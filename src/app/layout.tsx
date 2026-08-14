@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   title: "Highstrike — Stock Market Analytics",
   description:
     "Institutional-grade market analytics, screening, and real-time data — built for serious traders.",
-  metadataBase: new URL("https://highstrike.vercel.app"),
+  metadataBase: new URL("https://highstrike-one.vercel.app"),
   openGraph: {
     title: "Highstrike — Stock Market Analytics",
     description:
