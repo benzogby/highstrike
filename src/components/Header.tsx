@@ -1,9 +1,9 @@
 import Link from "next/link";
 
 const nav = [
+  { href: "#scoreboard", label: "Scoreboard" },
+  { href: "#how-it-works", label: "How it Works" },
   { href: "#features", label: "Features" },
-  { href: "#pricing", label: "Pricing" },
-  { href: "#faq", label: "FAQ" },
 ];
 
 export default function Header() {
@@ -31,7 +31,7 @@ export default function Header() {
           href="#waitlist"
           className="rounded-lg bg-accent px-4 py-2 font-display text-sm font-semibold text-bg transition hover:bg-accent-2"
         >
-          Get early access
+          Get Access Now
         </a>
       </div>
     </header>

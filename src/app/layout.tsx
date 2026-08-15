@@ -19,14 +19,14 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Highstrike — Stock Market Analytics",
+  title: "HighStrike — Everything You Need to Win in the Markets, Powered by AI",
   description:
-    "Institutional-grade market analytics, screening, and real-time data — built for serious traders.",
+    "Daily trade setups, entries, targets, and market analysis generated for you so you can focus on execution, not research.",
   metadataBase: new URL("https://highstrike-one.vercel.app"),
   openGraph: {
-    title: "Highstrike — Stock Market Analytics",
+    title: "HighStrike — Everything You Need to Win in the Markets, Powered by AI",
     description:
-      "Institutional-grade market analytics, screening, and real-time data — built for serious traders.",
+      "Daily trade setups, entries, targets, and market analysis generated for you so you can focus on execution, not research.",
     type: "website",
   },
 };

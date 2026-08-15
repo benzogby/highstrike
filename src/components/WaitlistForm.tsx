@@ -57,7 +57,7 @@ export default function WaitlistForm({ compact = false }: { compact?: boolean })
         disabled={status === "loading"}
         className="h-12 shrink-0 rounded-lg bg-accent px-6 font-display text-sm font-semibold text-bg transition hover:bg-accent-2 disabled:opacity-60"
       >
-        {status === "loading" ? "Joining…" : "Get early access"}
+        {status === "loading" ? "Joining…" : "Get Access Now"}
       </button>
       {status === "error" && (
         <p className="text-sm text-down sm:absolute sm:mt-14">{message}</p>
