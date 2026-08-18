@@ -1,5 +1,8 @@
-// Static mockup of the HighStrike AI Terminal "weather report" view — stands in
-// for the product video on the source page. Values are illustrative.
+// Mockup of the HighStrike AI Terminal "weather report" view — stands in
+// for the product video on the source page. Values are illustrative; the
+// date renders client-side so it is always current.
+
+import { NowDateLong } from "@/components/Now";
 
 type GaugeProps = {
   label: string;
@@ -77,7 +80,9 @@ export default function TerminalMockup() {
       </div>
 
       <div className="p-6">
-        <p className="font-display text-lg font-semibold">Saturday, March 21</p>
+        <p className="font-display text-lg font-semibold">
+          <NowDateLong />
+        </p>
         <p className="mt-0.5 text-xs text-ink-3">
           Today&apos;s HighStrike AI Weather Report
         </p>

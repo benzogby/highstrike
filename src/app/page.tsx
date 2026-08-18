@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Eyebrow from "@/components/Eyebrow";
+import { DateOffset } from "@/components/Now";
 import SystemsShowcase from "@/components/SystemsShowcase";
 import TerminalMockup from "@/components/TerminalMockup";
 import SetupCardMockup from "@/components/SetupCardMockup";
@@ -302,15 +303,17 @@ export default function Home() {
 
           <div className="mt-6 grid w-full max-w-3xl gap-4 sm:grid-cols-2">
             {[
-              { date: "Mar 23", ticker: "DELL", status: "Target Hit", result: "+956%" },
-              { date: "Mar 20", ticker: "SMCI", status: "Closed", result: "+121%" },
+              { daysAgo: -2, ticker: "DELL", status: "Target Hit", result: "+956%" },
+              { daysAgo: -5, ticker: "SMCI", status: "Closed", result: "+121%" },
             ].map((t) => (
               <div
                 key={t.ticker}
                 className="flex items-center justify-between rounded-2xl border border-line bg-panel px-6 py-5"
               >
                 <div className="text-left">
-                  <p className="text-xs text-ink-3">{t.date}</p>
+                  <p className="text-xs text-ink-3">
+                    <DateOffset days={t.daysAgo} />
+                  </p>
                   <p className="font-display text-xl font-bold">{t.ticker}</p>
                   <p className="mt-0.5 inline-flex items-center gap-1.5 text-xs text-ink-2">
                     <span className="h-1.5 w-1.5 rounded-full bg-up" aria-hidden="true" />

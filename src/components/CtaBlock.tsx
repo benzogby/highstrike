@@ -1,3 +1,5 @@
+import { NowMonth } from "@/components/Now";
+
 export default function CtaBlock() {
   return (
     <div className="flex flex-col items-center gap-3 text-center">
@@ -9,7 +11,8 @@ export default function CtaBlock() {
       </a>
       <p className="text-sm text-ink-2">Start Trading with HighStrike AI Terminal</p>
       <p className="text-xs text-ink-3">
-        *BONUS: March registrants get FREE access to HighStrike Trading School ($2,995 value)
+        *BONUS: <NowMonth /> registrants get FREE access to HighStrike Trading
+        School ($2,995 value)
       </p>
     </div>
   );

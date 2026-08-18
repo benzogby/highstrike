@@ -1,4 +1,7 @@
-// Illustrative mockup of a published setup card in the terminal.
+// Illustrative mockup of a published setup card in the terminal. Dates and
+// the timestamp render client-side so they track the current date.
+
+import { NowTimeET, UpcomingFriday } from "@/components/Now";
 
 const rows = [
   { field: "Direction", value: "Long", accent: false },
@@ -14,7 +17,12 @@ const flags = [
   { label: "Unusual options", value: "5 flags" },
 ];
 
-const contracts = ["Mar 28 $340C", "Mar 28 $345C", "Apr 4 $340C", "Apr 4 $350C"];
+const contracts = [
+  { weeks: 0, strike: "$340C" },
+  { weeks: 0, strike: "$345C" },
+  { weeks: 1, strike: "$340C" },
+  { weeks: 1, strike: "$350C" },
+];
 
 export default function SetupCardMockup() {
   return (
@@ -26,7 +34,9 @@ export default function SetupCardMockup() {
           </span>
           <span className="font-display text-sm font-semibold">$MCD · McDonald&apos;s Corp</span>
         </div>
-        <span className="font-mono-nums text-xs text-ink-3">08:47 ET</span>
+        <span className="font-mono-nums text-xs text-ink-3">
+          <NowTimeET />
+        </span>
       </div>
 
       <dl className="divide-y divide-line">
@@ -56,12 +66,12 @@ export default function SetupCardMockup() {
           Suggested contracts
         </p>
         <div className="mt-2 flex flex-wrap gap-2">
-          {contracts.map((c) => (
+          {contracts.map((c, i) => (
             <span
-              key={c}
+              key={i}
               className="rounded-md border border-line bg-panel-2 px-2.5 py-1 font-mono-nums text-xs text-ink-2"
             >
-              {c}
+              <UpcomingFriday weeks={c.weeks} /> {c.strike}
             </span>
           ))}
         </div>
