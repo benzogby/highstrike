@@ -18,7 +18,11 @@ function SignInForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(() =>
+    searchParams.get("error") === "auth_callback"
+      ? "Sign-in didn't complete — please try again."
+      : ""
+  );
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
