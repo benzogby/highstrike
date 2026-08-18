@@ -10,7 +10,7 @@ type GaugeProps = {
 };
 
 // Semicircular meter: track + value arc + needle, value 0–100.
-function Gauge({ label, value }: GaugeProps) {
+export function Gauge({ label, value }: GaugeProps) {
   const R = 44;
   const CX = 56;
   const CY = 56;

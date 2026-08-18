@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { posts } from "@/lib/posts";
 
-const BASE = "https://highstrike-one.vercel.app";
+const BASE = "https://www.highstrike.com";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const pages = ["", "/results", "/pricing", "/blog", "/about", "/company"].map(

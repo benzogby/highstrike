@@ -41,7 +41,11 @@ export default function SignUpPage() {
     });
     setLoading(false);
     if (err) {
-      setError(err.message);
+      setError(
+        /rate limit/i.test(err.message)
+          ? "We're onboarding a lot of traders right now — please try again in about an hour."
+          : err.message
+      );
       return;
     }
     // If email confirmation is disabled, a session comes back immediately.

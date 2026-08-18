@@ -66,6 +66,23 @@ export function DateOffset({ days }: { days: number }) {
   return <span suppressHydrationWarning>{text}</span>;
 }
 
+/** "Good morning" / "Good afternoon" / "Good evening" by ET hour */
+export function NowGreeting() {
+  const text = useNowText((d) => {
+    const hour = Number(
+      d.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        hour12: false,
+        timeZone: ET,
+      })
+    );
+    if (hour < 12) return "Good morning";
+    if (hour < 17) return "Good afternoon";
+    return "Good evening";
+  });
+  return <span suppressHydrationWarning>{text || "Welcome back"}</span>;
+}
+
 /** Upcoming Friday `weeks` out (0 = this/next Friday), e.g. "Aug 22" */
 export function UpcomingFriday({ weeks = 0 }: { weeks?: number }) {
   const text = useNowText((d) => {
