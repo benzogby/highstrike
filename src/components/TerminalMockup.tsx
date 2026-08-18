@@ -62,7 +62,7 @@ const snapshot = [
 
 export default function TerminalMockup() {
   return (
-    <div className="overflow-hidden rounded-2xl border border-line bg-panel shadow-2xl shadow-black/50">
+    <div className="overflow-hidden rounded-2xl border border-line bg-panel card-shadow">
       {/* window chrome */}
       <div className="flex items-center justify-between border-b border-line px-5 py-3">
         <div className="flex items-center gap-2">

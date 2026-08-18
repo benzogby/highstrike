@@ -18,7 +18,7 @@ const contracts = ["Mar 28 $340C", "Mar 28 $345C", "Apr 4 $340C", "Apr 4 $350C"]
 
 export default function SetupCardMockup() {
   return (
-    <div className="overflow-hidden rounded-2xl border border-line bg-panel shadow-2xl shadow-black/50">
+    <div className="overflow-hidden rounded-2xl border border-line bg-panel card-shadow">
       <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
         <div className="flex items-center gap-3">
           <span className="rounded-md bg-accent px-2 py-0.5 font-display text-xs font-bold text-bg">

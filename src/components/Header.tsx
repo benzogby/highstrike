@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase/client";
+import ThemeToggle from "@/components/ThemeToggle";
 
 const nav = [
   { href: "/results", label: "Results" },
@@ -46,7 +47,8 @@ export default function Header() {
             </Link>
           ))}
         </nav>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          <ThemeToggle />
           {signedIn ? (
             <Link
               href="/dashboard"
@@ -85,7 +87,7 @@ export function Logo({ size = 28 }: { size?: number }) {
       fill="none"
       aria-hidden="true"
     >
-      <rect width="32" height="32" rx="8" fill="var(--color-accent)" />
+      <rect width="32" height="32" rx="8" fill="#a3e635" />
       <path
         d="M8 22 L13 15 L17 18 L24 8"
         stroke="#0a0b0d"

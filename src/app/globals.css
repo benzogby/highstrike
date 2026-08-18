@@ -19,6 +19,32 @@
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;
 }
 
+:root {
+  color-scheme: dark;
+  --grid-line: rgba(255, 255, 255, 0.035);
+  --glow-strength: 14%;
+  --card-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --color-bg: #f7f8f6;
+  --color-panel: #ffffff;
+  --color-panel-2: #eef0ec;
+  --color-line: rgba(10, 11, 13, 0.08);
+  --color-line-strong: rgba(10, 11, 13, 0.18);
+  --color-ink: #14161a;
+  --color-ink-2: #4a5160;
+  --color-ink-3: #757c88;
+  --color-accent: #4d7c0f;
+  --color-accent-2: #3f6212;
+  --color-up: #047857;
+  --color-down: #dc2626;
+  --grid-line: rgba(10, 11, 13, 0.05);
+  --glow-strength: 10%;
+  --card-shadow: 0 25px 50px -12px rgba(10, 11, 13, 0.18);
+}
+
 html {
   scroll-behavior: smooth;
 }
@@ -43,11 +69,15 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+.card-shadow {
+  box-shadow: var(--card-shadow);
+}
+
 /* Subtle grid backdrop for the hero */
 .hero-grid {
   background-image:
-    linear-gradient(to right, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+    linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
   background-size: 48px 48px;
   mask-image: radial-gradient(ellipse 80% 60% at 50% 20%, black 30%, transparent 75%);
 }
@@ -55,7 +85,7 @@ body {
 .glow {
   background: radial-gradient(
     ellipse 50% 40% at 50% 0%,
-    color-mix(in oklab, var(--color-accent) 14%, transparent),
+    color-mix(in oklab, var(--color-accent) var(--glow-strength), transparent),
     transparent 70%
   );
 }
@@ -73,8 +103,226 @@ body {
   animation-play-state: paused;
 }
 
+/* ---------------------------------------------------------------------------
+   Systems showcase — stage rail + illustrative cards
+   (clickable stages; dimmed until reached; current stage pulses)
+--------------------------------------------------------------------------- */
+
+.sys-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.125rem;
+  position: relative;
+}
+
+@media (min-width: 640px) {
+  .sys-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (min-width: 1024px) {
+  .sys-grid { grid-template-columns: repeat(3, 1fr); row-gap: 2.25rem; }
+}
+
+.sys-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  cursor: pointer;
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sys-stage:focus-visible {
+  outline: none;
+}
+
+.sys-stage:focus-visible .sys-dot {
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-accent) 40%, transparent);
+}
+
+.sys-node {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  align-self: flex-start;
+}
+
+.sys-dot {
+  width: 34px;
+  height: 34px;
+  flex: none;
+  border-radius: 999px;
+  border: 1.5px solid var(--color-line-strong);
+  background: var(--color-panel);
+  color: var(--color-ink-3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  transition: background 0.45s ease, border-color 0.45s ease, color 0.45s ease;
+}
+
+.sys-stage:hover:not(.now) .sys-dot {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.sys-stage.on .sys-dot {
+  background: var(--color-ink);
+  border-color: var(--color-ink);
+  color: var(--color-bg);
+}
+
+.sys-stage.on.now .sys-dot {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-bg);
+}
+
+.sys-stage.now .sys-dot {
+  animation: sysPulse 1.9s ease-out infinite;
+}
+
+@keyframes sysPulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--color-accent) 45%, transparent); }
+  70% { box-shadow: 0 0 0 11px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+.sys-label {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.95rem;
+  letter-spacing: -0.01em;
+  color: var(--color-ink-3);
+  transition: color 0.5s ease;
+}
+
+.sys-stage.on .sys-label {
+  color: var(--color-ink);
+}
+
+.sys-card {
+  flex: 1;
+  border: 1px solid var(--color-line);
+  border-radius: 1rem;
+  background: var(--color-panel);
+  padding: 1.05rem 1.1rem;
+  min-height: 13rem;
+  opacity: 0.38;
+  transform: translateY(6px);
+  outline: 2px dashed transparent;
+  outline-offset: 3px;
+  transition: opacity 0.5s ease, transform 0.5s ease, outline-color 0.5s ease;
+}
+
+.sys-stage.on .sys-card {
+  opacity: 1;
+  transform: none;
+  animation: sysCard 0.75s cubic-bezier(0.22, 1.2, 0.36, 1);
+}
+
+.sys-stage.now .sys-card {
+  outline-color: color-mix(in oklab, var(--color-accent) 50%, transparent);
+}
+
+@keyframes sysCard {
+  from { opacity: 0.3; transform: translateY(12px) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+
+.sys-kicker {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  margin-bottom: 0.65rem;
+}
+
+.sys-body {
+  margin-top: 0.75rem;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: var(--color-ink-2);
+}
+
+/* Vignette: cascading rows */
+.sys-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.6rem;
+  font-size: 0.78rem;
+  padding: 0.28rem 0;
+  border-bottom: 1px solid var(--color-line);
+  opacity: 0;
+}
+
+.sys-row:last-child {
+  border-bottom: none;
+}
+
+.sys-stage.on .sys-row {
+  animation: sysRow 0.5s ease forwards;
+}
+
+.sys-stage.on .sys-row:nth-child(1) { animation-delay: 0.2s; }
+.sys-stage.on .sys-row:nth-child(2) { animation-delay: 0.4s; }
+.sys-stage.on .sys-row:nth-child(3) { animation-delay: 0.6s; }
+
+@keyframes sysRow {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Vignette: gauge arc draw */
+.sys-arc {
+  stroke-dasharray: 140;
+  stroke-dashoffset: 140;
+}
+
+.sys-stage.on .sys-arc {
+  animation: sysDraw 0.9s ease-out 0.25s forwards;
+}
+
+@keyframes sysDraw {
+  to { stroke-dashoffset: 46; }
+}
+
+/* Vignette: flow bars */
+.sys-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-accent);
+  width: 0;
+}
+
+.sys-stage.on .sys-bar {
+  animation: sysBar 0.8s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+}
+
+.sys-stage.on .sys-bar.b1 { animation-delay: 0.25s; }
+.sys-stage.on .sys-bar.b2 { animation-delay: 0.45s; }
+.sys-stage.on .sys-bar.b3 { animation-delay: 0.65s; }
+
+@keyframes sysBar {
+  to { width: var(--bar-w); }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .ticker-track {
-    animation: none;
+  .ticker-track { animation: none; }
+  .sys-stage .sys-dot,
+  .sys-stage .sys-card,
+  .sys-stage .sys-row,
+  .sys-stage .sys-arc,
+  .sys-stage .sys-bar {
+    animation: none !important;
+    transition: none;
   }
+  .sys-stage.on .sys-row { opacity: 1; }
+  .sys-stage.on .sys-arc { stroke-dashoffset: 46; }
+  .sys-stage.on .sys-bar { width: var(--bar-w); }
 }

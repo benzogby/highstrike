@@ -10,7 +10,7 @@ const rows = [
 
 export default function ScannerMockup() {
   return (
-    <div className="overflow-hidden rounded-2xl border border-line bg-panel shadow-2xl shadow-black/50">
+    <div className="overflow-hidden rounded-2xl border border-line bg-panel card-shadow">
       <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
         <span className="font-display text-sm font-semibold">Flow Scanner</span>
         <span className="flex items-center gap-1.5 text-xs text-ink-3">

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Eyebrow from "@/components/Eyebrow";
+import SystemsShowcase from "@/components/SystemsShowcase";
 import TerminalMockup from "@/components/TerminalMockup";
 import SetupCardMockup from "@/components/SetupCardMockup";
 import ScannerMockup from "@/components/ScannerMockup";
@@ -11,39 +12,6 @@ const trustStats = [
   { value: "8 yrs", label: "Of market theory" },
   { value: "150k", label: "Trades of data" },
   { value: "5,400+", label: "Symbols scanned daily" },
-];
-
-const platform = [
-  {
-    title: "Dashboard Terminal",
-    body: "Every trade idea, market read, and data flag in one keyboard-fast workspace — built to be the first tab you open and the only one you need.",
-    icon: "M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4zM9 21h6",
-  },
-  {
-    title: "AI Weather Report",
-    body: "Volatility, opportunity, and direction scored before the open — so every setup you see is framed by the day's actual conditions.",
-    icon: "M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999A5.002 5.002 0 103 15z",
-  },
-  {
-    title: "Setup Engine",
-    body: "Curated trade setups with entries, targets, time frames, and the reasoning written out in plain English. No black boxes.",
-    icon: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z",
-  },
-  {
-    title: "Flow Scanner",
-    body: "Unusual options activity, relative volume, and momentum distilled into a single flow score across the entire scan universe.",
-    icon: "M13 7h8m0 0v8m0-8l-8 8-4-4-6 6",
-  },
-  {
-    title: "Insider Monitor",
-    body: "Open-market insider buying scored for size, clustering, and pattern breaks — the filings that matter, separated from the noise.",
-    icon: "M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9",
-  },
-  {
-    title: "Chatter Engine",
-    body: "X and Reddit chatter monitored at scale and reduced to a sentiment read per ticker — crowd positioning without the doomscrolling.",
-    icon: "M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.86 9.86 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z",
-  },
 ];
 
 const pipeline = [
@@ -195,26 +163,8 @@ export default function Home() {
               the next, and all of it lands in a single workspace before the open.
             </p>
           </div>
-          <div className="mt-14 grid gap-px overflow-hidden rounded-2xl border border-line bg-line text-left sm:grid-cols-2 lg:grid-cols-3">
-            {platform.map((f) => (
-              <div key={f.title} className="bg-panel p-7 transition hover:bg-panel-2">
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="var(--color-accent)"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d={f.icon} />
-                </svg>
-                <h3 className="mt-4 font-display text-base font-semibold">{f.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-ink-2">{f.body}</p>
-              </div>
-            ))}
+          <div className="mt-14">
+            <SystemsShowcase />
           </div>
         </div>
       </section>
