@@ -9,6 +9,7 @@ import AuthShell, {
   authButtonClass,
   authLabelClass,
 } from "@/components/AuthShell";
+import GoogleAuthButton, { AuthDivider } from "@/components/GoogleAuthButton";
 
 function SignInForm() {
   const router = useRouter();
@@ -103,6 +104,10 @@ export default function SignInPage() {
         </>
       }
     >
+      <GoogleAuthButton label="Continue with Google" />
+      <div className="my-4">
+        <AuthDivider />
+      </div>
       <Suspense>
         <SignInForm />
       </Suspense>

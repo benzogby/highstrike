@@ -9,6 +9,7 @@ import AuthShell, {
   authButtonClass,
   authLabelClass,
 } from "@/components/AuthShell";
+import GoogleAuthButton, { AuthDivider } from "@/components/GoogleAuthButton";
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -88,6 +89,10 @@ export default function SignUpPage() {
         </>
       }
     >
+      <GoogleAuthButton label="Continue with Google" />
+      <div className="my-4">
+        <AuthDivider />
+      </div>
       <form onSubmit={submit} className="space-y-4">
         <div>
           <label htmlFor="email" className={authLabelClass}>
