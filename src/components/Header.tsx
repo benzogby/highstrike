@@ -1,9 +1,11 @@
 import Link from "next/link";
 
 const nav = [
-  { href: "#scoreboard", label: "Scoreboard" },
-  { href: "#how-it-works", label: "How it Works" },
-  { href: "#features", label: "Features" },
+  { href: "/results", label: "Results" },
+  { href: "/pricing", label: "Pricing" },
+  { href: "/blog", label: "Blog" },
+  { href: "/about", label: "About" },
+  { href: "/company", label: "Company" },
 ];
 
 export default function Header() {
@@ -16,23 +18,23 @@ export default function Header() {
             highstrike
           </span>
         </Link>
-        <nav className="hidden items-center gap-8 md:flex">
+        <nav className="hidden items-center gap-7 md:flex">
           {nav.map((n) => (
-            <a
+            <Link
               key={n.href}
               href={n.href}
               className="text-sm text-ink-2 transition hover:text-ink"
             >
               {n.label}
-            </a>
+            </Link>
           ))}
         </nav>
-        <a
-          href="#waitlist"
+        <Link
+          href="/#waitlist"
           className="rounded-lg bg-accent px-4 py-2 font-display text-sm font-semibold text-bg transition hover:bg-accent-2"
         >
           Get Access Now
-        </a>
+        </Link>
       </div>
     </header>
   );
