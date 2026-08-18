@@ -1,4 +1,8 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { supabaseBrowser } from "@/lib/supabase/client";
 
 const nav = [
   { href: "/results", label: "Results" },
@@ -9,6 +13,19 @@ const nav = [
 ];
 
 export default function Header() {
+  const [signedIn, setSignedIn] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const supabase = supabaseBrowser();
+    supabase.auth.getUser().then(({ data }) => setSignedIn(Boolean(data.user)));
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSignedIn(Boolean(session?.user));
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-bg/80 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
@@ -29,12 +46,31 @@ export default function Header() {
             </Link>
           ))}
         </nav>
-        <Link
-          href="/#waitlist"
-          className="rounded-lg bg-accent px-4 py-2 font-display text-sm font-semibold text-bg transition hover:bg-accent-2"
-        >
-          Get Access Now
-        </Link>
+        <div className="flex items-center gap-4">
+          {signedIn ? (
+            <Link
+              href="/dashboard"
+              className="rounded-lg bg-accent px-4 py-2 font-display text-sm font-semibold text-bg transition hover:bg-accent-2"
+            >
+              Dashboard
+            </Link>
+          ) : (
+            <>
+              <Link
+                href="/signin"
+                className="hidden text-sm text-ink-2 transition hover:text-ink sm:block"
+              >
+                Sign in
+              </Link>
+              <Link
+                href="/signup"
+                className="rounded-lg bg-accent px-4 py-2 font-display text-sm font-semibold text-bg transition hover:bg-accent-2"
+              >
+                Sign up
+              </Link>
+            </>
+          )}
+        </div>
       </div>
     </header>
   );
