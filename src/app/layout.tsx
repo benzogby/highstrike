@@ -44,7 +44,7 @@ export default function RootLayout({
         <script
           // Applies the stored/system theme before first paint to avoid a flash.
           dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.getItem("hs-theme");if(!t){t=window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"}if(t==="light"){document.documentElement.setAttribute("data-theme","light")}}catch(e){}`,
+            __html: `try{var t=localStorage.getItem("hs-theme")||"light";if(t==="light"){document.documentElement.setAttribute("data-theme","light")}}catch(e){}`,
           }}
         />
       </head>
