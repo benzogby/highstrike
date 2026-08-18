@@ -87,7 +87,7 @@ export function Logo({ size = 28 }: { size?: number }) {
       fill="none"
       aria-hidden="true"
     >
-      <rect width="32" height="32" rx="8" fill="#a3e635" />
+      <rect width="32" height="32" rx="8" fill="#009f6f" />
       <path
         d="M8 22 L13 15 L17 18 L24 8"
         stroke="#0a0b0d"

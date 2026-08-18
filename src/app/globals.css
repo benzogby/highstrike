@@ -9,9 +9,9 @@
   --color-ink: #f4f5f7;
   --color-ink-2: #a3abb8;
   --color-ink-3: #6b7280;
-  --color-accent: #a3e635;
-  --color-accent-2: #bef264;
-  --color-up: #34d399;
+  --color-accent: #009f6f;
+  --color-accent-2: #00b57f;
+  --color-up: #009f6f;
   --color-down: #f87171;
 
   --font-display: var(--font-space-grotesk), system-ui, sans-serif;
@@ -36,9 +36,9 @@
   --color-ink: #14161a;
   --color-ink-2: #4a5160;
   --color-ink-3: #757c88;
-  --color-accent: #4d7c0f;
-  --color-accent-2: #3f6212;
-  --color-up: #047857;
+  --color-accent: #009f6f;
+  --color-accent-2: #008a60;
+  --color-up: #009f6f;
   --color-down: #dc2626;
   --grid-line: rgba(10, 11, 13, 0.05);
   --glow-strength: 10%;

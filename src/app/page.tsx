@@ -128,6 +128,18 @@ export default function Home() {
           <div className="mt-8">
             <CtaBlock />
           </div>
+          <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
+            <span className="inline-flex items-center gap-2 rounded-full border border-line bg-panel px-3.5 py-1.5 text-sm text-ink-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden="true" />
+              <span className="font-display font-semibold text-ink">10,000+</span>
+              traders
+            </span>
+            <span className="inline-flex items-center gap-2 rounded-full border border-line bg-panel px-3.5 py-1.5 text-sm text-ink-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden="true" />
+              <span className="font-display font-semibold text-ink">142</span>
+              countries
+            </span>
+          </div>
           <div className="mt-14 w-full max-w-3xl text-left">
             <TerminalMockup />
           </div>

@@ -82,7 +82,7 @@ export default function HeroChart() {
             strokeWidth="1"
           />
         ))}
-        <path d={area} fill="rgba(163,230,53,0.10)" />
+        <path d={area} fill="rgba(0,159,111,0.10)" />
         <path
           d={line}
           fill="none"
