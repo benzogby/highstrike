@@ -326,3 +326,17 @@ body {
   .sys-stage.on .sys-arc { stroke-dashoffset: 46; }
   .sys-stage.on .sys-bar { width: var(--bar-w); }
 }
+
+/* Uploaded brand logos: show the right variant per theme */
+.brand-logo-dark {
+  display: none;
+}
+:root[data-theme="light"] .brand-logo-light {
+  display: block;
+}
+:root:not([data-theme="light"]) .brand-logo-light {
+  display: none;
+}
+:root:not([data-theme="light"]) .brand-logo-dark {
+  display: block;
+}

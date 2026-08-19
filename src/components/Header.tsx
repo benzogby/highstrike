@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase/client";
+import BrandMark from "@/components/BrandMark";
 import ThemeToggle from "@/components/ThemeToggle";
 
 const nav = [
@@ -31,10 +32,7 @@ export default function Header() {
     <header className="sticky top-0 z-40 border-b border-line bg-bg/80 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
         <Link href="/" className="flex items-center gap-2.5">
-          <Logo />
-          <span className="font-display text-lg font-bold tracking-tight">
-            highstrike
-          </span>
+          <BrandMark />
         </Link>
         <nav className="hidden items-center gap-7 md:flex">
           {nav.map((n) => (
