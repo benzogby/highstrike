@@ -24,6 +24,7 @@ export const metadata: Metadata = {
   description:
     "Daily trade setups, entries, targets, and market analysis generated for you so you can focus on execution, not research.",
   metadataBase: new URL("https://www.highstrike.com"),
+  icons: { icon: "/api/site/favicon" },
   openGraph: {
     title: "HighStrike — Everything You Need to Win in the Markets, Powered by AI",
     description:

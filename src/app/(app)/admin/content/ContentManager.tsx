@@ -29,6 +29,11 @@ const SLOTS: Slot[] = [
     title: "Social share image",
     hint: "Used when links are shared (Open Graph). 1200×630 recommended.",
   },
+  {
+    key: "favicon",
+    title: "Favicon",
+    hint: "Browser-tab icon. Square SVG, PNG, or ICO — 64×64 or larger. Updates within ~5 minutes for repeat visitors.",
+  },
 ];
 
 type LibraryItem = { name: string; url: string; createdAt: string };

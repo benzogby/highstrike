@@ -51,11 +51,15 @@ export default function SettingsForm({
   userId,
   email,
   hasPassword,
+  billing,
+  billingNotice,
   initial,
 }: {
   userId: string;
   email: string;
   hasPassword: boolean;
+  billing: boolean;
+  billingNotice: "success" | "cancelled" | null;
   initial: Initial;
 }) {
   const router = useRouter();
@@ -170,6 +174,33 @@ export default function SettingsForm({
     if (key === plan) return;
     setPlanBusy(key);
     setPlanMsg(null);
+
+    // Live billing: paid plans go through Stripe Checkout; downgrades go
+    // through the customer portal (cancel there).
+    if (billing && key !== "free") {
+      try {
+        const res = await fetch("/api/billing/checkout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ plan: key }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.url) throw new Error(data.error ?? "Checkout failed");
+        window.location.href = data.url;
+        return;
+      } catch (e) {
+        setPlanBusy(null);
+        setPlanMsg({ ok: false, text: e instanceof Error ? e.message : "Checkout failed" });
+        return;
+      }
+    }
+    if (billing && key === "free") {
+      const opened = await openPortal(false);
+      setPlanBusy(null);
+      if (opened) return;
+      // No Stripe customer yet (e.g. beta-era plan) — fall through to direct set.
+    }
+
     const { error } = await supabaseBrowser()
       .from("profiles")
       .update({ plan: key })
@@ -187,6 +218,21 @@ export default function SettingsForm({
           ? "Downgraded to Free."
           : `Plan set to ${PLANS.find((p) => p.key === key)?.name}.`,
     });
+  }
+
+  async function openPortal(report = true): Promise<boolean> {
+    try {
+      const res = await fetch("/api/billing/portal", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok || !data.url) throw new Error(data.error ?? "Couldn't open billing portal");
+      window.location.href = data.url;
+      return true;
+    } catch (e) {
+      if (report) {
+        setPlanMsg({ ok: false, text: e instanceof Error ? e.message : "Couldn't open billing portal" });
+      }
+      return false;
+    }
   }
 
   const displayName = name.trim() || email.split("@")[0];
@@ -367,10 +413,37 @@ export default function SettingsForm({
             </span>
           )}
         </div>
-        <p className="mt-2 text-sm text-ink-2">
-          Billing isn&apos;t connected during the beta — plan changes apply to your account
-          immediately and nothing is charged.
-        </p>
+        {billingNotice === "success" && (
+          <p className="mt-3 rounded-lg border border-accent/40 bg-panel-2 px-4 py-3 text-sm text-ink">
+            <span className="mr-2 text-up">✓</span>
+            Payment received — your plan updates within a few seconds. Refresh if it
+            hasn&apos;t switched yet.
+          </p>
+        )}
+        {billingNotice === "cancelled" && (
+          <p className="mt-3 rounded-lg border border-line bg-panel-2 px-4 py-3 text-sm text-ink-2">
+            Checkout cancelled — no charge was made.
+          </p>
+        )}
+        {billing ? (
+          <p className="mt-2 text-sm text-ink-2">
+            Secure checkout and billing management are handled by Stripe.
+          </p>
+        ) : (
+          <p className="mt-2 text-sm text-ink-2">
+            Billing isn&apos;t connected during the beta — plan changes apply to your
+            account immediately and nothing is charged.
+          </p>
+        )}
+        {billing && plan !== "free" && (
+          <button
+            type="button"
+            onClick={() => openPortal()}
+            className="mt-3 rounded-lg border border-line-strong px-4 py-2 font-display text-sm font-semibold text-ink-2 transition hover:border-accent/50 hover:text-accent"
+          >
+            Manage billing →
+          </button>
+        )}
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
           {PLANS.map((p) => {
             const current = plan === p.key;

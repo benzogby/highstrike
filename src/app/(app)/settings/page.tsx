@@ -2,13 +2,19 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
 import AppShell from "@/components/AppShell";
+import { stripeEnabled } from "@/lib/stripe";
 import SettingsForm from "./SettingsForm";
 
 export const metadata: Metadata = {
   title: "Settings — HighStrike",
 };
 
-export default async function SettingsPage() {
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ billing?: string }>;
+}) {
+  const { billing } = await searchParams;
   const supabase = await supabaseServer();
   const {
     data: { user },
@@ -44,6 +50,8 @@ export default async function SettingsPage() {
           userId={user.id}
           email={user.email ?? ""}
           hasPassword={providers.includes("email")}
+          billing={stripeEnabled()}
+          billingNotice={billing === "success" ? "success" : billing === "cancelled" ? "cancelled" : null}
           initial={{
             name: profile?.name ?? "",
             bio: profile?.bio ?? "",
