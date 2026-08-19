@@ -38,14 +38,18 @@ export default function AppShell({
   email,
   isAdmin,
   active,
+  displayName,
+  avatarUrl,
   children,
 }: {
   email: string;
   isAdmin: boolean;
-  active: "home" | "admin";
+  active: "home" | "admin" | "settings";
+  displayName?: string | null;
+  avatarUrl?: string | null;
   children: React.ReactNode;
 }) {
-  const firstName = email.split("@")[0];
+  const firstName = displayName || email.split("@")[0];
 
   return (
     <div className="flex min-h-screen">
@@ -89,6 +93,20 @@ export default function AppShell({
               </span>
             );
           })}
+          {active === "settings" ? (
+            <span className="flex items-center gap-3 rounded-lg bg-panel-2 px-3 py-2 text-sm font-semibold text-ink">
+              <NavIcon d={SETTINGS_ICON} active />
+              Settings
+            </span>
+          ) : (
+            <Link
+              href="/settings"
+              className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-ink-2 transition hover:bg-panel-2 hover:text-ink"
+            >
+              <NavIcon d={SETTINGS_ICON} />
+              Settings
+            </Link>
+          )}
         </nav>
         {isAdmin && (
           <div className="px-3 pb-2">
@@ -119,9 +137,23 @@ export default function AppShell({
         )}
         <div className="border-t border-line p-4">
           <div className="flex items-center justify-between gap-2">
-            <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-ink">{firstName}</p>
-              <p className="truncate text-xs text-ink-3">{email}</p>
+            <div className="flex min-w-0 items-center gap-2.5">
+              {avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={avatarUrl}
+                  alt=""
+                  className="h-8 w-8 flex-none rounded-full border border-line object-cover"
+                />
+              ) : (
+                <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-accent font-display text-xs font-bold uppercase text-bg">
+                  {firstName.slice(0, 2)}
+                </span>
+              )}
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-ink">{firstName}</p>
+                <p className="truncate text-xs text-ink-3">{email}</p>
+              </div>
             </div>
             <ThemeToggle />
           </div>
@@ -181,6 +213,9 @@ export default function AppShell({
     </div>
   );
 }
+
+const SETTINGS_ICON =
+  "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065zM15 12a3 3 0 11-6 0 3 3 0 016 0z";
 
 function NavIcon({ d, active = false }: { d: string; active?: boolean }) {
   return (

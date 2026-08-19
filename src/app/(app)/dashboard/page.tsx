@@ -68,15 +68,21 @@ export default async function DashboardPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("is_admin")
+    .select("is_admin, name, avatar_url")
     .eq("id", user.id)
     .single();
   const isAdmin = Boolean(profile?.is_admin);
 
-  const firstName = (user.email ?? "trader").split("@")[0];
+  const firstName = profile?.name || (user.email ?? "trader").split("@")[0];
 
   return (
-    <AppShell email={user.email ?? ""} isAdmin={isAdmin} active="home">
+    <AppShell
+      email={user.email ?? ""}
+      isAdmin={isAdmin}
+      active="home"
+      displayName={profile?.name}
+      avatarUrl={profile?.avatar_url}
+    >
       
           {/* Greeting */}
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">

@@ -20,13 +20,19 @@ export default async function AdminLayout({
 
   const { data: me } = await supabase
     .from("profiles")
-    .select("is_admin")
+    .select("is_admin, name, avatar_url")
     .eq("id", user.id)
     .single();
   if (!me?.is_admin) redirect("/dashboard");
 
   return (
-    <AppShell email={user.email ?? ""} isAdmin active="admin">
+    <AppShell
+      email={user.email ?? ""}
+      isAdmin
+      active="admin"
+      displayName={me?.name}
+      avatarUrl={me?.avatar_url}
+    >
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
         <div>
           <p className="text-xs uppercase tracking-wider text-ink-3">Admin</p>
