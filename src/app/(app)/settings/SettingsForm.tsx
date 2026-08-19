@@ -197,8 +197,13 @@ export default function SettingsForm({
     if (billing && key === "free") {
       const opened = await openPortal(false);
       setPlanBusy(null);
-      if (opened) return;
-      // No Stripe customer yet (e.g. beta-era plan) — fall through to direct set.
+      if (!opened) {
+        setPlanMsg({
+          ok: false,
+          text: "No active billing found for this account — contact support@highstrike.com.",
+        });
+      }
+      return;
     }
 
     const { error } = await supabaseBrowser()
