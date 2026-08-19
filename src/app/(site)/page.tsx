@@ -1,6 +1,10 @@
 import Link from "next/link";
 import Eyebrow from "@/components/Eyebrow";
-import { DateOffset } from "@/components/Now";
+import {
+  HeroStatBadges,
+  ScoreboardStats,
+  ScoreboardTrades,
+} from "@/components/SiteContentBits";
 import SystemsShowcase from "@/components/SystemsShowcase";
 import TerminalMockup from "@/components/TerminalMockup";
 import SetupCardMockup from "@/components/SetupCardMockup";
@@ -129,18 +133,7 @@ export default function Home() {
           <div className="mt-8">
             <CtaBlock />
           </div>
-          <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-            <span className="inline-flex items-center gap-2 rounded-full border border-line bg-panel px-3.5 py-1.5 text-sm text-ink-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden="true" />
-              <span className="font-display font-semibold text-ink">10,000+</span>
-              traders
-            </span>
-            <span className="inline-flex items-center gap-2 rounded-full border border-line bg-panel px-3.5 py-1.5 text-sm text-ink-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden="true" />
-              <span className="font-display font-semibold text-ink">142</span>
-              countries
-            </span>
-          </div>
+          <HeroStatBadges />
           <div className="mt-14 w-full max-w-3xl text-left">
             <TerminalMockup />
           </div>
@@ -286,44 +279,8 @@ export default function Home() {
             opportunities in real time.
           </p>
 
-          <div className="mt-12 grid w-full max-w-3xl grid-cols-1 gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-3">
-            {[
-              { value: "39%", label: "Average gain" },
-              { value: "64%", label: "Win rate" },
-              { value: "-19%", label: "Average loss" },
-            ].map((s) => (
-              <div key={s.label} className="bg-panel px-6 py-8">
-                <p className="font-display text-4xl font-bold text-accent">{s.value}</p>
-                <p className="mt-1 text-xs uppercase tracking-wider text-ink-3">
-                  {s.label}
-                </p>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-6 grid w-full max-w-3xl gap-4 sm:grid-cols-2">
-            {[
-              { daysAgo: -2, ticker: "DELL", status: "Target Hit", result: "+956%" },
-              { daysAgo: -5, ticker: "SMCI", status: "Closed", result: "+121%" },
-            ].map((t) => (
-              <div
-                key={t.ticker}
-                className="flex items-center justify-between rounded-2xl border border-line bg-panel px-6 py-5"
-              >
-                <div className="text-left">
-                  <p className="text-xs text-ink-3">
-                    <DateOffset days={t.daysAgo} />
-                  </p>
-                  <p className="font-display text-xl font-bold">{t.ticker}</p>
-                  <p className="mt-0.5 inline-flex items-center gap-1.5 text-xs text-ink-2">
-                    <span className="h-1.5 w-1.5 rounded-full bg-up" aria-hidden="true" />
-                    {t.status}
-                  </p>
-                </div>
-                <p className="font-mono-nums text-2xl text-up">{t.result}</p>
-              </div>
-            ))}
-          </div>
+          <ScoreboardStats />
+          <ScoreboardTrades />
 
           <Link
             href="/results"

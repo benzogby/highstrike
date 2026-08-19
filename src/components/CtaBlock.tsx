@@ -1,4 +1,4 @@
-import { NowMonth } from "@/components/Now";
+import { BonusLine } from "@/components/SiteContentBits";
 
 export default function CtaBlock() {
   return (
@@ -10,10 +10,7 @@ export default function CtaBlock() {
         Get Access Now
       </a>
       <p className="text-sm text-ink-2">Start Trading with HighStrike AI Terminal</p>
-      <p className="text-xs text-ink-3">
-        *BONUS: <NowMonth /> registrants get FREE access to HighStrike Trading
-        School ($2,995 value)
-      </p>
+      <BonusLine />
     </div>
   );
 }
