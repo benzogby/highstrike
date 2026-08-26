@@ -18,6 +18,8 @@ const nav = [
   },
   {
     label: "Scanner",
+    key: "scanner",
+    href: "/scanner",
     icon: "M13 7h8m0 0v8m0-8l-8 8-4-4-6 6",
   },
   {
@@ -48,7 +50,7 @@ export default function AppShell({
 }: {
   email: string;
   isAdmin: boolean;
-  active: "home" | "setups" | "admin" | "settings" | "none";
+  active: "home" | "setups" | "scanner" | "admin" | "settings" | "none";
   displayName?: string | null;
   avatarUrl?: string | null;
   children: React.ReactNode;
