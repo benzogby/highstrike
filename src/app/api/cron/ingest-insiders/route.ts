@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
 import { supabaseService } from "@/lib/stripe";
 import { ingestInsiders } from "@/lib/insiders";
+import { ingestChatter } from "@/lib/chatter";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -49,7 +50,8 @@ async function handle(request: Request) {
     });
 
     const result = await ingestInsiders();
-    return NextResponse.json({ status: "ok", ...result });
+    const chatter = await ingestChatter();
+    return NextResponse.json({ status: "ok", ...result, chatter });
   } catch (e) {
     console.error("ingest-insiders failed:", e);
     return NextResponse.json(

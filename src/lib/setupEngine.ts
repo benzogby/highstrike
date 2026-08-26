@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { fetchQuotes } from "@/lib/quotes";
 import { computeScan, type ScanRow } from "@/lib/scanner";
+import { latestChatter } from "@/lib/chatter";
 import { supabaseService } from "@/lib/stripe";
 import { recordActivity } from "@/lib/alerts";
 
@@ -10,13 +11,22 @@ import { recordActivity } from "@/lib/alerts";
 // insider activity — via Claude (claude-opus-5) when ANTHROPIC_API_KEY is
 // configured, else a deterministic heuristic over the same signals.
 
-/** Scanner row enriched with 14-day insider aggregates for the ticker. */
+/** Scanner row enriched with insider (14d) and chatter aggregates. */
 export type EnrichedRow = ScanRow & {
   insBuyers: number;
   insBuyValue: number;
   insSellers: number;
   insSellValue: number;
+  chatterMsgsPerHour: number | null;
+  chatterBullishPct: number | null;
 };
+
+function chatterNote(r: EnrichedRow): string | null {
+  if (r.chatterMsgsPerHour == null) return null;
+  const lean =
+    r.chatterBullishPct != null ? `, ${r.chatterBullishPct}% bullish lean` : "";
+  return `chatter ${r.chatterMsgsPerHour.toFixed(1)} msgs/h${lean}`;
+}
 
 function insiderNote(r: EnrichedRow): string | null {
   if (r.insBuyers === 0 && r.insSellers === 0) return null;
@@ -246,6 +256,7 @@ async function claudeGenerate(quotes: EnrichedRow[]): Promise<Generated> {
         q.gapPct != null ? `gap ${q.gapPct >= 0 ? "+" : ""}${q.gapPct.toFixed(2)}%` : null,
         q.mom5d != null ? `5d ${q.mom5d >= 0 ? "+" : ""}${q.mom5d.toFixed(2)}%` : null,
         insiderNote(q),
+        chatterNote(q),
       ].filter(Boolean);
       return `${q.ticker}: ${bits.join(" | ")}`;
     })
@@ -259,7 +270,8 @@ async function claudeGenerate(quotes: EnrichedRow[]): Promise<Generated> {
       "You produce market commentary and illustrative trade setups — never guarantees. " +
       "Each universe line carries the terminal's own signals: flow score 0-100 with a long/short/neutral bias " +
       "(computed from day momentum, position in the day's range, gap follow-through, and 5-session trend), " +
-      "plus SEC Form 4 insider activity from the last 14 days where any exists. " +
+      "plus SEC Form 4 insider activity from the last 14 days and crowd chatter metrics " +
+      "(message velocity and bullish lean from public StockTwits streams) where they exist. " +
       "Weigh these signals and CITE the specific ones that drive each pick in its justification " +
       "(e.g. the flow score, range position, or insider buying). Insider buying clusters are meaningful; " +
       "lone routine sells usually are not. Keep your flow_score within about ±10 of the scanner's, " +
@@ -357,14 +369,19 @@ export async function generateDaily(force = false): Promise<{
     }
   }
 
+  const chatter = await latestChatter();
+
   const quotes: EnrichedRow[] = scan.map((r) => {
     const ins = insAgg.get(r.ticker);
+    const ch = chatter.get(r.ticker);
     return {
       ...r,
       insBuyers: ins?.buyers.size ?? 0,
       insBuyValue: ins?.buyValue ?? 0,
       insSellers: ins?.sellers.size ?? 0,
       insSellValue: ins?.sellValue ?? 0,
+      chatterMsgsPerHour: ch?.msgsPerHour ?? null,
+      chatterBullishPct: ch?.bullishPct ?? null,
     };
   });
 
