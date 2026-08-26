@@ -5,6 +5,7 @@ import { supabaseServer } from "@/lib/supabase/server";
 import AppShell from "@/components/AppShell";
 import { Gauge } from "@/components/TerminalMockup";
 import { NowDateLong, NowGreeting, UpcomingFriday } from "@/components/Now";
+import WatchlistPanel from "./WatchlistPanel";
 
 export const metadata: Metadata = {
   title: "Dashboard — HighStrike",
@@ -41,14 +42,6 @@ const setups = [
     justification: "Crude weakness, relative volume fading on rallies",
     flow: 41,
   },
-];
-
-const watchlist = [
-  { ticker: "NVDA", last: "182.90", chg: "+1.84%", up: true, flow: 91 },
-  { ticker: "DELL", last: "148.22", chg: "+3.10%", up: true, flow: 87 },
-  { ticker: "MCD", last: "339.45", chg: "+0.62%", up: true, flow: 84 },
-  { ticker: "SMCI", last: "61.38", chg: "-1.12%", up: false, flow: 78 },
-  { ticker: "XOM", last: "108.71", chg: "-0.44%", up: false, flow: 41 },
 ];
 
 const activity = [
@@ -178,49 +171,8 @@ export default async function DashboardPage() {
                 ))}
               </div>
 
-              {/* Watchlist */}
-              <div className="mt-8 flex items-baseline justify-between">
-                <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-ink-2">
-                  Watchlist
-                </h2>
-                <span className="text-[10px] uppercase tracking-wider text-ink-3">
-                  Illustrative preview
-                </span>
-              </div>
-              <div className="mt-3 overflow-hidden rounded-2xl border border-line bg-panel">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-line text-left text-[10px] uppercase tracking-wider text-ink-3">
-                      <th className="px-5 py-2.5 font-medium">Ticker</th>
-                      <th className="px-3 py-2.5 text-right font-medium">Last</th>
-                      <th className="px-3 py-2.5 text-right font-medium">Change</th>
-                      <th className="px-5 py-2.5 text-right font-medium">Flow</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-line">
-                    {watchlist.map((r) => (
-                      <tr key={r.ticker}>
-                        <td className="px-5 py-2.5 font-display font-semibold">
-                          {r.ticker}
-                        </td>
-                        <td className="px-3 py-2.5 text-right font-mono-nums text-ink-2">
-                          {r.last}
-                        </td>
-                        <td
-                          className={`px-3 py-2.5 text-right font-mono-nums ${
-                            r.up ? "text-up" : "text-down"
-                          }`}
-                        >
-                          {r.chg}
-                        </td>
-                        <td className="px-5 py-2.5 text-right font-mono-nums text-ink-2">
-                          {r.flow}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              {/* Watchlist — live */}
+              <WatchlistPanel userId={user.id} />
             </section>
 
             {/* Right rail */}
