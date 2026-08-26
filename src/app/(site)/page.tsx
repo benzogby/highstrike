@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { createClient } from "@supabase/supabase-js";
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "@/lib/supabaseConfig";
 import Eyebrow from "@/components/Eyebrow";
 import {
   HeroStatBadges,
@@ -6,6 +8,7 @@ import {
   ScoreboardTrades,
 } from "@/components/SiteContentBits";
 import SystemsShowcase from "@/components/SystemsShowcase";
+import LiveScoreboard from "./results/LiveScoreboard";
 import TerminalMockup from "@/components/TerminalMockup";
 import SetupCardMockup from "@/components/SetupCardMockup";
 import ScannerMockup from "@/components/ScannerMockup";
@@ -111,7 +114,39 @@ const faqs = [
   },
 ];
 
-export default function Home() {
+// Refresh the live report + scoreboard on the homepage every 30 minutes.
+export const revalidate = 1800;
+
+async function fetchPublicReport() {
+  try {
+    const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+    const { data } = await supabase
+      .from("weather_reports")
+      .select("report_date, volatility, opportunity, direction, summary")
+      .order("report_date", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!data) return null;
+    return {
+      volatility: data.volatility,
+      opportunity: data.opportunity,
+      direction: data.direction,
+      summary: data.summary,
+      dateLabel: new Date(`${data.report_date}T12:00:00Z`).toLocaleDateString("en-US", {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+        timeZone: "UTC",
+      }),
+    };
+  } catch {
+    return null;
+  }
+}
+
+export default async function Home() {
+  const report = await fetchPublicReport();
+
   return (
     <main>
       {/* Hero */}
@@ -135,7 +170,13 @@ export default function Home() {
           </div>
           <HeroStatBadges />
           <div className="mt-14 w-full max-w-3xl text-left">
-            <TerminalMockup />
+            <TerminalMockup report={report} />
+            {report && (
+              <p className="mt-2 text-center text-xs text-ink-3">
+                That&apos;s the actual report published to members this morning —
+                the setup cards behind it are inside the terminal.
+              </p>
+            )}
           </div>
         </div>
       </section>
@@ -281,6 +322,18 @@ export default function Home() {
 
           <ScoreboardStats />
           <ScoreboardTrades />
+
+          <div className="mt-10 w-full">
+            <p className="font-display text-sm font-semibold uppercase tracking-wide text-ink-2">
+              And since August 2026, the terminal grades itself in public
+            </p>
+            <p className="mx-auto mt-2 max-w-xl text-sm text-ink-2">
+              Every setup the AI publishes is recorded with its entry and target,
+              then graded automatically against real prices — wins and losses
+              together, updating daily.
+            </p>
+            <LiveScoreboard />
+          </div>
 
           <Link
             href="/results"

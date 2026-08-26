@@ -8,12 +8,14 @@ type Stage = {
   title: string;
   kicker: string;
   body: string;
+  status: "live" | "soon";
   vignette: React.ReactNode;
 };
 
 const stages: Stage[] = [
   {
     title: "Dashboard Terminal",
+    status: "live",
     kicker: "Your morning, assembled",
     body: "Every idea, read, and flag in one keyboard-fast workspace — the first tab you open and the only one you need.",
     vignette: (
@@ -35,6 +37,7 @@ const stages: Stage[] = [
   },
   {
     title: "AI Weather Report",
+    status: "live",
     kicker: "Conditions before trades",
     body: "Volatility, opportunity, and direction scored before the open — every setup framed by the day's actual conditions.",
     vignette: (
@@ -65,6 +68,7 @@ const stages: Stage[] = [
   },
   {
     title: "Setup Engine",
+    status: "live",
     kicker: "Finished trade cards",
     body: "Entries, targets, time frames, and the reasoning in plain English. If it can't be explained, it doesn't publish.",
     vignette: (
@@ -86,6 +90,7 @@ const stages: Stage[] = [
   },
   {
     title: "Flow Scanner",
+    status: "live",
     kicker: "5,400+ symbols, ranked",
     body: "Unusual options activity, relative volume, and momentum distilled into one flow score across the scan universe.",
     vignette: (
@@ -111,6 +116,7 @@ const stages: Stage[] = [
   },
   {
     title: "Insider Monitor",
+    status: "live",
     kicker: "Filings that matter",
     body: "Open-market insider buying scored for size, clustering, and pattern breaks — separated from the administrative noise.",
     vignette: (
@@ -132,6 +138,7 @@ const stages: Stage[] = [
   },
   {
     title: "Chatter Engine",
+    status: "soon",
     kicker: "Crowd positioning, read",
     body: "X and Reddit monitored at scale, reduced to a sentiment read per ticker — without the doomscrolling.",
     vignette: (
@@ -196,6 +203,15 @@ export default function SystemsShowcase() {
           <span className="sys-node">
             <span className="sys-dot">{String(i + 1).padStart(2, "0")}</span>
             <span className="sys-label">{s.title}</span>
+            <span
+              className={`ml-2 rounded-full px-1.5 py-0.5 font-display text-[9px] font-bold uppercase tracking-wider ${
+                s.status === "live"
+                  ? "bg-accent text-bg"
+                  : "border border-line text-ink-3"
+              }`}
+            >
+              {s.status === "live" ? "Live" : "Soon"}
+            </span>
           </span>
           <span className="sys-card block">
             <span className="sys-kicker block">{s.kicker}</span>

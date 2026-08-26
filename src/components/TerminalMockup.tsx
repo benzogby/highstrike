@@ -1,8 +1,16 @@
-// Mockup of the HighStrike AI Terminal "weather report" view — stands in
-// for the product video on the source page. Values are illustrative; the
-// date renders client-side so it is always current.
+// The HighStrike AI Terminal "weather report" card. When the homepage passes
+// a real published report it renders live values; otherwise it falls back to
+// illustrative gauges with a client-side current date.
 
 import { NowDateLong } from "@/components/Now";
+
+export type PublicReport = {
+  volatility: number;
+  opportunity: number;
+  direction: number;
+  summary: string;
+  dateLabel: string;
+};
 
 type GaugeProps = {
   label: string;
@@ -63,7 +71,7 @@ const snapshot = [
   { symbol: "VIX", note: "Compressing — supportive of longs", dir: "down" as const },
 ];
 
-export default function TerminalMockup() {
+export default function TerminalMockup({ report }: { report?: PublicReport | null }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-line bg-panel card-shadow">
       {/* window chrome */}
@@ -76,22 +84,37 @@ export default function TerminalMockup() {
         <span className="font-display text-xs font-semibold tracking-wide text-ink-2">
           HighStrike AI Terminal
         </span>
-        <span className="font-mono-nums text-xs text-ink-3">LIVE</span>
+        {report ? (
+          <span className="flex items-center gap-1.5 font-mono-nums text-xs text-accent">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" aria-hidden="true" />
+            LIVE
+          </span>
+        ) : (
+          <span className="font-mono-nums text-xs text-ink-3">PREVIEW</span>
+        )}
       </div>
 
       <div className="p-6">
         <p className="font-display text-lg font-semibold">
-          <NowDateLong />
+          {report ? report.dateLabel : <NowDateLong />}
         </p>
         <p className="mt-0.5 text-xs text-ink-3">
-          Today&apos;s HighStrike AI Weather Report
+          {report
+            ? "Today's published AI Weather Report — this is the real one"
+            : "Today's HighStrike AI Weather Report"}
         </p>
 
         <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <Gauge label="Volatility" value={82} />
-          <Gauge label="Opportunity" value={55} />
-          <Gauge label="Direction" value={35} />
+          <Gauge label="Volatility" value={report?.volatility ?? 82} />
+          <Gauge label="Opportunity" value={report?.opportunity ?? 55} />
+          <Gauge label="Direction" value={report?.direction ?? 35} />
         </div>
+
+        {report?.summary && (
+          <p className="mt-4 rounded-xl border border-line bg-panel-2 px-4 py-3 text-sm leading-relaxed text-ink-2">
+            {report.summary}
+          </p>
+        )}
 
         <p className="mt-6 text-[11px] uppercase tracking-wider text-ink-3">
           Market snapshot
