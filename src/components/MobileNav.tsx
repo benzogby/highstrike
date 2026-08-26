@@ -62,9 +62,9 @@ export default function MobileNav({
             type="button"
             aria-label="Close navigation"
             onClick={() => setOpen(false)}
-            className="absolute inset-0 bg-bg/60 backdrop-blur-sm"
+            className="anim-fade absolute inset-0 bg-bg/60 backdrop-blur-sm"
           />
-          <div className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col border-r border-line bg-panel shadow-2xl">
+          <div className="anim-slide-in absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col border-r border-line bg-panel shadow-2xl">
             <div className="flex items-center justify-between border-b border-line px-4 py-4">
               <span className="font-display text-base font-bold">Menu</span>
               <button

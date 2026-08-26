@@ -63,7 +63,7 @@ export default async function InsidersPage() {
       displayName={profile?.name}
       avatarUrl={profile?.avatar_url}
     >
-      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+      <div className="anim-rise flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
         <div>
           <p className="text-xs uppercase tracking-wider text-ink-3">Insider Feed</p>
           <h1 className="mt-1 font-display text-2xl font-bold sm:text-3xl">
@@ -95,7 +95,7 @@ export default async function InsidersPage() {
         </div>
       )}
 
-      <div className="mt-6 overflow-x-auto rounded-2xl border border-line bg-panel">
+      <div className="anim-rise mt-6 overflow-x-auto rounded-2xl border border-line bg-panel" style={{ "--rise-delay": "90ms" } as React.CSSProperties}>
         <table className="w-full min-w-[640px] text-sm">
           <thead>
             <tr className="border-b border-line text-left text-[10px] uppercase tracking-wider text-ink-3">

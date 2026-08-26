@@ -84,7 +84,7 @@ export default async function SymbolPage({
       avatarUrl={profile?.avatar_url}
     >
       {/* Header */}
-      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+      <div className="anim-rise flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
         <div>
           <p className="text-xs uppercase tracking-wider text-ink-3">
             {symbol.exchange ?? "US"} · {symbol.sector ?? "Equity"}
@@ -110,7 +110,7 @@ export default async function SymbolPage({
       </div>
 
       {/* Chart */}
-      <div className="mt-6">
+      <div className="anim-rise mt-6" style={{ "--rise-delay": "90ms" } as React.CSSProperties}>
         <PriceChart ticker={ticker} />
       </div>
 

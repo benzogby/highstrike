@@ -151,9 +151,9 @@ export default function CommandBar({ isAdmin }: { isAdmin: boolean }) {
               type="button"
               aria-label="Close search"
               onClick={() => setOpen(false)}
-              className="absolute inset-0 bg-bg/60 backdrop-blur-sm"
+              className="anim-fade absolute inset-0 bg-bg/60 backdrop-blur-sm"
             />
-            <div className="absolute left-1/2 top-24 w-[92vw] max-w-xl -translate-x-1/2 overflow-hidden rounded-2xl border border-line bg-panel shadow-2xl">
+            <div className="anim-pop absolute left-1/2 top-24 w-[92vw] max-w-xl -translate-x-1/2 overflow-hidden rounded-2xl border border-line bg-panel shadow-2xl">
               <input
                 ref={inputRef}
                 value={query}

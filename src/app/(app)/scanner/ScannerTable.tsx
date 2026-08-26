@@ -191,6 +191,16 @@ export default function ScannerTable() {
                 </td>
               </tr>
             ))}
+            {sorted == null &&
+              [0, 1, 2, 3, 4, 5].map((i) => (
+                <tr key={`sk-${i}`}>
+                  {COLS.map((c) => (
+                    <td key={c.key} className="px-4 py-3">
+                      <span className="skeleton block h-4 w-full rounded" />
+                    </td>
+                  ))}
+                </tr>
+              ))}
             {sorted && sorted.length === 0 && (
               <tr>
                 <td colSpan={COLS.length} className="px-4 py-8 text-center text-sm text-ink-3">

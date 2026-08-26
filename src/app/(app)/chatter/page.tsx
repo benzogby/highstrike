@@ -52,7 +52,7 @@ export default async function ChatterPage() {
       displayName={profile?.name}
       avatarUrl={profile?.avatar_url}
     >
-      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+      <div className="anim-rise flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
         <div>
           <p className="text-xs uppercase tracking-wider text-ink-3">
             Chatter Engine{dayLabel ? ` — ${dayLabel}` : ""}
@@ -66,7 +66,7 @@ export default async function ChatterPage() {
         </p>
       </div>
 
-      <div className="mt-6 overflow-x-auto rounded-2xl border border-line bg-panel">
+      <div className="anim-rise mt-6 overflow-x-auto rounded-2xl border border-line bg-panel" style={{ "--rise-delay": "90ms" } as React.CSSProperties}>
         <table className="w-full min-w-[640px] text-sm">
           <thead>
             <tr className="border-b border-line text-left text-[10px] uppercase tracking-wider text-ink-3">

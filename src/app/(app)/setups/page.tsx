@@ -99,7 +99,7 @@ export default async function SetupsPage() {
       displayName={profile?.name}
       avatarUrl={profile?.avatar_url}
     >
-      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+      <div className="anim-rise flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
         <div>
           <p className="text-xs uppercase tracking-wider text-ink-3">Setup Engine</p>
           <h1 className="mt-1 font-display text-2xl font-bold sm:text-3xl">
@@ -112,7 +112,7 @@ export default async function SetupsPage() {
       </div>
 
       {/* Scoreboard */}
-      <div className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line lg:grid-cols-4">
+      <div className="anim-rise mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line lg:grid-cols-4" style={{ "--rise-delay": "90ms" } as React.CSSProperties}>
         {tiles.map((t) => (
           <div key={t.label} className="bg-panel px-5 py-5">
             <p className="font-display text-2xl font-bold text-accent">{t.value}</p>

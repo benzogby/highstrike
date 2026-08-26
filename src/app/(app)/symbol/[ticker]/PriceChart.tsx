@@ -111,8 +111,14 @@ export default function PriceChart({ ticker }: { ticker: string }) {
       </div>
 
       {!points && (
-        <div className="flex h-64 items-center justify-center text-sm text-ink-3">
-          Loading chart…
+        <div className="flex h-64 items-end gap-1 px-6 pb-8" aria-label="Loading chart">
+          {[38, 52, 44, 60, 50, 66, 58, 72, 62, 78, 70, 84].map((h, i) => (
+            <span
+              key={i}
+              className="skeleton w-full rounded-t"
+              style={{ height: `${h}%` }}
+            />
+          ))}
         </div>
       )}
       {points && !view && (
@@ -151,9 +157,18 @@ export default function PriceChart({ ticker }: { ticker: string }) {
               </text>
             </g>
           ))}
-          <path d={view.area} fill="var(--color-accent)" opacity="0.1" />
           <path
+            key={`area-${range}`}
+            className="chart-area-fade"
+            d={view.area}
+            fill="var(--color-accent)"
+            opacity="0.1"
+          />
+          <path
+            key={`line-${range}`}
+            className="chart-draw"
             d={view.line}
+            pathLength={1}
             fill="none"
             stroke="var(--color-accent)"
             strokeWidth="2"
@@ -174,18 +189,36 @@ export default function PriceChart({ ticker }: { ticker: string }) {
           />
           {hoverPt && hover != null && (
             <g>
-              <line
-                x1={view.x(hover)}
-                x2={view.x(hover)}
-                y1={PAD.top}
-                y2={H - PAD.bottom}
-                stroke="var(--color-line-strong)"
-                strokeWidth="1"
-              />
-              <circle cx={view.x(hover)} cy={view.y(hoverPt.close)} r="6" fill="var(--color-panel)" />
-              <circle cx={view.x(hover)} cy={view.y(hoverPt.close)} r="4" fill="var(--color-accent)" />
+              {/* Crosshair glides between points instead of snapping */}
               <g
-                transform={`translate(${Math.min(view.x(hover) + 10, W - 150)}, ${PAD.top + 4})`}
+                style={{
+                  transform: `translateX(${view.x(hover)}px)`,
+                  transition: "transform 70ms ease-out",
+                }}
+              >
+                <line
+                  x1={0}
+                  x2={0}
+                  y1={PAD.top}
+                  y2={H - PAD.bottom}
+                  stroke="var(--color-line-strong)"
+                  strokeWidth="1"
+                />
+              </g>
+              <g
+                style={{
+                  transform: `translate(${view.x(hover)}px, ${view.y(hoverPt.close)}px)`,
+                  transition: "transform 70ms ease-out",
+                }}
+              >
+                <circle r="6" fill="var(--color-panel)" />
+                <circle r="4" fill="var(--color-accent)" />
+              </g>
+              <g
+                style={{
+                  transform: `translate(${Math.min(view.x(hover) + 10, W - 150)}px, ${PAD.top + 4}px)`,
+                  transition: "transform 90ms ease-out",
+                }}
               >
                 <rect width="132" height="40" rx="8" fill="var(--color-panel-2)" stroke="var(--color-line)" />
                 <text x="10" y="17" fontSize="11" fill="var(--color-ink-3)" className="font-mono-nums">
