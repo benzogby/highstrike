@@ -346,14 +346,26 @@ export default function WatchlistPanel({ userId }: { userId: string }) {
                     <Sparkline values={sparks[t]} />
                   </td>
                   <td className="px-5 py-2.5 text-right">
-                    <button
-                      type="button"
-                      onClick={() => removeTicker(t)}
-                      aria-label={`Remove ${t}`}
-                      className="text-xs text-ink-3 opacity-0 transition group-hover:opacity-100 hover:text-down"
-                    >
-                      ✕
-                    </button>
+                    <span className="inline-flex items-center gap-3">
+                      <Link
+                        href={`/symbol/${t}#alerts`}
+                        aria-label={`Set alert on ${t}`}
+                        title="Set price alert"
+                        className="text-ink-3 opacity-0 transition group-hover:opacity-100 hover:text-accent"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                        </svg>
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => removeTicker(t)}
+                        aria-label={`Remove ${t}`}
+                        className="text-xs text-ink-3 opacity-0 transition group-hover:opacity-100 hover:text-down"
+                      >
+                        ✕
+                      </button>
+                    </span>
                   </td>
                 </tr>
               );
@@ -361,7 +373,28 @@ export default function WatchlistPanel({ userId }: { userId: string }) {
             {tickers.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-5 py-8 text-center text-sm text-ink-3">
-                  No symbols yet — add your first ticker above.
+                  <p>No symbols yet — add a ticker above, or start with the classics:</p>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={async () => {
+                      if (!activeId) return;
+                      setBusy(true);
+                      await supabaseBrowser()
+                        .from("watchlist_items")
+                        .insert(
+                          ["SPY", "QQQ", "NVDA", "AAPL", "TSLA"].map((t) => ({
+                            watchlist_id: activeId,
+                            ticker: t,
+                          }))
+                        );
+                      setBusy(false);
+                      loadItems();
+                    }}
+                    className="mt-3 rounded-lg bg-accent px-4 py-2 font-display text-sm font-semibold text-bg transition hover:bg-accent-2 disabled:opacity-60"
+                  >
+                    {busy ? "Adding…" : "Add SPY, QQQ, NVDA, AAPL, TSLA"}
+                  </button>
                 </td>
               </tr>
             )}

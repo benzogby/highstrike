@@ -74,7 +74,7 @@ export default function AlertPanel({
   }
 
   return (
-    <section className="mt-10 rounded-2xl border border-line bg-panel p-6">
+    <section id="alerts" className="mt-10 scroll-mt-24 rounded-2xl border border-line bg-panel p-6">
       <div className="flex items-baseline justify-between">
         <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-ink-2">
           Price alerts — ${ticker}

@@ -120,14 +120,26 @@ export default function ScannerTable() {
           </thead>
           <tbody className="divide-y divide-line">
             {(sorted ?? []).map((r) => (
-              <tr key={r.ticker} className="transition hover:bg-panel-2">
+              <tr key={r.ticker} className="group transition hover:bg-panel-2">
                 <td className="px-4 py-2.5">
-                  <Link
-                    href={`/symbol/${r.ticker}`}
-                    className="font-display font-semibold transition hover:text-accent"
-                  >
-                    {r.ticker}
-                  </Link>
+                  <span className="inline-flex items-center gap-2">
+                    <Link
+                      href={`/symbol/${r.ticker}`}
+                      className="font-display font-semibold transition hover:text-accent"
+                    >
+                      {r.ticker}
+                    </Link>
+                    <Link
+                      href={`/symbol/${r.ticker}#alerts`}
+                      aria-label={`Set alert on ${r.ticker}`}
+                      title="Set price alert"
+                      className="text-ink-3 opacity-0 transition group-hover:opacity-100 hover:text-accent"
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                      </svg>
+                    </Link>
+                  </span>
                   <span className="ml-2 hidden max-w-[160px] truncate align-middle text-xs text-ink-3 lg:inline-block">
                     {r.name}
                   </span>

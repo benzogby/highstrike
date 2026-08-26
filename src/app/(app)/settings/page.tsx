@@ -4,6 +4,7 @@ import { supabaseServer } from "@/lib/supabase/server";
 import AppShell from "@/components/AppShell";
 import { stripeEnabled } from "@/lib/stripe";
 import SettingsForm from "./SettingsForm";
+import AlertsManager from "./AlertsManager";
 
 export const metadata: Metadata = {
   title: "Settings — HighStrike",
@@ -45,7 +46,8 @@ export default async function SettingsPage({
         <p className="text-xs uppercase tracking-wider text-ink-3">Account</p>
         <h1 className="mt-1 font-display text-2xl font-bold sm:text-3xl">Settings</h1>
       </div>
-      <div className="mt-8 max-w-3xl">
+      <div className="mt-8 max-w-3xl space-y-10">
+        <AlertsManager />
         <SettingsForm
           userId={user.id}
           email={user.email ?? ""}
