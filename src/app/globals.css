@@ -258,6 +258,17 @@ body {
   }
 }
 
+/* First-run tour: the spotlighted section rises above the dim backdrop */
+.tour-highlight {
+  position: relative;
+  z-index: 51;
+  background: var(--color-bg);
+  border-radius: 1rem;
+  box-shadow:
+    0 0 0 6px var(--color-bg),
+    0 0 0 8px var(--color-accent);
+}
+
 /* Tactile press — tiny, fast, works everywhere */
 .press {
   transition: transform 0.12s ease;

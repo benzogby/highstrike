@@ -8,6 +8,7 @@ import { NowDateLong, NowGreeting, UpcomingFriday } from "@/components/Now";
 import { fetchMarketNews, newsTime } from "@/lib/news";
 import WatchlistPanel from "./WatchlistPanel";
 import ActivityFeed from "./ActivityFeed";
+import FirstRunTour from "./FirstRunTour";
 
 export const metadata: Metadata = {
   title: "Dashboard — HighStrike",
@@ -23,7 +24,7 @@ export default async function DashboardPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("is_admin, name, avatar_url")
+    .select("is_admin, name, avatar_url, tour_done")
     .eq("id", user.id)
     .single();
   const isAdmin = Boolean(profile?.is_admin);
@@ -99,8 +100,10 @@ export default async function DashboardPage() {
             </p>
           </div>
 
+          <FirstRunTour userId={user.id} show={!profile?.tour_done} />
+
           {/* Weather strip */}
-          <section className="anim-rise mt-8" style={{ "--rise-delay": "80ms" } as React.CSSProperties}>
+          <section id="tour-weather" className="anim-rise mt-8" style={{ "--rise-delay": "80ms" } as React.CSSProperties}>
             <div className="flex items-baseline justify-between">
               <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-ink-2">
                 {reportLabel ? `Weather report — ${reportLabel}` : "Weather report"}
@@ -135,7 +138,7 @@ export default async function DashboardPage() {
 
           <div className="mt-10 grid gap-8 xl:grid-cols-3">
             {/* Setups */}
-            <section className="anim-rise xl:col-span-2" style={{ "--rise-delay": "160ms" } as React.CSSProperties}>
+            <section id="tour-setups" className="anim-rise xl:col-span-2" style={{ "--rise-delay": "160ms" } as React.CSSProperties}>
               <div className="flex items-baseline justify-between">
                 <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-ink-2">
                   {reportLabel ? `Setups — ${reportLabel}` : "Setups"}
@@ -226,7 +229,7 @@ export default async function DashboardPage() {
             </section>
 
             {/* Right rail */}
-            <section className="anim-rise" style={{ "--rise-delay": "240ms" } as React.CSSProperties}>
+            <section id="tour-activity" className="anim-rise" style={{ "--rise-delay": "240ms" } as React.CSSProperties}>
               <div className="flex items-baseline justify-between">
                 <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-ink-2">
                   Activity
