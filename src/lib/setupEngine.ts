@@ -27,6 +27,73 @@ export function etToday(): string {
   return new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
 }
 
+const STOP_PCT = 8; // adverse move that closes a setup as "stopped"
+const HORIZON_DAYS = 10; // calendar days before an open setup expires
+
+function parsePrice(text: string): number | null {
+  const m = text.replace(/,/g, "").match(/([0-9]+(?:\.[0-9]+)?)/);
+  return m ? Number(m[1]) : null;
+}
+
+/**
+ * Grades every open setup against current prices: target hit, stopped out
+ * (±8% adverse), or expired past the horizon. Backfills entry/target prices
+ * for rows published before grading existed.
+ */
+export async function gradeSetups(): Promise<{ graded: number; closed: number }> {
+  const service = supabaseService();
+  const { data: open } = await service
+    .from("setups")
+    .select("id, ticker, direction, report_date, price_target, entry_price, target_price, expires_on")
+    .eq("status", "open");
+  if (!open || open.length === 0) return { graded: 0, closed: 0 };
+
+  const quotes = await fetchQuotes([...new Set(open.map((s) => s.ticker))]);
+  const priceOf = new Map(quotes.map((q) => [q.symbol, q.price]));
+  const today = etToday();
+  let closed = 0;
+
+  for (const s of open) {
+    const price = priceOf.get(s.ticker);
+    if (!price) continue;
+
+    const entry = s.entry_price ?? price;
+    const target = s.target_price ?? parsePrice(s.price_target);
+    const expires =
+      s.expires_on ??
+      new Date(new Date(`${s.report_date}T12:00:00Z`).getTime() + HORIZON_DAYS * 86400000)
+        .toISOString()
+        .slice(0, 10);
+
+    const sign = s.direction === "long" ? 1 : -1;
+    const movePct = ((price - entry) / entry) * 100 * sign;
+
+    let status: "open" | "target_hit" | "stopped" | "expired" = "open";
+    if (target !== null) {
+      if (s.direction === "long" && price >= target) status = "target_hit";
+      if (s.direction === "short" && price <= target) status = "target_hit";
+    }
+    if (status === "open" && movePct <= -STOP_PCT) status = "stopped";
+    if (status === "open" && today > expires) status = "expired";
+
+    const update: Record<string, unknown> = {
+      entry_price: entry,
+      target_price: target,
+      expires_on: expires,
+      current_pct: Math.round(movePct * 100) / 100,
+    };
+    if (status !== "open") {
+      update.status = status;
+      update.result_pct = Math.round(movePct * 100) / 100;
+      update.closed_at = new Date().toISOString();
+      closed++;
+    }
+    await service.from("setups").update(update).eq("id", s.id);
+  }
+
+  return { graded: open.length, closed };
+}
+
 const clamp = (n: number) => Math.max(0, Math.min(100, Math.round(n)));
 
 function heuristic(quotes: Quote[]): Generated {
@@ -184,8 +251,19 @@ export async function generateDaily(force = false): Promise<{
   if (wErr) throw new Error(`weather upsert failed: ${wErr.message}`);
 
   await service.from("setups").delete().eq("report_date", date);
+  const priceOf = new Map(quotes.map((q) => [q.symbol, q.price]));
+  const expiresOn = new Date(Date.now() + HORIZON_DAYS * 86400000)
+    .toISOString()
+    .slice(0, 10);
   const { error: sErr } = await service.from("setups").insert(
-    generated.setups.map((s) => ({ report_date: date, ...s, model: generated.model }))
+    generated.setups.map((s) => ({
+      report_date: date,
+      ...s,
+      model: generated.model,
+      entry_price: priceOf.get(s.ticker) ?? null,
+      target_price: parsePrice(s.price_target),
+      expires_on: expiresOn,
+    }))
   );
   if (sErr) throw new Error(`setups insert failed: ${sErr.message}`);
 

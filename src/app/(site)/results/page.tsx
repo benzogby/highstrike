@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
 import Eyebrow from "@/components/Eyebrow";
+import LiveScoreboard from "./LiveScoreboard";
+
+// The live scoreboard should refresh at least hourly.
+export const revalidate = 3600;
 import CtaBlock from "@/components/CtaBlock";
 
 export const metadata: Metadata = {
@@ -107,6 +111,25 @@ export default function ResultsPage() {
             Metrics computed across published HighStrike AI setups. Past performance
             is not indicative of future results.
           </p>
+        </div>
+      </section>
+
+      {/* Live terminal scoreboard */}
+      <section className="border-t border-line">
+        <div className="mx-auto max-w-5xl px-5 py-20">
+          <div className="flex flex-col items-center text-center">
+            <Eyebrow>Live scoreboard</Eyebrow>
+            <h2 className="font-display text-2xl font-bold uppercase tracking-tight sm:text-3xl">
+              The terminal grades itself
+            </h2>
+            <p className="mt-3 max-w-2xl text-sm text-ink-2">
+              Since August 2026, every setup the AI Terminal publishes is recorded
+              with its entry price and target, then graded automatically against
+              real prices — target hit, stopped, or expired. These numbers update
+              daily and include every loss.
+            </p>
+          </div>
+          <LiveScoreboard />
         </div>
       </section>
 

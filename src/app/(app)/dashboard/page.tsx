@@ -47,22 +47,27 @@ export default async function DashboardPage() {
     ? await supabase
         .from("setups")
         .select(
-          "ticker, direction, justification, entry_criteria, price_target, time_frame, flow_score, symbols(name)"
+          "ticker, direction, justification, entry_criteria, price_target, time_frame, flow_score, status, current_pct, result_pct, symbols(name)"
         )
         .eq("report_date", weather.report_date)
         .order("flow_score", { ascending: false })
     : { data: null };
 
-  const setups = (setupRows ?? []).map((s) => ({
-    ticker: `$${s.ticker}`,
-    name: (s.symbols as unknown as { name: string } | null)?.name ?? s.ticker,
-    direction: s.direction === "long" ? "Long" : "Short",
-    up: s.direction === "long",
-    target: s.price_target,
-    frame: s.time_frame,
-    justification: s.justification,
-    flow: s.flow_score,
-  }));
+  const setups = (setupRows ?? []).map((s) => {
+    const pct = s.status === "open" ? s.current_pct : s.result_pct;
+    return {
+      ticker: `$${s.ticker}`,
+      name: (s.symbols as unknown as { name: string } | null)?.name ?? s.ticker,
+      direction: s.direction === "long" ? "Long" : "Short",
+      up: s.direction === "long",
+      target: s.price_target,
+      frame: s.time_frame,
+      justification: s.justification,
+      flow: s.flow_score,
+      status: s.status as string,
+      pct: pct as number | null,
+    };
+  });
 
   const reportLabel = weather
     ? new Date(`${weather.report_date}T12:00:00Z`).toLocaleDateString("en-US", {
@@ -161,7 +166,24 @@ export default async function DashboardPage() {
                         {s.up ? "▲" : "▼"} {s.direction}
                       </span>
                     </div>
-                    <p className="text-xs text-ink-3">{s.name}</p>
+                    <div className="mt-0.5 flex items-center justify-between">
+                      <p className="text-xs text-ink-3">{s.name}</p>
+                      <span
+                        className={`font-mono-nums text-[11px] ${
+                          s.pct == null
+                            ? "text-ink-3"
+                            : s.pct >= 0
+                              ? "text-up"
+                              : "text-down"
+                        }`}
+                      >
+                        {s.status === "target_hit" && "✓ Target hit "}
+                        {s.status === "stopped" && "✕ Stopped "}
+                        {s.status === "expired" && "Expired "}
+                        {s.pct != null &&
+                          `${s.pct >= 0 ? "+" : ""}${s.pct.toFixed(2)}%${s.status === "open" ? " so far" : ""}`}
+                      </span>
+                    </div>
                     <p className="mt-3 flex-1 text-xs leading-relaxed text-ink-2">
                       {s.justification}
                     </p>

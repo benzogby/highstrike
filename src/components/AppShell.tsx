@@ -6,10 +6,14 @@ import { NowTimeET } from "@/components/Now";
 const nav = [
   {
     label: "Home",
+    key: "home",
+    href: "/dashboard",
     icon: "M3 12l9-9 9 9M5 10v10a1 1 0 001 1h3a1 1 0 001-1v-6h4v6a1 1 0 001 1h3a1 1 0 001-1V10",
   },
   {
     label: "Setups",
+    key: "setups",
+    href: "/setups",
     icon: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z",
   },
   {
@@ -44,7 +48,7 @@ export default function AppShell({
 }: {
   email: string;
   isAdmin: boolean;
-  active: "home" | "admin" | "settings";
+  active: "home" | "setups" | "admin" | "settings";
   displayName?: string | null;
   avatarUrl?: string | null;
   children: React.ReactNode;
@@ -59,8 +63,8 @@ export default function AppShell({
           <BrandMark />
         </Link>
         <nav className="mt-2 flex-1 space-y-1 px-3">
-          {nav.map((n, i) => {
-            const isActive = active === "home" && i === 0;
+          {nav.map((n) => {
+            const isActive = "key" in n && active === n.key;
             return isActive ? (
               <span
                 key={n.label}
@@ -69,10 +73,10 @@ export default function AppShell({
                 <NavIcon d={n.icon} active />
                 {n.label}
               </span>
-            ) : i === 0 ? (
+            ) : "href" in n && n.href ? (
               <Link
                 key={n.label}
-                href="/dashboard"
+                href={n.href}
                 className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-ink-2 transition hover:bg-panel-2 hover:text-ink"
               >
                 <NavIcon d={n.icon} />
