@@ -55,6 +55,7 @@ export default function WatchlistPanel({ userId }: { userId: string }) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [tickers, setTickers] = useState<string[]>([]);
   const [quotes, setQuotes] = useState<Record<string, Quote>>({});
+  const [flash, setFlash] = useState<Record<string, "up" | "down">>({});
   const [sparks, setSparks] = useState<Record<string, number[]>>({});
   const [live, setLive] = useState(false);
   const [query, setQuery] = useState("");
@@ -119,7 +120,21 @@ export default function WatchlistPanel({ userId }: { userId: string }) {
         const data = (await res.json()) as { live: boolean; quotes: Quote[] };
         if (!alive) return;
         setLive(Boolean(data.live));
-        setQuotes(Object.fromEntries(data.quotes.map((q) => [q.symbol, q])));
+        setQuotes((prev) => {
+          // Flash cells whose price actually moved since the last refresh.
+          const changes: Record<string, "up" | "down"> = {};
+          for (const q of data.quotes) {
+            const old = prev[q.symbol]?.price;
+            if (old != null && q.price !== old) {
+              changes[q.symbol] = q.price > old ? "up" : "down";
+            }
+          }
+          if (Object.keys(changes).length > 0) {
+            setFlash(changes);
+            setTimeout(() => alive && setFlash({}), 950);
+          }
+          return Object.fromEntries(data.quotes.map((q) => [q.symbol, q]));
+        });
       } catch {
         // keep last quotes
       }
@@ -332,7 +347,11 @@ export default function WatchlistPanel({ userId }: { userId: string }) {
                       {t}
                     </Link>
                   </td>
-                  <td className="px-3 py-2.5 text-right font-mono-nums text-ink-2">
+                  <td
+                    className={`px-3 py-2.5 text-right font-mono-nums text-ink-2 ${
+                      flash[t] === "up" ? "flash-up" : flash[t] === "down" ? "flash-down" : ""
+                    }`}
+                  >
                     {q ? q.price.toFixed(2) : "—"}
                   </td>
                   <td
@@ -370,7 +389,17 @@ export default function WatchlistPanel({ userId }: { userId: string }) {
                 </tr>
               );
             })}
-            {tickers.length === 0 && (
+            {lists === null &&
+              [0, 1, 2].map((i) => (
+                <tr key={`sk-${i}`}>
+                  {[0, 1, 2, 3, 4].map((j) => (
+                    <td key={j} className="px-5 py-3">
+                      <span className="skeleton block h-4 w-full max-w-24 rounded" />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            {lists !== null && tickers.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-5 py-8 text-center text-sm text-ink-3">
                   <p>No symbols yet — add a ticker above, or start with the classics:</p>
@@ -391,7 +420,7 @@ export default function WatchlistPanel({ userId }: { userId: string }) {
                       setBusy(false);
                       loadItems();
                     }}
-                    className="mt-3 rounded-lg bg-accent px-4 py-2 font-display text-sm font-semibold text-bg transition hover:bg-accent-2 disabled:opacity-60"
+                    className="press mt-3 rounded-lg bg-accent px-4 py-2 font-display text-sm font-semibold text-bg transition hover:bg-accent-2 disabled:opacity-60"
                   >
                     {busy ? "Adding…" : "Add SPY, QQQ, NVDA, AAPL, TSLA"}
                   </button>

@@ -3,6 +3,11 @@
 // illustrative gauges with a client-side current date.
 
 import { NowDateLong } from "@/components/Now";
+import Gauge from "@/components/Gauge";
+
+// Re-exported so existing `import { Gauge } from "@/components/TerminalMockup"`
+// call sites keep working after the animated extraction.
+export { default as Gauge } from "@/components/Gauge";
 
 export type PublicReport = {
   volatility: number;
@@ -12,58 +17,6 @@ export type PublicReport = {
   dateLabel: string;
 };
 
-type GaugeProps = {
-  label: string;
-  value: number;
-};
-
-// Semicircular meter: track + value arc + needle, value 0–100.
-export function Gauge({ label, value }: GaugeProps) {
-  const R = 44;
-  const CX = 56;
-  const CY = 56;
-  const angle = Math.PI * (1 - value / 100);
-  const nx = CX + (R - 10) * Math.cos(angle);
-  const ny = CY - (R - 10) * Math.sin(angle);
-  const circumference = Math.PI * R;
-  const filled = (value / 100) * circumference;
-
-  return (
-    <div className="flex flex-col items-center gap-1 rounded-xl border border-line bg-panel-2 px-4 pb-4 pt-3">
-      <div className="flex w-full items-center justify-between gap-4">
-        <span className="text-[10px] uppercase tracking-wider text-ink-3">{label}</span>
-        <span className="font-mono-nums text-sm text-accent">{value}</span>
-      </div>
-      <svg width="112" height="64" viewBox="0 0 112 64" aria-hidden="true">
-        <path
-          d={`M ${CX - R} ${CY} A ${R} ${R} 0 0 1 ${CX + R} ${CY}`}
-          fill="none"
-          stroke="var(--color-line-strong)"
-          strokeWidth="6"
-          strokeLinecap="round"
-        />
-        <path
-          d={`M ${CX - R} ${CY} A ${R} ${R} 0 0 1 ${CX + R} ${CY}`}
-          fill="none"
-          stroke="var(--color-accent)"
-          strokeWidth="6"
-          strokeLinecap="round"
-          strokeDasharray={`${filled} ${circumference}`}
-        />
-        <line
-          x1={CX}
-          y1={CY}
-          x2={nx}
-          y2={ny}
-          stroke="var(--color-ink)"
-          strokeWidth="2"
-          strokeLinecap="round"
-        />
-        <circle cx={CX} cy={CY} r="3.5" fill="var(--color-ink)" />
-      </svg>
-    </div>
-  );
-}
 
 const snapshot = [
   { symbol: "S&P 500", note: "Grinding higher into month-end", dir: "up" as const },

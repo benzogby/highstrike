@@ -56,8 +56,12 @@ export default function ActivityFeed() {
       )}
       {events != null && events.length > 0 && (
         <ul className="divide-y divide-line">
-          {events.map((e) => (
-            <li key={e.id} className="flex items-start gap-3 px-5 py-3.5">
+          {events.map((e, i) => (
+            <li
+              key={e.id}
+              className="anim-rise flex items-start gap-3 px-5 py-3.5"
+              style={{ "--rise-delay": `${Math.min(i * 50, 350)}ms` } as React.CSSProperties}
+            >
               <span
                 className={`mt-1.5 h-1.5 w-1.5 flex-none rounded-full ${
                   e.kind === "alert_fired" || e.kind === "report_published"

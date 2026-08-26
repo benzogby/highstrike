@@ -113,7 +113,7 @@ export default function AlertPanel({
         <button
           type="submit"
           disabled={busy}
-          className="rounded-lg bg-accent px-4 py-1.5 font-display text-sm font-semibold text-bg transition hover:bg-accent-2 disabled:opacity-60"
+          className="press rounded-lg bg-accent px-4 py-1.5 font-display text-sm font-semibold text-bg transition hover:bg-accent-2 disabled:opacity-60"
         >
           {busy ? "Saving…" : "Set alert"}
         </button>

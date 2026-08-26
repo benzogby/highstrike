@@ -90,6 +90,86 @@ body {
   );
 }
 
+/* ————— Motion system (all entrance/feedback motion is gated on
+   prefers-reduced-motion; without it, content renders instantly) ————— */
+
+@media (prefers-reduced-motion: no-preference) {
+  .anim-rise {
+    opacity: 0;
+    transform: translateY(14px);
+    animation: hs-rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    animation-delay: var(--rise-delay, 0ms);
+  }
+
+  .flash-up {
+    animation: hs-flash-up 0.9s ease-out;
+  }
+
+  .flash-down {
+    animation: hs-flash-down 0.9s ease-out;
+  }
+
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      var(--color-panel-2) 25%,
+      var(--color-line) 50%,
+      var(--color-panel-2) 75%
+    );
+    background-size: 200% 100%;
+    animation: hs-shimmer 1.4s linear infinite;
+  }
+
+  .card-lift {
+    transition:
+      transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+      border-color 0.18s ease,
+      box-shadow 0.18s ease;
+  }
+  .card-lift:hover {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes hs-rise {
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes hs-flash-up {
+  0% {
+    background-color: color-mix(in oklab, var(--color-up) 20%, transparent);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+@keyframes hs-flash-down {
+  0% {
+    background-color: color-mix(in oklab, var(--color-down) 20%, transparent);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+@keyframes hs-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* Tactile press — tiny, fast, works everywhere */
+.press {
+  transition: transform 0.12s ease;
+}
+.press:active {
+  transform: scale(0.97);
+}
+
 @keyframes ticker-scroll {
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }

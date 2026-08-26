@@ -84,7 +84,7 @@ export default async function DashboardPage() {
     >
       
           {/* Greeting */}
-          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+          <div className="anim-rise flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
             <div>
               <p className="text-xs uppercase tracking-wider text-ink-3">
                 <NowDateLong />
@@ -100,7 +100,7 @@ export default async function DashboardPage() {
           </div>
 
           {/* Weather strip */}
-          <section className="mt-8">
+          <section className="anim-rise mt-8" style={{ "--rise-delay": "80ms" } as React.CSSProperties}>
             <div className="flex items-baseline justify-between">
               <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-ink-2">
                 {reportLabel ? `Weather report — ${reportLabel}` : "Weather report"}
@@ -135,7 +135,7 @@ export default async function DashboardPage() {
 
           <div className="mt-10 grid gap-8 xl:grid-cols-3">
             {/* Setups */}
-            <section className="xl:col-span-2">
+            <section className="anim-rise xl:col-span-2" style={{ "--rise-delay": "160ms" } as React.CSSProperties}>
               <div className="flex items-baseline justify-between">
                 <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-ink-2">
                   {reportLabel ? `Setups — ${reportLabel}` : "Setups"}
@@ -153,7 +153,7 @@ export default async function DashboardPage() {
                 {setups.map((s) => (
                   <div
                     key={s.ticker}
-                    className="flex flex-col rounded-2xl border border-line bg-panel p-5 transition hover:border-accent/40"
+                    className="card-lift flex flex-col rounded-2xl border border-line bg-panel p-5 hover:border-accent/40 hover:shadow-lg"
                   >
                     <div className="flex items-center justify-between">
                       <Link
@@ -226,7 +226,7 @@ export default async function DashboardPage() {
             </section>
 
             {/* Right rail */}
-            <section>
+            <section className="anim-rise" style={{ "--rise-delay": "240ms" } as React.CSSProperties}>
               <div className="flex items-baseline justify-between">
                 <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-ink-2">
                   Activity
