@@ -1,12 +1,42 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { fetchQuotes, type Quote } from "@/lib/quotes";
+import { fetchQuotes } from "@/lib/quotes";
+import { computeScan, type ScanRow } from "@/lib/scanner";
 import { supabaseService } from "@/lib/stripe";
 import { recordActivity } from "@/lib/alerts";
 
-// Daily generation of the market weather report + setup cards. Uses Claude
-// (claude-opus-5) when ANTHROPIC_API_KEY is configured; otherwise falls back
-// to a deterministic heuristic derived from the same quote data, so the
-// pipeline publishes real database-backed content in every environment.
+// Daily generation of the market weather report + setup cards. Cross-system
+// by design: generation consumes the terminal's own signals — scanner flow
+// scores (day momentum, range position, gaps, 5d trend) and recent SEC
+// insider activity — via Claude (claude-opus-5) when ANTHROPIC_API_KEY is
+// configured, else a deterministic heuristic over the same signals.
+
+/** Scanner row enriched with 14-day insider aggregates for the ticker. */
+export type EnrichedRow = ScanRow & {
+  insBuyers: number;
+  insBuyValue: number;
+  insSellers: number;
+  insSellValue: number;
+};
+
+function insiderNote(r: EnrichedRow): string | null {
+  if (r.insBuyers === 0 && r.insSellers === 0) return null;
+  const parts: string[] = [];
+  if (r.insBuyers > 0) {
+    parts.push(
+      `${r.insBuyers} insider buy${r.insBuyers > 1 ? "s" : ""}${
+        r.insBuyValue > 0 ? ` ($${Math.round(r.insBuyValue).toLocaleString()})` : ""
+      }`
+    );
+  }
+  if (r.insSellers > 0) {
+    parts.push(
+      `${r.insSellers} insider sell${r.insSellers > 1 ? "s" : ""}${
+        r.insSellValue > 0 ? ` ($${Math.round(r.insSellValue).toLocaleString()})` : ""
+      }`
+    );
+  }
+  return `${parts.join(", ")} filed in the last 14 days`;
+}
 
 export type GeneratedSetup = {
   ticker: string;
@@ -136,8 +166,8 @@ export async function gradeSetups(): Promise<{ graded: number; closed: number }>
 
 const clamp = (n: number) => Math.max(0, Math.min(100, Math.round(n)));
 
-function heuristic(quotes: Quote[]): Generated {
-  const sorted = [...quotes].sort((a, b) => b.changePct - a.changePct);
+function heuristic(quotes: EnrichedRow[]): Generated {
+  const byScore = [...quotes].sort((a, b) => b.score - a.score);
   const gainers = quotes.filter((q) => q.changePct > 0).length;
   const avgAbs = quotes.reduce((s, q) => s + Math.abs(q.changePct), 0) / (quotes.length || 1);
 
@@ -145,50 +175,80 @@ function heuristic(quotes: Quote[]): Generated {
   const volatility = clamp(avgAbs * 28);
   const opportunity = clamp(avgAbs * 18 + Math.abs(direction - 50) * 0.6 + 25);
 
-  const target = (q: Quote, up: boolean) =>
+  const target = (q: EnrichedRow, up: boolean) =>
     `$${(q.price * (up ? 1.05 : 0.95)).toFixed(2)}`;
 
-  const mk = (q: Quote, dir: "long" | "short", rank: number): GeneratedSetup => ({
-    ticker: q.symbol,
-    direction: dir,
-    justification:
-      dir === "long"
-        ? `${q.symbol} is leading the scan universe at ${q.changePct >= 0 ? "+" : ""}${q.changePct.toFixed(2)}% with breadth ${gainers}/${quotes.length} positive — momentum continuation setup while the day's leaders hold their gains.`
-        : `${q.symbol} is the weakest name in the universe at ${q.changePct.toFixed(2)}% against ${gainers}/${quotes.length} positive breadth — relative-weakness fade while rallies keep getting sold.`,
-    entry_criteria: [
-      dir === "long"
-        ? `Price holds above ${target(q, false)} on a 15-minute close`
-        : `Price fails below ${target(q, true)} on a 15-minute close`,
-      "Relative volume above 1.5× at trigger time",
-      "Broad-market direction score unchanged or improving",
-    ],
-    price_target: target(q, dir === "long"),
-    time_frame: "3-5 days",
-    flow_score: clamp(78 - rank * 9 + Math.abs(q.changePct) * 3),
-  });
+  const mk = (q: EnrichedRow, dir: "long" | "short"): GeneratedSetup => {
+    const ins = insiderNote(q);
+    const signalBits = [
+      `flow score ${q.score}`,
+      q.rangePos != null
+        ? `closing at ${q.rangePos.toFixed(2)} of the day's range`
+        : null,
+      q.mom5d != null
+        ? `${q.mom5d >= 0 ? "+" : ""}${q.mom5d.toFixed(1)}% over 5 sessions`
+        : null,
+    ].filter(Boolean);
+    const insiderBoost = dir === "long" ? Math.min(q.insBuyers * 6, 12) : 0;
+    return {
+      ticker: q.ticker,
+      direction: dir,
+      justification:
+        dir === "long"
+          ? `${q.ticker} tops the scanner (${signalBits.join(", ")}) at ${q.changePct >= 0 ? "+" : ""}${q.changePct.toFixed(2)}% with breadth ${gainers}/${quotes.length} positive${ins ? `, and ${ins}` : ""} — momentum continuation while the leaders hold.`
+          : `${q.ticker} sits at the bottom of the scanner (${signalBits.join(", ")}) at ${q.changePct.toFixed(2)}% against ${gainers}/${quotes.length} positive breadth${ins ? `, with ${ins}` : ""} — relative-weakness fade while rallies keep getting sold.`,
+      entry_criteria: [
+        dir === "long"
+          ? `Price holds above ${target(q, false)} on a 15-minute close`
+          : `Price fails below ${target(q, true)} on a 15-minute close`,
+        "Relative volume above 1.5× at trigger time",
+        "Broad-market direction score unchanged or improving",
+      ],
+      price_target: target(q, dir === "long"),
+      time_frame: "3-5 days",
+      flow_score: clamp(q.score + insiderBoost),
+    };
+  };
 
   const setups: GeneratedSetup[] = [];
-  if (sorted[0]) setups.push(mk(sorted[0], "long", 0));
-  if (sorted[1]) setups.push(mk(sorted[1], "long", 1));
-  const last = sorted[sorted.length - 1];
-  if (last && last.changePct < 0) setups.push(mk(last, "short", 2));
+  if (byScore[0]) setups.push(mk(byScore[0], "long"));
+  if (byScore[1]) setups.push(mk(byScore[1], "long"));
+  const weakest = byScore[byScore.length - 1];
+  if (weakest && weakest.score <= 45 && weakest.changePct < 0) {
+    setups.push(mk(weakest, "short"));
+  }
+
+  const clusterTickers = quotes
+    .filter((q) => q.insBuyers >= 2)
+    .map((q) => `$${q.ticker}`);
 
   return {
     weather: {
       volatility,
       opportunity,
       direction,
-      summary: `${gainers} of ${quotes.length} tracked names positive; average absolute move ${avgAbs.toFixed(2)}%. ${direction >= 50 ? "Constructive tape — favor momentum continuation." : "Defensive tape — be selective and size down."}`,
+      summary: `${gainers} of ${quotes.length} tracked names positive; average absolute move ${avgAbs.toFixed(2)}%. ${direction >= 50 ? "Constructive tape — favor momentum continuation." : "Defensive tape — be selective and size down."}${clusterTickers.length ? ` Insider buying clusters active on ${clusterTickers.join(", ")}.` : ""}`,
     },
     setups,
     model: "heuristic",
   };
 }
 
-async function claudeGenerate(quotes: Quote[]): Promise<Generated> {
+async function claudeGenerate(quotes: EnrichedRow[]): Promise<Generated> {
   const client = new Anthropic();
   const quoteLines = quotes
-    .map((q) => `${q.symbol}: $${q.price.toFixed(2)} (${q.changePct >= 0 ? "+" : ""}${q.changePct.toFixed(2)}%)`)
+    .map((q) => {
+      const bits = [
+        `$${q.price.toFixed(2)}`,
+        `${q.changePct >= 0 ? "+" : ""}${q.changePct.toFixed(2)}% today`,
+        `flow ${q.score} (${q.bias})`,
+        q.rangePos != null ? `range-pos ${q.rangePos.toFixed(2)}` : null,
+        q.gapPct != null ? `gap ${q.gapPct >= 0 ? "+" : ""}${q.gapPct.toFixed(2)}%` : null,
+        q.mom5d != null ? `5d ${q.mom5d >= 0 ? "+" : ""}${q.mom5d.toFixed(2)}%` : null,
+        insiderNote(q),
+      ].filter(Boolean);
+      return `${q.ticker}: ${bits.join(" | ")}`;
+    })
     .join("\n");
 
   const response = await client.messages.create({
@@ -197,6 +257,13 @@ async function claudeGenerate(quotes: Quote[]): Promise<Generated> {
     system:
       "You are HighStrike AI, generating the daily pre-market report for an options-trading terminal. " +
       "You produce market commentary and illustrative trade setups — never guarantees. " +
+      "Each universe line carries the terminal's own signals: flow score 0-100 with a long/short/neutral bias " +
+      "(computed from day momentum, position in the day's range, gap follow-through, and 5-session trend), " +
+      "plus SEC Form 4 insider activity from the last 14 days where any exists. " +
+      "Weigh these signals and CITE the specific ones that drive each pick in its justification " +
+      "(e.g. the flow score, range position, or insider buying). Insider buying clusters are meaningful; " +
+      "lone routine sells usually are not. Keep your flow_score within about ±10 of the scanner's, " +
+      "adjusting for signal quality. " +
       "Respond with ONLY a JSON object, no markdown fences, matching exactly: " +
       '{"weather":{"volatility":0-100,"opportunity":0-100,"direction":0-100,"summary":"1-2 sentences"},' +
       '"setups":[{"ticker":"...","direction":"long"|"short","justification":"2 sentences of concrete reasoning tied to the data","entry_criteria":["3 specific trigger conditions"],"price_target":"$123.45","time_frame":"e.g. 3-5 days","flow_score":0-100}]} ' +
@@ -204,7 +271,7 @@ async function claudeGenerate(quotes: Quote[]): Promise<Generated> {
     messages: [
       {
         role: "user",
-        content: `Today's scan universe with last price and day change:\n${quoteLines}\n\nGenerate today's weather report and 3 setups.`,
+        content: `Today's scan universe with the terminal's signals:\n${quoteLines}\n\nGenerate today's weather report and 3 setups.`,
       },
     ],
   });
@@ -219,7 +286,7 @@ async function claudeGenerate(quotes: Quote[]): Promise<Generated> {
     .trim();
 
   const parsed = JSON.parse(text) as Generated;
-  const known = new Set(quotes.map((q) => q.symbol));
+  const known = new Set(quotes.map((q) => q.ticker));
   const setups = (parsed.setups ?? [])
     .filter(
       (s) =>
@@ -263,13 +330,43 @@ export async function generateDaily(force = false): Promise<{
   const dow = new Date(`${date}T12:00:00Z`).getUTCDay();
   if ((dow === 0 || dow === 6) && !force) return { status: "skipped_weekend", date };
 
-  const { data: universe } = await service
-    .from("symbols")
-    .select("ticker")
-    .eq("is_active", true)
-    .limit(40);
-  const tickers = (universe ?? []).map((r) => r.ticker);
-  const quotes = await fetchQuotes(tickers);
+  // Cross-system inputs: the scanner's ranked universe + 14-day insider flow.
+  const { rows: scan } = await computeScan();
+  const since14 = new Date(Date.now() - 14 * 86400000).toISOString().slice(0, 10);
+  const { data: insiderRows } = await service
+    .from("insider_trades")
+    .select("ticker, transaction_code, owner_name, value")
+    .gte("filed_at", since14);
+
+  const insAgg = new Map<
+    string,
+    { buyers: Set<string>; buyValue: number; sellers: Set<string>; sellValue: number }
+  >();
+  for (const t of insiderRows ?? []) {
+    const e =
+      insAgg.get(t.ticker) ??
+      insAgg
+        .set(t.ticker, { buyers: new Set(), buyValue: 0, sellers: new Set(), sellValue: 0 })
+        .get(t.ticker)!;
+    if (t.transaction_code === "P") {
+      e.buyers.add(t.owner_name);
+      e.buyValue += Number(t.value ?? 0);
+    } else {
+      e.sellers.add(t.owner_name);
+      e.sellValue += Number(t.value ?? 0);
+    }
+  }
+
+  const quotes: EnrichedRow[] = scan.map((r) => {
+    const ins = insAgg.get(r.ticker);
+    return {
+      ...r,
+      insBuyers: ins?.buyers.size ?? 0,
+      insBuyValue: ins?.buyValue ?? 0,
+      insSellers: ins?.sellers.size ?? 0,
+      insSellValue: ins?.sellValue ?? 0,
+    };
+  });
 
   let generated: Generated;
   if (process.env.ANTHROPIC_API_KEY) {
@@ -291,7 +388,7 @@ export async function generateDaily(force = false): Promise<{
   if (wErr) throw new Error(`weather upsert failed: ${wErr.message}`);
 
   await service.from("setups").delete().eq("report_date", date);
-  const priceOf = new Map(quotes.map((q) => [q.symbol, q.price]));
+  const priceOf = new Map(quotes.map((q) => [q.ticker, q.price]));
   const expiresOn = new Date(Date.now() + HORIZON_DAYS * 86400000)
     .toISOString()
     .slice(0, 10);
