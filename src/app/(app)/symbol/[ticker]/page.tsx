@@ -61,6 +61,13 @@ export default async function SymbolPage({
         .limit(10),
     ]);
 
+  const { data: insiders } = await supabase
+    .from("insider_trades")
+    .select("accession, filed_at, owner_name, owner_title, transaction_code, shares, value")
+    .eq("ticker", ticker)
+    .order("filed_at", { ascending: false })
+    .limit(8);
+
   if (!symbol) notFound();
   const quote = quoteArr[0];
   const up = (quote?.changePct ?? 0) >= 0;
@@ -179,8 +186,58 @@ export default async function SymbolPage({
         )}
       </section>
 
+      {/* Insider activity */}
+      <section className="mt-10">
+        <div className="flex items-baseline justify-between">
+          <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-ink-2">
+            Insider activity — ${ticker}
+          </h2>
+          <Link
+            href="/insiders"
+            className="text-xs font-semibold text-accent transition hover:text-accent-2"
+          >
+            Full insider feed →
+          </Link>
+        </div>
+        {(insiders ?? []).length === 0 ? (
+          <p className="mt-3 rounded-2xl border border-line bg-panel px-5 py-6 text-center text-sm text-ink-3">
+            No recent Form 4 open-market trades on file for ${ticker}.
+          </p>
+        ) : (
+          <ul className="mt-3 divide-y divide-line overflow-hidden rounded-2xl border border-line bg-panel">
+            {(insiders ?? []).map((t) => (
+              <li
+                key={`${t.accession}-${t.transaction_code}`}
+                className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 text-sm"
+              >
+                <span className="min-w-0">
+                  <span
+                    className={`mr-2 rounded-full px-2 py-0.5 font-display text-[10px] font-bold ${
+                      t.transaction_code === "P" ? "bg-accent text-bg" : "bg-down/90 text-bg"
+                    }`}
+                  >
+                    {t.transaction_code === "P" ? "BUY" : "SELL"}
+                  </span>
+                  <span className="text-ink">{t.owner_name}</span>
+                  {t.owner_title && (
+                    <span className="ml-1.5 text-xs text-ink-3">· {t.owner_title}</span>
+                  )}
+                </span>
+                <span className="font-mono-nums text-xs text-ink-2">
+                  {t.shares != null ? Number(t.shares).toLocaleString() : "—"} sh
+                  {t.value != null && ` · $${Math.round(Number(t.value)).toLocaleString()}`}
+                  {" · "}
+                  {t.filed_at}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
       <p className="mt-8 text-xs text-ink-3">
-        Market commentary, not investment advice. History from end-of-day closes.
+        Market commentary, not investment advice. History from end-of-day closes;
+        insider data from SEC EDGAR Form 4 filings.
       </p>
     </AppShell>
   );

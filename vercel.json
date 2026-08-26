@@ -5,6 +5,10 @@
     {
       "path": "/api/cron/generate-setups",
       "schedule": "30 12 * * *"
+    },
+    {
+      "path": "/api/cron/ingest-insiders",
+      "schedule": "30 22 * * *"
     }
   ]
 }

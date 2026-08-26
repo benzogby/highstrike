@@ -29,6 +29,8 @@ const nav = [
   },
   {
     label: "Insider Feed",
+    key: "insiders",
+    href: "/insiders",
     icon: "M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9",
   },
   {
@@ -51,7 +53,7 @@ export default function AppShell({
 }: {
   email: string;
   isAdmin: boolean;
-  active: "home" | "setups" | "scanner" | "admin" | "settings" | "none";
+  active: "home" | "setups" | "scanner" | "insiders" | "admin" | "settings" | "none";
   displayName?: string | null;
   avatarUrl?: string | null;
   children: React.ReactNode;
