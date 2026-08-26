@@ -5,6 +5,7 @@ import { supabaseServer } from "@/lib/supabase/server";
 import AppShell from "@/components/AppShell";
 import { Gauge } from "@/components/TerminalMockup";
 import { NowDateLong, NowGreeting, UpcomingFriday } from "@/components/Now";
+import { fetchMarketNews, newsTime } from "@/lib/news";
 import WatchlistPanel from "./WatchlistPanel";
 import ActivityFeed from "./ActivityFeed";
 
@@ -62,6 +63,8 @@ export default async function DashboardPage() {
       pct: pct as number | null,
     };
   });
+
+  const marketNews = await fetchMarketNews();
 
   const reportLabel = weather
     ? new Date(`${weather.report_date}T12:00:00Z`).toLocaleDateString("en-US", {
@@ -233,6 +236,36 @@ export default async function DashboardPage() {
                 </span>
               </div>
               <ActivityFeed />
+
+              {marketNews.items.length > 0 && (
+                <>
+                  <div className="mt-8 flex items-baseline justify-between">
+                    <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-ink-2">
+                      Market news
+                    </h2>
+                    <span className="text-[10px] uppercase tracking-wider text-ink-3">
+                      Live headlines
+                    </span>
+                  </div>
+                  <ul className="mt-3 divide-y divide-line rounded-2xl border border-line bg-panel">
+                    {marketNews.items.map((n) => (
+                      <li key={n.url}>
+                        <a
+                          href={n.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block px-5 py-3 transition hover:bg-panel-2"
+                        >
+                          <p className="text-sm text-ink">{n.headline}</p>
+                          <p className="mt-0.5 text-xs text-ink-3">
+                            {n.source} · {newsTime(n.datetime)}
+                          </p>
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
 
               <div className="mt-6 rounded-2xl border border-line bg-panel p-6">
                 <h3 className="font-display text-sm font-semibold">

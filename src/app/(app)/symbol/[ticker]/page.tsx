@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
 import AppShell from "@/components/AppShell";
 import { fetchQuotes } from "@/lib/quotes";
+import { fetchCompanyNews, newsTime } from "@/lib/news";
 import PriceChart from "./PriceChart";
 import AlertPanel from "./AlertPanel";
 
@@ -60,6 +61,8 @@ export default async function SymbolPage({
         .order("report_date", { ascending: false })
         .limit(10),
     ]);
+
+  const news = await fetchCompanyNews(ticker);
 
   const { data: insiders } = await supabase
     .from("insider_trades")
@@ -183,6 +186,38 @@ export default async function SymbolPage({
               </tbody>
             </table>
           </div>
+        )}
+      </section>
+
+      {/* News */}
+      <section className="mt-10">
+        <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-ink-2">
+          News — ${ticker}
+        </h2>
+        {news.items.length === 0 ? (
+          <p className="mt-3 rounded-2xl border border-line bg-panel px-5 py-6 text-center text-sm text-ink-3">
+            {news.live
+              ? `No recent headlines for $${ticker}.`
+              : "Headlines connect once live data is enabled."}
+          </p>
+        ) : (
+          <ul className="mt-3 divide-y divide-line overflow-hidden rounded-2xl border border-line bg-panel">
+            {news.items.map((n) => (
+              <li key={n.url}>
+                <a
+                  href={n.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block px-5 py-3.5 transition hover:bg-panel-2"
+                >
+                  <p className="text-sm font-medium text-ink">{n.headline}</p>
+                  <p className="mt-1 text-xs text-ink-3">
+                    {n.source} · {newsTime(n.datetime)}
+                  </p>
+                </a>
+              </li>
+            ))}
+          </ul>
         )}
       </section>
 
