@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase/client";
+import { toastSuccess } from "@/lib/toastBus";
 
 type Alert = {
   id: string;
@@ -38,6 +39,7 @@ export default function AlertsManager() {
       .update({ status: "cancelled" })
       .eq("id", id);
     load();
+    toastSuccess("Alert removed");
   }
 
   return (

@@ -3,6 +3,7 @@ import BrandMark from "@/components/BrandMark";
 import CommandBar from "@/components/CommandBar";
 import MobileNav from "@/components/MobileNav";
 import ThemeToggle from "@/components/ThemeToggle";
+import Toaster from "@/components/Toaster";
 import { NowTimeET } from "@/components/Now";
 
 const nav = [
@@ -230,6 +231,7 @@ export default function AppShell({
 
         <main className="px-5 py-8 lg:px-8">{children}</main>
       </div>
+      <Toaster />
     </div>
   );
 }

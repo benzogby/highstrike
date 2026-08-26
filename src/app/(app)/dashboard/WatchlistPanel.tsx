@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase/client";
+import { toastSuccess, toastError } from "@/lib/toastBus";
 
 type List = { id: string; name: string };
 type Quote = { symbol: string; price: number; changePct: number; live: boolean };
@@ -198,6 +199,7 @@ export default function WatchlistPanel({ userId }: { userId: string }) {
       setQuery("");
       setHits([]);
       await loadItems();
+      toastSuccess(`$${data.ticker ?? ticker} added to your watchlist`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't add symbol");
     } finally {
@@ -208,11 +210,13 @@ export default function WatchlistPanel({ userId }: { userId: string }) {
   async function removeTicker(ticker: string) {
     if (!activeId) return;
     setTickers((t) => t.filter((x) => x !== ticker));
-    await supabaseBrowser()
+    const { error: err } = await supabaseBrowser()
       .from("watchlist_items")
       .delete()
       .eq("watchlist_id", activeId)
       .eq("ticker", ticker);
+    if (err) toastError(`Couldn't remove $${ticker}`);
+    else toastSuccess(`$${ticker} removed`);
   }
 
   async function newList() {
@@ -224,11 +228,12 @@ export default function WatchlistPanel({ userId }: { userId: string }) {
       .select("id, name")
       .single();
     if (err || !data) {
-      setError(err?.message ?? "Couldn't create list");
+      toastError(err?.message ?? "Couldn't create list");
       return;
     }
     setLists((l) => [...(l ?? []), data]);
     setActiveId(data.id);
+    toastSuccess(`Watchlist "${data.name}" created`);
   }
 
   async function deleteList() {
@@ -238,6 +243,7 @@ export default function WatchlistPanel({ userId }: { userId: string }) {
     const remaining = (lists ?? []).filter((l) => l.id !== activeId);
     setLists(remaining);
     setActiveId(remaining[0]?.id ?? null);
+    toastSuccess("Watchlist deleted");
   }
 
   return (
@@ -419,6 +425,7 @@ export default function WatchlistPanel({ userId }: { userId: string }) {
                         );
                       setBusy(false);
                       loadItems();
+                      toastSuccess("Starter watchlist added — SPY, QQQ, NVDA, AAPL, TSLA");
                     }}
                     className="press mt-3 rounded-lg bg-accent px-4 py-2 font-display text-sm font-semibold text-bg transition hover:bg-accent-2 disabled:opacity-60"
                   >

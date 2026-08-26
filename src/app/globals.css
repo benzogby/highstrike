@@ -175,6 +175,40 @@ body {
   }
 }
 
+/* Toasts keep a (fast) transition even under reduced motion so dismissal
+   state stays visible; only the slide distance is motion-gated. */
+.toast-in {
+  animation: hs-toast-in 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.toast-out {
+  opacity: 0;
+  transform: translateX(12px);
+  transition:
+    opacity 0.22s ease,
+    transform 0.22s ease;
+}
+
+@keyframes hs-toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast-in {
+    animation: none;
+  }
+  .toast-out {
+    transform: none;
+  }
+}
+
 @keyframes hs-fade {
   to {
     opacity: 1;

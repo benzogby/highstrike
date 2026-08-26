@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase/client";
+import { toastSuccess, toastError } from "@/lib/toastBus";
 
 type Alert = {
   id: string;
@@ -63,13 +64,16 @@ export default function AlertPanel({
     }
     setThreshold("");
     load();
+    toastSuccess(`Alert set — $${ticker} ${condition} $${value.toFixed(2)}`);
   }
 
   async function cancel(id: string) {
-    await supabaseBrowser()
+    const { error: err } = await supabaseBrowser()
       .from("price_alerts")
       .update({ status: "cancelled" })
       .eq("id", id);
+    if (err) toastError("Couldn't cancel the alert");
+    else toastSuccess("Alert cancelled");
     load();
   }
 

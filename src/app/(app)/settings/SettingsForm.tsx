@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { SUPABASE_URL } from "@/lib/supabaseConfig";
+import { toastSuccess } from "@/lib/toastBus";
 
 const inputClass =
   "h-11 w-full rounded-lg border border-line bg-panel-2 px-3.5 text-sm text-ink placeholder:text-ink-3 outline-none transition focus:border-accent/60 focus:ring-2 focus:ring-accent/20";
@@ -95,7 +96,7 @@ export default function SettingsForm({
       setProfileMsg({ ok: false, text: error.message });
       return;
     }
-    setProfileMsg({ ok: true, text: "Profile saved." });
+    toastSuccess("Profile saved");
     router.refresh();
   }
 
@@ -121,7 +122,7 @@ export default function SettingsForm({
         .eq("id", userId);
       if (setErr) throw setErr;
       setAvatarUrl(url);
-      setProfileMsg({ ok: true, text: "Photo updated." });
+      toastSuccess("Profile photo updated");
       router.refresh();
     } catch (e) {
       setProfileMsg({ ok: false, text: e instanceof Error ? e.message : "Upload failed" });
@@ -143,7 +144,7 @@ export default function SettingsForm({
       return;
     }
     setAvatarUrl(null);
-    setProfileMsg({ ok: true, text: "Photo removed." });
+    toastSuccess("Profile photo removed");
     router.refresh();
   }
 
@@ -167,7 +168,7 @@ export default function SettingsForm({
     }
     setPw("");
     setPw2("");
-    setPwMsg({ ok: true, text: hasPassword ? "Password updated." : "Password set — you can now sign in with email + password too." });
+    toastSuccess(hasPassword ? "Password updated" : "Password set — email sign-in now works too");
   }
 
   async function choosePlan(key: string) {
@@ -216,13 +217,11 @@ export default function SettingsForm({
       return;
     }
     setPlan(key);
-    setPlanMsg({
-      ok: true,
-      text:
-        key === "free"
-          ? "Downgraded to Free."
-          : `Plan set to ${PLANS.find((p) => p.key === key)?.name}.`,
-    });
+    toastSuccess(
+      key === "free"
+        ? "Downgraded to Free"
+        : `Plan set to ${PLANS.find((p) => p.key === key)?.name}`
+    );
   }
 
   async function openPortal(report = true): Promise<boolean> {
