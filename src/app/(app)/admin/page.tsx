@@ -1,4 +1,5 @@
 import { supabaseServer } from "@/lib/supabase/server";
+import GenerateNowButton from "./GenerateNowButton";
 
 function formatWhen(iso: string) {
   return new Date(iso).toLocaleString("en-US", {
@@ -45,6 +46,15 @@ export default async function AdminOverviewPage() {
 
   return (
     <>
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-panel px-5 py-4">
+        <div>
+          <p className="font-display text-sm font-semibold">Setup Engine</p>
+          <p className="text-xs text-ink-3">
+            Runs automatically at 8:30 AM ET — or trigger a fresh report now.
+          </p>
+        </div>
+        <GenerateNowButton />
+      </div>
       <div className="grid gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-3">
         {stats.map((s) => (
           <div key={s.label} className="bg-panel px-6 py-7">
