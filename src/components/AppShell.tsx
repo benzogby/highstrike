@@ -1,5 +1,6 @@
 import Link from "next/link";
 import BrandMark from "@/components/BrandMark";
+import CommandBar from "@/components/CommandBar";
 import MobileNav from "@/components/MobileNav";
 import ThemeToggle from "@/components/ThemeToggle";
 import { NowTimeET } from "@/components/Now";
@@ -198,14 +199,8 @@ export default function AppShell({
                 <BrandMark size={24} />
               </Link>
             </div>
-            <div className="hidden max-w-md flex-1 lg:block">
-              <div className="flex h-10 items-center gap-2.5 rounded-lg border border-line bg-panel px-3.5 text-sm text-ink-3">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
-                  <path d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-                Search tickers, setups, filings…
-                <kbd className="ml-auto rounded border border-line px-1.5 font-mono-nums text-[10px]">/</kbd>
-              </div>
+            <div className="flex flex-1 items-center justify-end lg:justify-start">
+              <CommandBar isAdmin={isAdmin} />
             </div>
             <div className="flex items-center gap-3">
               <span className="hidden font-mono-nums text-xs text-ink-3 sm:block">
