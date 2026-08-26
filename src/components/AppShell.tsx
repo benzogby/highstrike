@@ -1,5 +1,6 @@
 import Link from "next/link";
 import BrandMark from "@/components/BrandMark";
+import MobileNav from "@/components/MobileNav";
 import ThemeToggle from "@/components/ThemeToggle";
 import { NowTimeET } from "@/components/Now";
 
@@ -178,9 +179,23 @@ export default function AppShell({
       <div className="min-w-0 flex-1 lg:pl-60">
         <header className="sticky top-0 z-30 border-b border-line bg-bg/80 backdrop-blur">
           <div className="flex h-16 items-center justify-between gap-4 px-5 lg:px-8">
-            <Link href="/" className="flex items-center gap-2 lg:hidden">
-              <BrandMark size={24} />
-            </Link>
+            <div className="flex items-center gap-3 lg:hidden">
+              <MobileNav
+                items={nav.map((n) => ({
+                  label: n.label,
+                  href: "href" in n ? n.href : undefined,
+                  key: "key" in n ? n.key : undefined,
+                }))}
+                active={active}
+                isAdmin={isAdmin}
+                email={email}
+                firstName={firstName}
+                avatarUrl={avatarUrl}
+              />
+              <Link href="/" className="flex items-center gap-2">
+                <BrandMark size={24} />
+              </Link>
+            </div>
             <div className="hidden max-w-md flex-1 lg:block">
               <div className="flex h-10 items-center gap-2.5 rounded-lg border border-line bg-panel px-3.5 text-sm text-ink-3">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
@@ -203,12 +218,12 @@ export default function AppShell({
                   ADMIN
                 </span>
               ) : (
-                <button
-                  type="button"
-                  className="rounded-lg bg-accent px-4 py-2 font-display text-sm font-semibold text-bg transition hover:bg-accent-2"
+                <Link
+                  href="/dashboard#watchlist"
+                  className="hidden rounded-lg bg-accent px-4 py-2 font-display text-sm font-semibold text-bg transition hover:bg-accent-2 sm:block"
                 >
                   + New watchlist
-                </button>
+                </Link>
               )}
             </div>
           </div>

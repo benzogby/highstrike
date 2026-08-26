@@ -10,11 +10,52 @@ type SearchHit = { ticker: string; name: string };
 
 const REFRESH_MS = 45_000;
 
+/** 12-point mini trend from accrued closes; renders a dash until history exists. */
+function Sparkline({ values }: { values?: number[] }) {
+  if (!values || values.length < 2) {
+    return <span className="text-xs text-ink-3">—</span>;
+  }
+  const w = 64;
+  const h = 22;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min || 1;
+  const pts = values
+    .map(
+      (v, i) =>
+        `${((i / (values.length - 1)) * (w - 4) + 2).toFixed(1)},${(
+          h - 3 - ((v - min) / span) * (h - 6)
+        ).toFixed(1)}`
+    )
+    .join(" ");
+  const up = values[values.length - 1] >= values[0];
+  return (
+    <svg
+      width={w}
+      height={h}
+      viewBox={`0 0 ${w} ${h}`}
+      className="inline-block align-middle"
+      aria-label={`Trend ${up ? "up" : "down"} over ${values.length} sessions`}
+      role="img"
+    >
+      <polyline
+        points={pts}
+        fill="none"
+        stroke={up ? "var(--color-up)" : "var(--color-down)"}
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 export default function WatchlistPanel({ userId }: { userId: string }) {
-  const [lists, setLists] = useState<List[]>([]);
+  const [lists, setLists] = useState<List[] | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [tickers, setTickers] = useState<string[]>([]);
   const [quotes, setQuotes] = useState<Record<string, Quote>>({});
+  const [sparks, setSparks] = useState<Record<string, number[]>>({});
   const [live, setLive] = useState(false);
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<SearchHit[]>([]);
@@ -91,6 +132,24 @@ export default function WatchlistPanel({ userId }: { userId: string }) {
     };
   }, [tickers]);
 
+  // Sparklines from first-party price history (fills as history accrues).
+  useEffect(() => {
+    if (tickers.length === 0) {
+      setSparks({});
+      return;
+    }
+    let alive = true;
+    fetch(`/api/sparklines?symbols=${tickers.join(",")}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (alive && d?.series) setSparks(d.series);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [tickers]);
+
   // Debounced symbol search.
   useEffect(() => {
     if (searchTimer.current) clearTimeout(searchTimer.current);
@@ -142,7 +201,7 @@ export default function WatchlistPanel({ userId }: { userId: string }) {
   }
 
   async function newList() {
-    const name = window.prompt("Watchlist name", `List ${lists.length + 1}`);
+    const name = window.prompt("Watchlist name", `List ${(lists?.length ?? 0) + 1}`);
     if (!name?.trim()) return;
     const { data, error: err } = await supabaseBrowser()
       .from("watchlists")
@@ -153,27 +212,33 @@ export default function WatchlistPanel({ userId }: { userId: string }) {
       setError(err?.message ?? "Couldn't create list");
       return;
     }
-    setLists((l) => [...l, data]);
+    setLists((l) => [...(l ?? []), data]);
     setActiveId(data.id);
   }
 
   async function deleteList() {
-    if (!activeId || lists.length <= 1) return;
+    if (!activeId || !lists || lists.length <= 1) return;
     if (!window.confirm("Delete this watchlist?")) return;
     await supabaseBrowser().from("watchlists").delete().eq("id", activeId);
-    const remaining = lists.filter((l) => l.id !== activeId);
+    const remaining = (lists ?? []).filter((l) => l.id !== activeId);
     setLists(remaining);
     setActiveId(remaining[0]?.id ?? null);
   }
 
   return (
     <>
-      <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
+      <div
+        id="watchlist"
+        className="mt-8 flex scroll-mt-24 flex-wrap items-center justify-between gap-3"
+      >
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-ink-2">
             Watchlist
           </h2>
-          {lists.map((l) => (
+          {lists === null && (
+            <span className="text-xs text-ink-3">Loading…</span>
+          )}
+          {(lists ?? []).map((l) => (
             <button
               key={l.id}
               type="button"
@@ -194,7 +259,7 @@ export default function WatchlistPanel({ userId }: { userId: string }) {
           >
             + New
           </button>
-          {lists.length > 1 && (
+          {(lists?.length ?? 0) > 1 && (
             <button
               type="button"
               onClick={deleteList}
@@ -247,6 +312,9 @@ export default function WatchlistPanel({ userId }: { userId: string }) {
               <th className="px-5 py-2.5 font-medium">Ticker</th>
               <th className="px-3 py-2.5 text-right font-medium">Last</th>
               <th className="px-3 py-2.5 text-right font-medium">Change</th>
+              <th className="hidden px-3 py-2.5 text-right font-medium sm:table-cell">
+                Trend
+              </th>
               <th className="px-5 py-2.5 text-right font-medium" aria-label="Actions" />
             </tr>
           </thead>
@@ -274,6 +342,9 @@ export default function WatchlistPanel({ userId }: { userId: string }) {
                   >
                     {q ? `${up ? "▲" : "▼"} ${Math.abs(q.changePct).toFixed(2)}%` : "—"}
                   </td>
+                  <td className="hidden px-3 py-2.5 text-right sm:table-cell">
+                    <Sparkline values={sparks[t]} />
+                  </td>
                   <td className="px-5 py-2.5 text-right">
                     <button
                       type="button"
@@ -289,7 +360,7 @@ export default function WatchlistPanel({ userId }: { userId: string }) {
             })}
             {tickers.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-5 py-8 text-center text-sm text-ink-3">
+                <td colSpan={5} className="px-5 py-8 text-center text-sm text-ink-3">
                   No symbols yet — add your first ticker above.
                 </td>
               </tr>

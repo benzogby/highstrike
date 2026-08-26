@@ -128,8 +128,8 @@ export default async function SymbolPage({
             The engine hasn&apos;t published a setup on ${ticker} yet.
           </p>
         ) : (
-          <div className="mt-3 overflow-hidden rounded-2xl border border-line bg-panel">
-            <table className="w-full text-sm">
+          <div className="mt-3 overflow-x-auto rounded-2xl border border-line bg-panel">
+            <table className="w-full min-w-[480px] text-sm">
               <thead>
                 <tr className="border-b border-line text-left text-[10px] uppercase tracking-wider text-ink-3">
                   <th className="px-5 py-2.5 font-medium">Date</th>
