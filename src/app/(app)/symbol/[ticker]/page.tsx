@@ -5,6 +5,7 @@ import { supabaseServer } from "@/lib/supabase/server";
 import AppShell from "@/components/AppShell";
 import { fetchQuotes } from "@/lib/quotes";
 import PriceChart from "./PriceChart";
+import AlertPanel from "./AlertPanel";
 
 export async function generateMetadata({
   params,
@@ -102,6 +103,12 @@ export default async function SymbolPage({
       <div className="mt-6">
         <PriceChart ticker={ticker} />
       </div>
+
+      <AlertPanel
+        ticker={ticker}
+        userId={user.id}
+        currentPrice={quote?.price ?? null}
+      />
 
       {/* Setup history for this symbol */}
       <section className="mt-10">

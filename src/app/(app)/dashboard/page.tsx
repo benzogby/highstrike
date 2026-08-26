@@ -6,18 +6,12 @@ import AppShell from "@/components/AppShell";
 import { Gauge } from "@/components/TerminalMockup";
 import { NowDateLong, NowGreeting, UpcomingFriday } from "@/components/Now";
 import WatchlistPanel from "./WatchlistPanel";
+import ActivityFeed from "./ActivityFeed";
 
 export const metadata: Metadata = {
   title: "Dashboard — HighStrike",
 };
 
-const activity = [
-  { text: "Weather report published", time: "08:15 ET", accent: true },
-  { text: "$NVDA setup card updated — flow score 91", time: "08:47 ET" },
-  { text: "Insider cluster flagged on $DELL (3 buyers)", time: "09:02 ET" },
-  { text: "$MCD entry trigger 2 of 3 armed", time: "09:20 ET" },
-  { text: "Chatter spike: $SMCI mentions +180% (24h)", time: "09:41 ET" },
-];
 
 export default async function DashboardPage() {
   const supabase = await supabaseServer();
@@ -235,27 +229,10 @@ export default async function DashboardPage() {
                   Activity
                 </h2>
                 <span className="text-[10px] uppercase tracking-wider text-ink-3">
-                  Illustrative preview
+                  Live feed
                 </span>
               </div>
-              <div className="mt-3 rounded-2xl border border-line bg-panel">
-                <ul className="divide-y divide-line">
-                  {activity.map((a) => (
-                    <li key={a.text} className="flex items-start gap-3 px-5 py-3.5">
-                      <span
-                        className={`mt-1.5 h-1.5 w-1.5 flex-none rounded-full ${
-                          a.accent ? "bg-accent" : "bg-line-strong"
-                        }`}
-                        aria-hidden="true"
-                      />
-                      <div className="min-w-0">
-                        <p className="text-sm text-ink">{a.text}</p>
-                        <p className="mt-0.5 font-mono-nums text-xs text-ink-3">{a.time}</p>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              <ActivityFeed />
 
               <div className="mt-6 rounded-2xl border border-line bg-panel p-6">
                 <h3 className="font-display text-sm font-semibold">

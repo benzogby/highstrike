@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
+import { checkAlerts } from "@/lib/alerts";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,10 @@ function sampleQuote(symbol: string) {
 }
 
 export async function GET(request: Request) {
+  // Piggyback a throttled alert sweep on member traffic (runs after the
+  // response is sent; internally rate-limited to one sweep per ~2 minutes).
+  after(() => checkAlerts({ throttled: true }).catch(() => {}));
+
   const url = new URL(request.url);
   const raw = url.searchParams.get("symbols") ?? "";
   const symbols = [

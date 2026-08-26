@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { fetchQuotes, type Quote } from "@/lib/quotes";
 import { supabaseService } from "@/lib/stripe";
+import { recordActivity } from "@/lib/alerts";
 
 // Daily generation of the market weather report + setup cards. Uses Claude
 // (claude-opus-5) when ANTHROPIC_API_KEY is configured; otherwise falls back
@@ -119,6 +120,15 @@ export async function gradeSetups(): Promise<{ graded: number; closed: number }>
       closed++;
     }
     await service.from("setups").update(update).eq("id", s.id);
+    if (status !== "open") {
+      const label =
+        status === "target_hit" ? "hit its target" : status === "stopped" ? "stopped out" : "expired";
+      await recordActivity(
+        "setup_closed",
+        `$${s.ticker} setup ${label} at ${movePct >= 0 ? "+" : ""}${movePct.toFixed(2)}%`,
+        { ticker: s.ticker }
+      );
+    }
   }
 
   return { graded: open.length, closed };
@@ -296,6 +306,13 @@ export async function generateDaily(force = false): Promise<{
     }))
   );
   if (sErr) throw new Error(`setups insert failed: ${sErr.message}`);
+
+  await recordActivity(
+    "report_published",
+    `Weather report published — ${generated.setups.length} setups (${generated.setups
+      .map((s) => `$${s.ticker}`)
+      .join(", ")})`
+  );
 
   return { status: "generated", date, model: generated.model, setups: generated.setups.length };
 }
