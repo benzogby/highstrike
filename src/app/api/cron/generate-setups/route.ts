@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
-import { generateDaily, gradeSetups } from "@/lib/setupEngine";
+import { generateDaily, gradeSetups, snapshotPrices } from "@/lib/setupEngine";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -38,9 +38,10 @@ async function handle(request: Request) {
   }
 
   try {
+    const snapshot = await snapshotPrices();
     const grading = await gradeSetups();
     const result = await generateDaily(wantsForce);
-    return NextResponse.json({ ...result, grading });
+    return NextResponse.json({ ...result, grading, snapshot });
   } catch (e) {
     console.error("generate-setups failed:", e);
     return NextResponse.json(

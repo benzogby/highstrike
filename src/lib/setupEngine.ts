@@ -36,6 +36,36 @@ function parsePrice(text: string): number | null {
 }
 
 /**
+ * Records today's real closes into price_history (first-party chart data).
+ * Sample quotes are never recorded — the table only ever holds live prices.
+ */
+export async function snapshotPrices(): Promise<{ recorded: number }> {
+  const service = supabaseService();
+  const { data: universe } = await service
+    .from("symbols")
+    .select("ticker")
+    .eq("is_active", true)
+    .limit(200);
+  const tickers = (universe ?? []).map((r) => r.ticker);
+  if (tickers.length === 0) return { recorded: 0 };
+
+  const quotes = await fetchQuotes(tickers);
+  const live = quotes.filter((q) => q.live);
+  if (live.length === 0) return { recorded: 0 };
+
+  const date = etToday();
+  const { error } = await service.from("price_history").upsert(
+    live.map((q) => ({ ticker: q.symbol, price_date: date, close: q.price })),
+    { onConflict: "ticker,price_date" }
+  );
+  if (error) {
+    console.error("price snapshot failed:", error.message);
+    return { recorded: 0 };
+  }
+  return { recorded: live.length };
+}
+
+/**
  * Grades every open setup against current prices: target hit, stopped out
  * (±8% adverse), or expired past the horizon. Backfills entry/target prices
  * for rows published before grading existed.

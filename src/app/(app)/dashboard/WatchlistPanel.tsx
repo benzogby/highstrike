@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase/client";
 
@@ -255,7 +256,14 @@ export default function WatchlistPanel({ userId }: { userId: string }) {
               const up = (q?.changePct ?? 0) >= 0;
               return (
                 <tr key={t} className="group">
-                  <td className="px-5 py-2.5 font-display font-semibold">{t}</td>
+                  <td className="px-5 py-2.5 font-display font-semibold">
+                    <Link
+                      href={`/symbol/${t}`}
+                      className="transition hover:text-accent"
+                    >
+                      {t}
+                    </Link>
+                  </td>
                   <td className="px-3 py-2.5 text-right font-mono-nums text-ink-2">
                     {q ? q.price.toFixed(2) : "—"}
                   </td>

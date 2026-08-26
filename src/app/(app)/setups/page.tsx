@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
 import AppShell from "@/components/AppShell";
@@ -144,7 +145,12 @@ export default async function SetupsPage() {
                   className="flex flex-col rounded-2xl border border-line bg-panel p-5"
                 >
                   <div className="flex items-center justify-between">
-                    <p className="font-display text-lg font-bold">${s.ticker}</p>
+                    <Link
+                      href={`/symbol/${s.ticker}`}
+                      className="font-display text-lg font-bold transition hover:text-accent"
+                    >
+                      ${s.ticker}
+                    </Link>
                     <span
                       className={`rounded-full px-2 py-0.5 font-display text-[10px] font-bold ${meta.classes}`}
                     >

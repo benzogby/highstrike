@@ -48,7 +48,7 @@ export default function AppShell({
 }: {
   email: string;
   isAdmin: boolean;
-  active: "home" | "setups" | "admin" | "settings";
+  active: "home" | "setups" | "admin" | "settings" | "none";
   displayName?: string | null;
   avatarUrl?: string | null;
   children: React.ReactNode;

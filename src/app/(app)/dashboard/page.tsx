@@ -159,7 +159,12 @@ export default async function DashboardPage() {
                     className="flex flex-col rounded-2xl border border-line bg-panel p-5 transition hover:border-accent/40"
                   >
                     <div className="flex items-center justify-between">
-                      <p className="font-display text-lg font-bold">{s.ticker}</p>
+                      <Link
+                        href={`/symbol/${s.ticker.replace("$", "")}`}
+                        className="font-display text-lg font-bold transition hover:text-accent"
+                      >
+                        {s.ticker}
+                      </Link>
                       <span
                         className={`font-mono-nums text-xs ${s.up ? "text-up" : "text-down"}`}
                       >
