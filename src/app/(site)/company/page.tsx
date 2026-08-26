@@ -1,6 +1,34 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { createClient } from "@supabase/supabase-js";
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "@/lib/supabaseConfig";
 import Eyebrow from "@/components/Eyebrow";
+
+// Team edits in the admin panel show up within 30 minutes.
+export const revalidate = 1800;
+
+type TeamMember = {
+  id: string;
+  name: string;
+  title: string;
+  bio: string;
+  photo_url: string | null;
+};
+
+async function fetchTeam(): Promise<TeamMember[]> {
+  try {
+    const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+    const { data } = await supabase
+      .from("team_members")
+      .select("id, name, title, bio, photo_url")
+      .eq("is_active", true)
+      .order("position")
+      .order("created_at");
+    return (data ?? []) as TeamMember[];
+  } catch {
+    return [];
+  }
+}
 
 export const metadata: Metadata = {
   title: "Company — HighStrike",
@@ -35,7 +63,8 @@ const facts = [
   { label: "Support", value: "support@highstrike.com" },
 ];
 
-export default function CompanyPage() {
+export default async function CompanyPage() {
+  const team = await fetchTeam();
   return (
     <main>
       {/* Hero */}
@@ -109,6 +138,54 @@ export default function CompanyPage() {
           </div>
         </div>
       </section>
+
+      {/* Team */}
+      {team.length > 0 && (
+        <section className="border-t border-line bg-panel/30">
+          <div className="mx-auto max-w-5xl px-5 py-20">
+            <div className="flex flex-col items-center text-center">
+              <Eyebrow>The team</Eyebrow>
+              <h2 className="font-display text-2xl font-bold uppercase tracking-tight sm:text-3xl">
+                The people behind the terminal
+              </h2>
+            </div>
+            <div
+              className={`mt-12 grid gap-6 ${
+                team.length === 1
+                  ? "mx-auto max-w-md"
+                  : team.length === 2
+                    ? "mx-auto max-w-2xl sm:grid-cols-2"
+                    : "sm:grid-cols-2 lg:grid-cols-3"
+              }`}
+            >
+              {team.map((m) => (
+                <div
+                  key={m.id}
+                  className="flex flex-col items-center rounded-2xl border border-line bg-panel p-7 text-center"
+                >
+                  {m.photo_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={m.photo_url}
+                      alt={m.name}
+                      className="h-24 w-24 rounded-full border border-line object-cover"
+                    />
+                  ) : (
+                    <span className="flex h-24 w-24 items-center justify-center rounded-full bg-accent font-display text-2xl font-bold uppercase text-bg">
+                      {m.name.slice(0, 2)}
+                    </span>
+                  )}
+                  <h3 className="mt-4 font-display text-lg font-semibold">{m.name}</h3>
+                  {m.title && <p className="mt-0.5 text-sm text-accent">{m.title}</p>}
+                  {m.bio && (
+                    <p className="mt-3 text-sm leading-relaxed text-ink-2">{m.bio}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Careers */}
       <section className="border-t border-line bg-panel/30">
