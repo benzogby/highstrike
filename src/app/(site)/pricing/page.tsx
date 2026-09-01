@@ -5,76 +5,77 @@ import WaitlistForm from "@/components/WaitlistForm";
 export const metadata: Metadata = {
   title: "Pricing — HighStrike",
   description:
-    "Plans for HighStrike AI Terminal: monthly, annual Alpha, and Lifetime access. Every plan includes the full terminal.",
+    "Three ways to trade with HighStrike: the Trading Room terminal, the Trading School curriculum, and the Alpha Mastermind.",
 };
 
 const tiers = [
   {
-    name: "Monthly",
-    price: "$99",
+    name: "Trading Room",
+    price: "$199",
     cadence: "per month",
-    blurb: "Full terminal access, cancel anytime.",
+    blurb: "The full AI terminal, live every market day.",
     features: [
-      "Daily AI market weather report",
-      "Daily trade setups with entries, targets & time frames",
+      "Daily AI market weather report & trade setups",
+      "Live watchlists, flow scanner & price alerts",
       "Unusual options & insider activity flags",
       "Social chatter monitoring",
-      "Suggested options contracts",
-    ],
-    highlight: false,
-  },
-  {
-    name: "Alpha (Annual)",
-    price: "$79",
-    cadence: "per month, billed annually",
-    blurb: "Two months free and locked-in founder pricing.",
-    features: [
-      "Everything in Monthly",
-      "Founder pricing locked for life",
-      "FREE access to HighStrike Trading School ($2,995 value)*",
-      "Priority support",
-      "Early access to new terminal features",
+      "Cancel anytime",
     ],
     highlight: true,
   },
   {
-    name: "Lifetime",
-    price: "$1,995",
+    name: "Trading School",
+    price: "$397",
     cadence: "one-time payment",
-    blurb: "Pay once. Every feature, forever.",
+    blurb: "The complete HighStrike options curriculum.",
     features: [
-      "Everything in Alpha",
-      "Lifetime terminal access — no renewals ever",
-      "All future features & data sources included",
-      "Lifetime access to HighStrike Trading School",
+      "Full options curriculum, mechanics to management",
+      "The risk framework behind every terminal setup",
+      "Trade review methodology — grade your own execution",
+      "Lifetime access to all course material",
+      "Every future curriculum update included",
+    ],
+    highlight: false,
+  },
+  {
+    name: "Alpha Mastermind",
+    price: "$4,995",
+    cadence: "one-time payment",
+    blurb: "Everything we make, plus direct access to the team.",
+    features: [
+      "Trading Room membership included",
+      "Full Trading School curriculum included",
+      "Small-group mastermind access to the HighStrike team",
+      "Advanced strategy & trade-review sessions",
+      "Priority support",
     ],
     highlight: false,
   },
 ];
 
 const comparison: { feature: string; monthly: string; alpha: string; lifetime: string }[] = [
-  { feature: "AI market weather report", monthly: "✓", alpha: "✓", lifetime: "✓" },
-  { feature: "Daily trade setups", monthly: "✓", alpha: "✓", lifetime: "✓" },
-  { feature: "Insider & unusual options flags", monthly: "✓", alpha: "✓", lifetime: "✓" },
-  { feature: "Suggested options contracts", monthly: "✓", alpha: "✓", lifetime: "✓" },
-  { feature: "Trading School access", monthly: "—", alpha: "✓*", lifetime: "✓" },
-  { feature: "Founder pricing lock", monthly: "—", alpha: "✓", lifetime: "n/a" },
-  { feature: "Priority support", monthly: "—", alpha: "✓", lifetime: "✓" },
-  { feature: "Future features included", monthly: "✓", alpha: "✓", lifetime: "✓" },
+  { feature: "AI market weather report & daily setups", monthly: "✓", alpha: "—", lifetime: "✓" },
+  { feature: "Live watchlists, scanner & alerts", monthly: "✓", alpha: "—", lifetime: "✓" },
+  { feature: "Insider & unusual options flags", monthly: "✓", alpha: "—", lifetime: "✓" },
+  { feature: "Full options curriculum", monthly: "—", alpha: "✓", lifetime: "✓" },
+  { feature: "Lifetime course access", monthly: "—", alpha: "✓", lifetime: "✓" },
+  { feature: "Small-group team access", monthly: "—", alpha: "—", lifetime: "✓" },
+  { feature: "Priority support", monthly: "—", alpha: "—", lifetime: "✓" },
+  { feature: "Billing", monthly: "Monthly", alpha: "One-time", lifetime: "One-time" },
 ];
 
 const faqs = [
   {
     q: "Can I cancel anytime?",
-    a: "Yes. Monthly and Alpha plans can be cancelled from your account at any time — you keep access through the end of the period you've paid for, and you won't be billed again.",
+    a: "Yes. The Trading Room is a monthly membership you can cancel from your account at any time — you keep access through the end of the period you've paid for, and you won't be billed again. Trading School and the Alpha Mastermind are one-time purchases, so there's nothing to cancel.",
   },
   {
-    q: "What's the difference between Alpha and Lifetime?",
-    a: "Alpha is our annual plan: you pay for ten months and get twelve, keep founder pricing for as long as you stay subscribed, and get Trading School included. Lifetime is a single payment for permanent access — no renewals, ever, with every future feature included.",
+    q: "What's the difference between the three?",
+    a: "The Trading Room is the live product — the AI terminal, daily setups, and alerts, billed monthly. Trading School is the education — our complete options curriculum, yours for life with one payment. The Alpha Mastermind bundles both and adds small-group access to the HighStrike team for traders who want to work with us directly.",
   },
   {
     q: "Is the Trading School bonus really included?",
-    a: "Yes — registrants during the bonus window get full access to HighStrike Trading School ($2,995 value) at no extra cost. The bonus window and terms are shown at checkout.",
+    a: "Yes — registrants during the bonus window get full access to HighStrike Trading School ($397 value) at no extra cost. The bonus window and terms are shown at checkout.",
   },
   {
     q: "Do I need options approval with my broker?",
@@ -96,11 +97,11 @@ export default function PricingPage() {
         <div className="relative mx-auto flex max-w-5xl flex-col items-center px-5 pb-16 pt-16 text-center lg:pt-24">
           <Eyebrow>Pricing</Eyebrow>
           <h1 className="font-display text-3xl font-bold uppercase tracking-tight sm:text-5xl">
-            One terminal. Three ways in.
+            Three ways to trade with us.
           </h1>
           <p className="mt-6 max-w-xl text-lg text-ink-2">
-            Every plan includes the full HighStrike AI Terminal — same data, same
-            setups, same AI. The only choice is how you pay.
+            The daily terminal, the complete curriculum, or everything plus direct
+            access to the team — pick the level that fits where you are.
           </p>
         </div>
       </section>
@@ -168,11 +169,11 @@ export default function PricingPage() {
               <thead>
                 <tr className="border-b border-line bg-panel-2 text-left">
                   <th className="px-6 py-4 font-display font-semibold">Feature</th>
-                  <th className="px-6 py-4 text-center font-display font-semibold">Monthly</th>
+                  <th className="px-6 py-4 text-center font-display font-semibold">Trading Room</th>
                   <th className="px-6 py-4 text-center font-display font-semibold text-accent">
-                    Alpha
+                    Trading School
                   </th>
-                  <th className="px-6 py-4 text-center font-display font-semibold">Lifetime</th>
+                  <th className="px-6 py-4 text-center font-display font-semibold">Alpha Mastermind</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line bg-panel">

@@ -6,6 +6,7 @@ import {
   priceIdFor,
   supabaseService,
   PAID_PLANS,
+  SUBSCRIPTION_PLANS,
   type PaidPlan,
 } from "@/lib/stripe";
 
@@ -60,14 +61,15 @@ export async function POST(req: Request) {
       .eq("id", user.id);
   }
 
+  const isSubscription = SUBSCRIPTION_PLANS.includes(paidPlan);
   const session = await stripe.checkout.sessions.create({
     customer: customerId,
-    mode: paidPlan === "lifetime" ? "payment" : "subscription",
+    mode: isSubscription ? "subscription" : "payment",
     line_items: [{ price: priceIdFor(paidPlan), quantity: 1 }],
     success_url: `${origin}/settings?billing=success`,
     cancel_url: `${origin}/settings?billing=cancelled`,
     metadata: { user_id: user.id, plan: paidPlan },
-    ...(paidPlan !== "lifetime"
+    ...(isSubscription
       ? { subscription_data: { metadata: { user_id: user.id, plan: paidPlan } } }
       : {}),
   });

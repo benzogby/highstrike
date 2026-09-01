@@ -63,11 +63,13 @@ export async function POST(req: Request) {
               .eq("stripe_customer_id", customerId);
           }
         } else if (["canceled", "unpaid", "incomplete_expired"].includes(sub.status)) {
+          // Only the Trading Room subscription lapses; one-time purchases
+          // (school, mastermind) are never downgraded by subscription events.
           await service
             .from("profiles")
             .update({ plan: "free" })
             .eq("stripe_customer_id", customerId)
-            .neq("plan", "lifetime");
+            .eq("plan", "room");
         }
         break;
       }
@@ -79,7 +81,7 @@ export async function POST(req: Request) {
           .from("profiles")
           .update({ plan: "free" })
           .eq("stripe_customer_id", customerId)
-          .neq("plan", "lifetime");
+          .eq("plan", "room");
         break;
       }
 

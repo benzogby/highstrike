@@ -35,7 +35,7 @@ export function BonusLine() {
   }
   return (
     <p className="text-xs text-ink-3">
-      *BONUS: <NowMonth /> registrants get FREE access to HighStrike Trading School ($2,995
+      *BONUS: <NowMonth /> registrants get FREE access to HighStrike Trading School ($397
       value)
     </p>
   );

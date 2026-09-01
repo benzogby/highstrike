@@ -8,9 +8,9 @@ import { SUPABASE_URL } from "@/lib/supabaseConfig";
 export function stripeEnabled() {
   return Boolean(
     process.env.STRIPE_SECRET_KEY &&
-      process.env.STRIPE_PRICE_MONTHLY &&
-      process.env.STRIPE_PRICE_ANNUAL &&
-      process.env.STRIPE_PRICE_LIFETIME
+      process.env.STRIPE_PRICE_TRADING_ROOM &&
+      process.env.STRIPE_PRICE_TRADING_SCHOOL &&
+      process.env.STRIPE_PRICE_ALPHA_MASTERMIND
   );
 }
 
@@ -20,23 +20,26 @@ export function getStripe(): Stripe {
   return new Stripe(key);
 }
 
-export const PAID_PLANS = ["monthly", "annual", "lifetime"] as const;
+// room = monthly subscription; school & mastermind = one-time purchases.
+export const PAID_PLANS = ["room", "school", "mastermind"] as const;
 export type PaidPlan = (typeof PAID_PLANS)[number];
+
+export const SUBSCRIPTION_PLANS: readonly PaidPlan[] = ["room"];
 
 export function priceIdFor(plan: PaidPlan): string {
   const id = {
-    monthly: process.env.STRIPE_PRICE_MONTHLY,
-    annual: process.env.STRIPE_PRICE_ANNUAL,
-    lifetime: process.env.STRIPE_PRICE_LIFETIME,
+    room: process.env.STRIPE_PRICE_TRADING_ROOM,
+    school: process.env.STRIPE_PRICE_TRADING_SCHOOL,
+    mastermind: process.env.STRIPE_PRICE_ALPHA_MASTERMIND,
   }[plan];
   if (!id) throw new Error(`Price id for plan "${plan}" not configured`);
   return id;
 }
 
 export function planForPriceId(priceId: string): PaidPlan | null {
-  if (priceId === process.env.STRIPE_PRICE_MONTHLY) return "monthly";
-  if (priceId === process.env.STRIPE_PRICE_ANNUAL) return "annual";
-  if (priceId === process.env.STRIPE_PRICE_LIFETIME) return "lifetime";
+  if (priceId === process.env.STRIPE_PRICE_TRADING_ROOM) return "room";
+  if (priceId === process.env.STRIPE_PRICE_TRADING_SCHOOL) return "school";
+  if (priceId === process.env.STRIPE_PRICE_ALPHA_MASTERMIND) return "mastermind";
   return null;
 }
 

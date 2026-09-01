@@ -106,7 +106,7 @@ const faqs = [
   },
   {
     q: "What does it cost?",
-    a: "Plans start at $99/month, with annual and lifetime options. Every plan includes the full terminal — same data, same setups, same AI. See the pricing page for details.",
+    a: "The Trading Room — the full AI terminal — is $199/month, cancel anytime. Trading School, our complete options curriculum, is a one-time $397. The Alpha Mastermind bundles everything with direct team access for a one-time $4,995. See the pricing page for details.",
   },
   {
     q: "Is this financial advice?",
@@ -381,7 +381,7 @@ export default async function Home() {
               School is the structured options program we&apos;ve run since 2018 —
               process, risk management, and trade selection, taught the way the
               models learned it. Registrants during the bonus window get the full
-              program, a $2,995 value, included free.
+              program, a $397 value, included free.
             </p>
             <Link
               href="/about"

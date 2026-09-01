@@ -171,7 +171,7 @@ function HeroSection() {
         <input
           value={bonus}
           onChange={(e) => setBonus(e.target.value)}
-          placeholder="*BONUS: August registrants get FREE access to HighStrike Trading School ($2,995 value)"
+          placeholder="*BONUS: August registrants get FREE access to HighStrike Trading School ($397 value)"
           className={inputClass}
         />
       </div>

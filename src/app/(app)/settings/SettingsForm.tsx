@@ -19,25 +19,25 @@ const PLANS = [
     blurb: "Waitlist access and the blog — terminal locked.",
   },
   {
-    key: "monthly",
-    name: "Monthly",
-    price: "$99",
+    key: "room",
+    name: "Trading Room",
+    price: "$199",
     cadence: "per month",
-    blurb: "Full terminal access, billed monthly.",
+    blurb: "The full AI terminal, live every market day.",
   },
   {
-    key: "annual",
-    name: "Alpha (Annual)",
-    price: "$79",
-    cadence: "per month, billed annually",
-    blurb: "Full terminal access at the founder rate.",
-  },
-  {
-    key: "lifetime",
-    name: "Lifetime",
-    price: "$1,995",
+    key: "school",
+    name: "Trading School",
+    price: "$397",
     cadence: "one-time payment",
-    blurb: "Permanent access, every future feature included.",
+    blurb: "The complete options curriculum, yours for life.",
+  },
+  {
+    key: "mastermind",
+    name: "Alpha Mastermind",
+    price: "$4,995",
+    cadence: "one-time payment",
+    blurb: "Trading Room + School + direct team access.",
   },
 ] as const;
 
@@ -173,6 +173,13 @@ export default function SettingsForm({
 
   async function choosePlan(key: string) {
     if (key === plan) return;
+    if (!billing) {
+      setPlanMsg({
+        ok: false,
+        text: "Checkout is being updated — plan changes are temporarily unavailable.",
+      });
+      return;
+    }
     setPlanBusy(key);
     setPlanMsg(null);
 
@@ -206,22 +213,6 @@ export default function SettingsForm({
       }
       return;
     }
-
-    const { error } = await supabaseBrowser()
-      .from("profiles")
-      .update({ plan: key })
-      .eq("id", userId);
-    setPlanBusy(null);
-    if (error) {
-      setPlanMsg({ ok: false, text: error.message });
-      return;
-    }
-    setPlan(key);
-    toastSuccess(
-      key === "free"
-        ? "Downgraded to Free"
-        : `Plan set to ${PLANS.find((p) => p.key === key)?.name}`
-    );
   }
 
   async function openPortal(report = true): Promise<boolean> {
@@ -435,8 +426,7 @@ export default function SettingsForm({
           </p>
         ) : (
           <p className="mt-2 text-sm text-ink-2">
-            Billing isn&apos;t connected during the beta — plan changes apply to your
-            account immediately and nothing is charged.
+            Checkout is being updated — plan changes are temporarily unavailable.
           </p>
         )}
         {billing && plan !== "free" && (
