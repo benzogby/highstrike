@@ -6,7 +6,9 @@
  *   npm run dns                                             list the zone's records
  *   npm run dns -- set A @ 76.76.21.21                      add or replace a record (DNS only, automatic TTL)
  *   npm run dns -- set CNAME www cname.vercel-dns.com --proxied
- *   npm run dns -- delete CNAME www
+ *   npm run dns -- add TXT @ "v=spf1 include:_spf.google.com ~all"   always add (TXT and MX records can share a name)
+ *   npm run dns -- add MX @ smtp.google.com --priority 1
+ *   npm run dns -- delete CNAME www                         (a content after the name deletes only that one)
  *
  * A name is "@" for the zone itself, a bare label ("www") or a full name. The token is an API token made from the
  * "Edit zone DNS" template for highstrike.com (dash.cloudflare.com/profile/api-tokens), kept in the login Keychain
@@ -98,13 +100,30 @@ async function records(token, zone) {
 }
 
 function show(rec) {
-  return `${rec.type.padEnd(6)} ${rec.name.padEnd(30)} ${rec.content}  ${rec.proxied ? "proxied" : "DNS only"}, ttl ${rec.ttl === 1 ? "auto" : rec.ttl}`;
+  const content = rec.type === "MX" ? `${rec.priority} ${rec.content}` : rec.content;
+  return `${rec.type.padEnd(6)} ${rec.name.padEnd(30)} ${content}  ${rec.proxied ? "proxied" : "DNS only"}, ttl ${rec.ttl === 1 ? "auto" : rec.ttl}`;
 }
+
+/** The action's words and flags: --proxied, --priority <n> (an MX record's; 10 when left out). */
+function parse(rest) {
+  const out = { proxied: false, priority: 10, words: [] };
+  for (let i = 0; i < rest.length; i++) {
+    if (rest[i] === "--proxied") out.proxied = true;
+    else if (rest[i] === "--priority") out.priority = Number(rest[++i]);
+    else out.words.push(rest[i]);
+  }
+  return out;
+}
+
+const USAGE =
+  "Use: npm run dns -- set <type> <name> <content> [--proxied] [--priority <n>]  (adds, or replaces the record of that type and name)\n" +
+  "     npm run dns -- add <type> <name> <content> [--priority <n>]  (always adds: TXT and MX records can share a name)\n" +
+  "     npm run dns -- delete <type> <name> [<content>]";
 
 async function dns(args) {
   const [action = "list", ...rest] = args;
-  const proxied = rest.includes("--proxied");
-  const [type, name, content] = rest.filter((a) => a !== "--proxied");
+  const { proxied, priority, words } = parse(rest);
+  const [type, name, content] = [words[0]?.toUpperCase(), words[1], words[2]];
   const { token, zone } = await zoneAndToken();
   if (action === "list") {
     console.log(`${zone.name}: zone ${zone.status}${zone.paused ? ", paused" : ""}, nameservers ${zone.name_servers?.join(", ")}`);
@@ -112,11 +131,12 @@ async function dns(args) {
     console.log(all.length ? all.map(show).join("\n") : "(no records)");
     return;
   }
-  if (!type || !name || (action === "set" && !content)) fail("Use: npm run dns -- set <type> <name> <content> [--proxied]  or  npm run dns -- delete <type> <name>");
+  if (!["set", "add", "delete"].includes(action)) fail(`Unknown action "${action}".\n${USAGE}`);
+  if (!type || !name || (action !== "delete" && !content)) fail(USAGE);
   const fqdn = fullName(name);
-  const matches = (await records(token, zone)).filter((r) => r.type === type.toUpperCase() && r.name === fqdn);
+  const matches = (await records(token, zone)).filter((r) => r.type === type && r.name === fqdn && (action !== "delete" || !content || r.content === content));
   if (action === "delete") {
-    if (!matches.length) fail(`There's no ${type.toUpperCase()} record for ${fqdn}.`);
+    if (!matches.length) fail(`There's no ${type} record for ${fqdn}${content ? ` with ${content}` : ""}.`);
     for (const rec of matches) {
       const r = await cf(token, `/zones/${zone.id}/dns_records/${rec.id}`, { method: "DELETE" });
       if (!r.ok) fail(`Cloudflare wouldn't delete ${show(rec)} (${r.status}): ${errors(r.body)}`);
@@ -124,16 +144,24 @@ async function dns(args) {
     }
     return;
   }
-  if (action !== "set") fail(`Unknown action "${action}": use list, set or delete.`);
-  const record = { type: type.toUpperCase(), name: fqdn, content, proxied, ttl: 1 };
-  const r = matches.length
+  // Only addresses and aliases can go through Cloudflare's proxy; MX records carry a priority.
+  const record = {
+    type,
+    name: fqdn,
+    content,
+    ttl: 1,
+    ...(["A", "AAAA", "CNAME"].includes(type) ? { proxied } : {}),
+    ...(type === "MX" ? { priority } : {}),
+  };
+  const replace = action === "set" && matches.length;
+  const r = replace
     ? await cf(token, `/zones/${zone.id}/dns_records/${matches[0].id}`, { method: "PUT", body: JSON.stringify(record) })
     : await cf(token, `/zones/${zone.id}/dns_records`, { method: "POST", body: JSON.stringify(record) });
-  if (!r.ok) fail(`Cloudflare refused ${record.type} ${fqdn} (${r.status}): ${errors(r.body)}`);
-  console.log(`${matches.length ? "Updated" : "Added"} ${show(r.body.result)}`);
+  if (!r.ok) fail(`Cloudflare refused ${type} ${fqdn} (${r.status}): ${errors(r.body)}`);
+  console.log(`${replace ? "Updated" : "Added"} ${show(r.body.result)}`);
 }
 
 const [command, ...args] = process.argv.slice(2);
 if (command === "token") await saveToken();
 else if (command === "dns") await dns(args);
-else fail('Use: node scripts/cloudflare.mjs token  or  node scripts/cloudflare.mjs dns [list | set <type> <name> <content> | delete <type> <name>]');
+else fail("Use: node scripts/cloudflare.mjs token  or  node scripts/cloudflare.mjs dns [list | set | add | delete …]");

@@ -46,11 +46,14 @@ The token is a personal access token from supabase.com/dashboard/account/tokens.
 
 ## Domain and DNS
 
-highstrike.com's DNS is on Cloudflare (nameservers `jerry` and `melany.ns.cloudflare.com`). Vercel serves the site and redirects `highstrike.com` to `www.highstrike.com`. These are the two records Vercel needs, both DNS only (grey cloud, not proxied):
+highstrike.com's DNS is on Cloudflare (nameservers `jerry` and `melany.ns.cloudflare.com`). Vercel serves the site and redirects `highstrike.com` to `www.highstrike.com`, and Google Workspace hosts the support@highstrike.com mailbox. All records are DNS only (grey cloud, not proxied):
 
-| Type | Name | Content |
-|---|---|---|
-| A | `@` | `76.76.21.21` |
-| CNAME | `www` | `cname.vercel-dns.com` |
+| Type | Name | Content | For |
+|---|---|---|---|
+| A | `@` | `76.76.21.21` | Vercel |
+| CNAME | `www` | `cname.vercel-dns.com` | Vercel |
+| MX | `@` | `smtp.google.com` (priority 1) | Google Workspace mail |
+| TXT | `@` | `v=spf1 include:_spf.google.com ~all` | SPF: Google may send as highstrike.com |
+| TXT | `_dmarc` | `v=DMARC1; p=none` | DMARC, monitoring only |
 
-`npm run dns` lists the zone's records, and `npm run dns -- set <type> <name> <content>` adds or replaces one, through Cloudflare's API. `npm run cloudflare:token` saves the API token it uses (an "Edit zone DNS" token for highstrike.com) in the login Keychain.
+`npm run dns` lists the zone's records through Cloudflare's API. `npm run dns -- set <type> <name> <content>` adds a record or replaces the one of that type and name, and `npm run dns -- add …` always adds (TXT and MX records can share a name; `--priority <n>` for MX). `npm run cloudflare:token` saves the API token it uses (an "Edit zone DNS" token for highstrike.com) in the login Keychain.
