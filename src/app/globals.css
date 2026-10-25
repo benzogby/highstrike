@@ -14,7 +14,7 @@
   --color-up: #009f6f;
   --color-down: #f87171;
 
-  --font-display: var(--font-space-grotesk), system-ui, sans-serif;
+  --font-display: var(--font-cal-sans), var(--font-space-grotesk), system-ui, sans-serif;
   --font-body: var(--font-inter), system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;
 }
@@ -47,6 +47,8 @@
 
 html {
   scroll-behavior: smooth;
+  /* Cal Sans (display) has a single weight; render it as drawn everywhere. */
+  font-synthesis-weight: none;
 }
 
 body {
@@ -60,8 +62,10 @@ body {
   background: color-mix(in oklab, var(--color-accent) 30%, transparent);
 }
 
+/* Cal Sans ships one weight: never fake-bold it, and keep its own tight spacing. */
 .font-display {
   font-family: var(--font-display);
+  font-synthesis-weight: none;
 }
 
 .font-mono-nums {
@@ -526,4 +530,66 @@ body {
 }
 :root:not([data-theme="light"]) .brand-logo-dark {
   display: block;
+}
+
+/* ---------------------------------------------------------------------------
+   Landing page (/): always the dark trading desk, whatever theme the visitor
+   picked elsewhere. :has() beats :root[data-theme="light"] on specificity.
+--------------------------------------------------------------------------- */
+
+:root:has([data-landing]) {
+  color-scheme: dark;
+  --color-bg: #06080b;
+  --color-panel: #0b0e12;
+  --color-panel-2: #11151a;
+  --color-line: rgba(255, 255, 255, 0.08);
+  --color-line-strong: rgba(255, 255, 255, 0.14);
+  --color-ink: #f2f4f7;
+  --color-ink-2: #a9b1bd;
+  --color-ink-3: #8b94a1;
+  --color-accent: #00c27f;
+  --color-accent-2: #2fd39a;
+  --color-up: #2fd39a;
+  --color-down: #ff6b6f;
+  --grid-line: rgba(255, 255, 255, 0.035);
+  --card-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+}
+
+.lp-glass {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.lp-phone {
+  box-shadow:
+    0 0 0 1px rgba(0, 194, 127, 0.12),
+    0 40px 120px -20px rgba(0, 194, 127, 0.45),
+    0 30px 60px -30px rgba(0, 0, 0, 0.9);
+}
+
+.lp-cta {
+  box-shadow: 0 12px 40px -10px rgba(0, 194, 127, 0.7);
+}
+
+@keyframes lp-pulse { 0%, 100% { opacity: 1 } 50% { opacity: 0.3 } }
+@keyframes lp-in { from { opacity: 0; transform: translateY(14px) } to { opacity: 1; transform: none } }
+@keyframes lp-drop {
+  0% { opacity: 0; transform: translateY(-18px) scale(0.96) }
+  12%, 88% { opacity: 1; transform: none }
+  100% { opacity: 0; transform: translateY(-10px) }
+}
+@keyframes lp-ring { from { stroke-dasharray: 0 100 } }
+@keyframes lp-draw { from { stroke-dashoffset: 100 } }
+@keyframes lp-float { 0%, 100% { transform: translateY(0) } 50% { transform: translateY(-8px) } }
+
+@media (prefers-reduced-motion: no-preference) {
+  .lp-pulse { animation: lp-pulse 1.6s ease-in-out infinite; }
+  .lp-in { animation: lp-in 0.7s ease-out both; animation-delay: var(--lp-delay, 0s); }
+  .lp-drop { animation: lp-drop 6s ease-in-out 1.2s infinite both; }
+  .lp-float { animation: lp-float 6s ease-in-out infinite; }
+  .lp-ring { animation: lp-ring 1.8s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+  .lp-draw { stroke-dasharray: 100; animation: lp-draw 2.4s ease-out 0.4s both; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lp-drop { opacity: 0; }
 }

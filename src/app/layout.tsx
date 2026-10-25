@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Space_Grotesk, IBM_Plex_Mono } from "next/font/google";
+import { Inter, Space_Grotesk, IBM_Plex_Mono, Cal_Sans } from "next/font/google";
 import TrackPageview from "./TrackPageview";
 import "./globals.css";
 
@@ -11,6 +11,14 @@ const inter = Inter({
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-space-grotesk",
   subsets: ["latin"],
+});
+
+const calSans = Cal_Sans({
+  variable: "--font-cal-sans",
+  subsets: ["latin"],
+  weight: "400",
+  // next/font has no metrics for Cal Sans, so it can't build a size-matched fallback.
+  adjustFontFallback: false,
 });
 
 const plexMono = IBM_Plex_Mono({
@@ -39,7 +47,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      // The font variables live on <html> so the theme's --font-* tokens, which are
+      // resolved on :root, can see them (on <body> they resolved to nothing).
+      className={`${inter.variable} ${spaceGrotesk.variable} ${calSans.variable} ${plexMono.variable}`}
+    >
       <head>
         <script
           // Applies the stored theme before first paint to avoid a flash.
@@ -49,7 +63,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${inter.variable} ${spaceGrotesk.variable} ${plexMono.variable} antialiased`}
+        className="antialiased"
       >
         <TrackPageview />
         {children}
