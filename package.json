@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "sql": "node scripts/supabase.mjs sql",
+    "supabase:token": "node scripts/supabase.mjs token"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.121.0",
