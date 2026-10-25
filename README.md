@@ -43,3 +43,14 @@ npm run sql -- --read-only "select now()"                # the database refuses 
 ```
 
 The token is a personal access token from supabase.com/dashboard/account/tokens. It's kept in the login Keychain (service `Highstrike`), never in the repo or `.env.local`; `SUPABASE_ACCESS_TOKEN` in the environment overrides it.
+
+## Domain and DNS
+
+highstrike.com's DNS is on Cloudflare (nameservers `jerry` and `melany.ns.cloudflare.com`). Vercel serves the site and redirects `highstrike.com` to `www.highstrike.com`. These are the two records Vercel needs, both DNS only (grey cloud, not proxied):
+
+| Type | Name | Content |
+|---|---|---|
+| A | `@` | `76.76.21.21` |
+| CNAME | `www` | `cname.vercel-dns.com` |
+
+`npm run dns` lists the zone's records, and `npm run dns -- set <type> <name> <content>` adds or replaces one, through Cloudflare's API. `npm run cloudflare:token` saves the API token it uses (an "Edit zone DNS" token for highstrike.com) in the login Keychain.
