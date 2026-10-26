@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 
-// The S&P 500 line in the hero phone: starts from the last recorded close and
-// switches to the live quote from /api/market when Finnhub is configured.
-// /api/market's fallback prices are samples, so they're never shown here.
+// The S&P 500 price in the homepage's briefing card: starts from the last
+// recorded close and switches to the live quote from /api/market when Finnhub
+// is configured. /api/market's fallback prices are samples, so they're never
+// shown here.
 export default function LiveSpy({ close, prevClose }: { close: number; prevClose: number }) {
   const [quote, setQuote] = useState({ price: close, changePct: ((close - prevClose) / prevClose) * 100 });
 
@@ -30,9 +31,9 @@ export default function LiveSpy({ close, prevClose }: { close: number; prevClose
 
   const up = quote.changePct >= 0;
   return (
-    <span className="font-mono-nums text-xs">
-      <span className="text-ink">{quote.price.toFixed(2)}</span>{" "}
-      <span className={up ? "text-up" : "text-down"}>
+    <span className="text-[13px] tabular-nums">
+      <span className="text-lx-ink">{quote.price.toFixed(2)}</span>{" "}
+      <span className={up ? "text-lx-up" : "text-lx-down"}>
         {up ? "+" : "−"}
         {Math.abs(quote.changePct).toFixed(2)}%
       </span>
