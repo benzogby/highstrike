@@ -1,566 +1,469 @@
+import type { Metadata } from "next";
 import Link from "next/link";
-import CountUp from "@/components/landing/CountUp";
-import LiveSpy from "@/components/landing/LiveSpy";
-import { formatDateShort, getLandingData, type ClosedSetup } from "./data";
+import BellClock from "@/components/landing/BellClock";
+import FaqIndex from "@/components/landing/FaqIndex";
+import HowItWorks from "@/components/landing/HowItWorks";
+import TickerLookup from "@/components/landing/TickerLookup";
+import {
+  AlertFeed,
+  AlertToast,
+  Briefing,
+  GradedStamp,
+  InsiderChatter,
+  ScannerSlice,
+  SchoolModules,
+  SetupCard,
+  WeatherRow,
+  price,
+  shortDate,
+  sideLabel,
+  signedPct,
+  statusLabel,
+} from "@/components/landing/Fragments";
+import { LOOKUP_START, getLandingData, getTickerRead, type ClosedSetup, type TickerRead } from "./data";
 
-// Refresh the live report, setups and scoreboard every 30 minutes.
+// The homepage, built with Taste Skill's "The product performs" direction in
+// the site's own light system: HighStrike's real morning output, as working
+// fragments of the terminal, is the picture on every screen. Styles in
+// landing.css. Refresh the live report, setups and record every 30 minutes.
 export const revalidate = 1800;
 
-const TRIAL_HREF = "/signup";
+export const metadata: Metadata = {
+  title: "HighStrike — Finished trades before the bell",
+  description:
+    "Every morning HighStrike's AI scans 5,400+ stocks and publishes the day's options setups with the entry, the target and the reasoning. $99 a month, first 7 days free.",
+  openGraph: {
+    title: "HighStrike — Finished trades before the bell",
+    description:
+      "Every morning HighStrike's AI scans 5,400+ stocks and publishes the day's options setups with the entry, the target and the reasoning.",
+    type: "website",
+  },
+};
+
+const TRIAL = "/signup";
 
 const faqs = [
   {
     q: "What do I get for $99 a month?",
-    a: "Everything: the AI trading terminal (market weather, the flow scanner, insider filings and alerts), the daily trade ideas with entries, targets, time windows and suggested contracts, and the full HighStrike Trading School library. One plan, no upsells.",
+    a: "Everything: the AI terminal with market weather, the flow scanner, insider filings and alerts; the daily setups with entry, target, time window and suggested contracts; and the full Trading School. One plan, no upsells.",
   },
   {
     q: "How does the free trial work?",
-    a: "You start with 7 days free. A card is needed to start, and you're charged $99 only if you keep going after day 7. Cancel from your account before then and you pay nothing.",
+    a: "You start with 7 days free. Cancel from your account before day 7 and you pay nothing; after that it is $99 a month, and you can cancel any time.",
   },
   {
-    q: "Do I need to connect my brokerage account?",
-    a: "No, and you can't. HighStrike is analytics software by design. It never touches your broker, your positions or your money; you place trades wherever you already trade.",
+    q: "When do setups publish?",
+    a: "Before the open on every market day. The report and the slate are ready before 9:30 ET, and an alert arrives when a setup's entry rules trigger.",
   },
   {
-    q: "What experience level do I need?",
-    a: "You should know what a call and a put are. Beyond that, every setup is a worked example with its reasoning written out, and the Trading School library covers the rest.",
+    q: "Do I connect my brokerage?",
+    a: "No, and you can't. HighStrike is analytics software: it never touches your broker, your positions or your money. You trade wherever you already trade.",
+  },
+  {
+    q: "What experience do I need?",
+    a: "You should know what a call and a put are. Every setup is a worked example with its reasoning written out, and Trading School covers the rest.",
   },
   {
     q: "Is this financial advice?",
-    a: "No. HighStrike AI is an analytics and data tool; setups are market commentary, not recommendations. Trading involves substantial risk, including loss of principal. You make your own decisions and should consult a qualified advisor.",
+    a: "No. HighStrike is an analytics and education tool, and setups are market commentary, not recommendations. Trading involves substantial risk, including loss of principal.",
   },
 ];
 
-const includes = [
-  "AI trading terminal: market weather, flow scanner, insider filings",
-  "Daily trade ideas with entry, target, time window and contracts",
-  "The full HighStrike Trading School library ($397 value)",
-  "Alerts when a setup triggers",
-  "Cancel anytime from your account",
+const steps = [
+  {
+    lead: "Overnight",
+    text: "The scanner ranks 5,400+ stocks by options flow, relative volume and momentum, and keeps the names whose flow has broken from their own baseline.",
+  },
+  {
+    lead: "Before the open",
+    text: "The AI writes each finalist up as a setup: the price that has to hold, the target, the time window and the reasoning, in plain English.",
+  },
+  {
+    lead: "When the price agrees",
+    text: "The entry rules trigger and an alert goes out. Until then the setup waits, and nothing is published after the fact.",
+  },
+  {
+    lead: "After it closes",
+    text: "Every setup is graded against real prices, hit or miss, and the result joins the public record below.",
+  },
 ];
 
-const lessons = [
-  { n: "01", title: "Options mechanics", state: "done" },
-  { n: "02", title: "Trade management", state: "done" },
-  { n: "03", title: "The risk framework behind every setup", state: "now" },
-  { n: "04", title: "Trade review: grade your own execution", state: "next" },
-] as const;
-
-// Placeholders until Ben sends real member quotes. They never render on the
-// production deployment (VERCEL_ENV), only on previews and locally.
-const PLACEHOLDER_TESTIMONIALS = [1, 2, 3];
-const showPlaceholders = process.env.VERCEL_ENV !== "production";
-
-function pct(n: number) {
-  return `${n >= 0 ? "+" : "−"}${Math.abs(n).toFixed(2)}%`;
+// The record table reads newest day first; the date prints once per day.
+function byDay(closed: ClosedSetup[]) {
+  return [...closed].sort((a, b) => (a.reportDate < b.reportDate ? 1 : a.reportDate > b.reportDate ? -1 : a.ticker.localeCompare(b.ticker)));
 }
 
-function money(n: number) {
-  return `$${n.toFixed(2)}`;
-}
-
-function statusLabel(status: string) {
-  if (status === "target_hit") return "Target hit";
-  if (status === "stopped") return "Stopped out";
-  if (status === "expired") return "Expired";
-  return status;
-}
-
-function Ring({ label, value, color, delay }: { label: string; value: number; color: string; delay: string }) {
-  return (
-    <div className="text-center">
-      <div className="relative mx-auto h-16 w-16">
-        <svg viewBox="0 0 64 64" className="h-16 w-16 -rotate-90" aria-hidden="true">
-          <circle cx="32" cy="32" r="26" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="6" />
-          <circle
-            cx="32"
-            cy="32"
-            r="26"
-            fill="none"
-            stroke={color}
-            strokeWidth="6"
-            strokeLinecap="round"
-            pathLength={100}
-            className="lp-ring"
-            style={{ strokeDasharray: `${value} 100`, animationDelay: delay }}
-          />
-        </svg>
-        <span className="font-mono-nums absolute inset-0 flex items-center justify-center text-base font-semibold">
-          <CountUp to={value} duration={1800} />
-        </span>
-      </div>
-      <p className="mt-1.5 text-[10.5px] text-ink-2">{label}</p>
-    </div>
-  );
-}
-
-function DirectionBadge({ direction }: { direction: string }) {
-  const long = direction === "long";
-  return (
-    <span
-      className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-        long ? "bg-up/15 text-up" : "bg-down/15 text-down"
-      }`}
-    >
-      {long ? "Long" : "Short"}
-    </span>
-  );
-}
-
-function Lock() {
-  return (
-    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
-      <rect x="4" y="11" width="16" height="10" rx="2" />
-      <path d="M8 11V7a4 4 0 018 0v4" />
-    </svg>
-  );
-}
-
-function sparkPoints(closes: number[]) {
-  if (closes.length < 2) return "";
-  const lo = Math.min(...closes);
-  const hi = Math.max(...closes);
-  const span = hi - lo || 1;
-  return closes
-    .map((c, i) => `${((i * 300) / (closes.length - 1)).toFixed(1)},${(58 - ((c - lo) / span) * 52).toFixed(1)}`)
-    .join(" ");
+function mondayOf(d: Date) {
+  const day = (d.getUTCDay() + 6) % 7;
+  const m = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - day));
+  return m.toISOString().slice(0, 10);
 }
 
 export default async function Home() {
-  const d = await getLandingData();
-  const top = d.today[0];
-  const sample: ClosedSetup | undefined = d.closed.find((c) => c.status === "target_hit" && c.criteria.length > 0);
-  const traders = parseInt(d.badges.traders.replace(/[^0-9]/g, ""), 10) || 10000;
-  const tradersSuffix = /\+\s*$/.test(d.badges.traders) ? "+" : "";
-  const countries = parseInt(d.badges.countries.replace(/[^0-9]/g, ""), 10) || 142;
-  const spyClose = d.spy.at(-1);
-  const spyPrev = d.spy.at(-2);
+  const { report, today, closed, spy, stats, weeks, movers, lookup, badges } = await getLandingData();
+
+  const example = closed.find((c) => c.status === "target_hit" && c.criteria.length > 0) ?? closed.find((c) => c.criteria.length > 0) ?? null;
+  const reads = (await Promise.all(today.slice(0, 3).map((t) => getTickerRead(t.ticker)))).filter((r): r is TickerRead => r != null);
+  // The day after a holiday repeats the last close, so every move reads zero:
+  // the band only shows when the last session really moved.
+  const band = movers.some((m) => m.changePct !== 0) ? movers.slice(0, 14) : [];
+  const session = spy[spy.length - 1]?.date;
+  const alerts = closed.filter((c) => c.status === "target_hit" && c.criteria.length > 0).slice(0, 3);
+
+  // The bar the page is about: the last full week of grading.
+  const thisWeek = mondayOf(new Date());
+  const accentWeek = [...weeks].reverse().find((w) => w.week < thisWeek)?.week;
+  const maxClosed = Math.max(1, ...weeks.map((w) => w.closed));
+
+  const rows = byDay(closed);
 
   return (
-    <main className="overflow-x-hidden">
-      {/* 1 · Hero: the promise, the trial, and the app with this morning's real report */}
-      <section className="mx-auto flex max-w-6xl flex-wrap items-center gap-11 px-5 pb-5 pt-6 lg:pt-12">
-        <div className="min-w-0 flex-[1_1_460px] text-center lg:text-left">
-          <p className="inline-flex items-center gap-2 rounded-full border border-line bg-white/[0.03] px-3 py-1.5 text-[13px] text-ink-2">
-            <span className="lp-pulse h-[7px] w-[7px] rounded-full bg-accent" aria-hidden="true" />
-            Everything for $99/month · 7 days free
-          </p>
-          <h1 className="font-display mt-5 text-[clamp(40px,10vw,80px)] leading-[1.04] tracking-[-0.02em]">
-            Trade like you have a <span className="text-accent">research team.</span>
+    <main>
+      {/* Hero: the promise upper left, this morning's briefing filling the rest */}
+      <section className="hs-wrap hs-hero" aria-labelledby="hs-title">
+        <div className="hs-hero__text">
+          <h1 id="hs-title" className="hs-display hs-lines">
+            <span className="hs-line">
+              <span data-line="" style={{ "--i": 0 } as React.CSSProperties}>
+                Finished trades
+              </span>
+            </span>
+            <span className="hs-line">
+              <span data-line="" style={{ "--i": 1 } as React.CSSProperties}>
+                before the bell
+              </span>
+            </span>
           </h1>
-          <p className="mx-auto mt-5 max-w-xl text-[17px] leading-relaxed text-ink-2 lg:mx-0">
-            Every morning, HighStrike AI reads the whole market and hands you finished options setups: the entry,
-            the target and the reason why. You decide. You execute.
+          <p className="hs-hero__lead hs-body" data-load="" style={{ "--d": "420ms" } as React.CSSProperties}>
+            Every morning HighStrike&apos;s AI scans 5,400+ stocks and publishes the day&apos;s options setups: the entry,
+            the target and the reasoning.
           </p>
-          <div className="mt-7 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
-            <Link
-              href={TRIAL_HREF}
-              className="press lp-cta inline-flex min-h-[54px] items-center justify-center rounded-full bg-accent px-7 text-base font-semibold text-[#03130c] transition hover:bg-accent-2"
-            >
-              Start your 7-day free trial
-            </Link>
+          <div data-load="" style={{ "--d": "500ms" } as React.CSSProperties}>
+            <div className="hs-hero__actions">
+              <Link href={TRIAL} className="hs-button">
+                Start free trial
+              </Link>
+              <a href="#lookup" className="hs-link">
+                Look up a ticker
+              </a>
+            </div>
+            <p className="hs-hero__price hs-small hs-muted">$99 a month after a 7-day free trial. Cancel anytime.</p>
           </div>
-          <p className="mt-3 text-[13px] text-ink-3">Then $99/month. Cancel anytime.</p>
-          <div className="mt-6 flex flex-wrap justify-center gap-2 lg:justify-start">
-            {[
-              [d.badges.traders, "traders"],
-              [d.badges.countries, "countries"],
-            ].map(([v, l]) => (
-              <span key={l} className="lp-glass inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-[13px] text-ink-2">
-                <span className="font-semibold text-ink">{v}</span> {l}
+          <BellClock className="hs-hero__bell" />
+        </div>
+        <figure className="hs-hero__figure" data-open="">
+          <Briefing report={report} today={today} spy={spy} />
+          <figcaption className="sr-only-hs">This morning&apos;s HighStrike briefing, live.</figcaption>
+        </figure>
+      </section>
+
+      {/* The last session's biggest moves among the names the desk follows */}
+      {band.length > 0 && (
+        <section className="hs-marquee" aria-labelledby="hs-marquee-note">
+          <input type="checkbox" id="hs-marquee-pause" className="hs-marquee__toggle sr-only-hs" />
+          <div className="hs-marquee__track">
+            {[...band, ...band].map((m, i) => (
+              <span key={`${m.ticker}-${i}`} className="hs-marquee__item" aria-hidden={i >= band.length ? true : undefined}>
+                <span>{m.ticker}</span>
+                <span className={m.changePct >= 0 ? "hs-up" : "hs-down"}>{signedPct(m.changePct)}</span>
               </span>
             ))}
-            <span className="lp-glass inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-[13px] text-ink-2">
-              Since <span className="font-semibold text-ink">2018</span>
-            </span>
           </div>
-        </div>
-
-        <div className="flex min-w-0 flex-[1_1_340px] justify-center" aria-label="The HighStrike app on a phone">
-          <div className="lp-float lp-phone w-full max-w-[330px] rounded-[44px] border border-white/[0.12] bg-[#0c0f13] p-2.5">
-            <div className="relative overflow-hidden rounded-[36px] border border-white/[0.06] bg-[#080a0d] px-3.5 pb-4 pt-4">
-              <div className="mx-auto mb-3 h-[22px] w-[84px] rounded-full bg-black" aria-hidden="true" />
-
-              <div className="flex items-center justify-between gap-2">
-                <div>
-                  <p className="text-xs text-ink-3">{d.report ? `${d.report.dateLabel} · pre-market` : "Pre-market"}</p>
-                  <p className="font-display mt-0.5 text-lg">Good morning</p>
-                </div>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={d.logo ?? "/api/site/favicon"} alt="" width={28} height={28} className="h-7 w-7" />
-              </div>
-
-              {top && (
-                <div className="lp-drop absolute inset-x-3 top-3 z-10 flex items-center gap-2.5 rounded-2xl border border-accent/35 bg-[#161c22]/95 px-3 py-2.5 shadow-[0_12px_30px_-10px_rgba(0,0,0,0.8)]">
-                  <span className="h-2 w-2 flex-none rounded-full bg-up" aria-hidden="true" />
-                  <div className="min-w-0">
-                    <p className="text-xs font-semibold">New setup published</p>
-                    <p className="font-mono-nums mt-px text-[11px] text-ink-2">
-                      {top.ticker} · {top.direction.toUpperCase()} · flow {top.flowScore ?? "—"}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {d.report && (
-                <div className="lp-glass mt-3.5 rounded-[18px] p-3">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-semibold text-ink-2">Market weather</p>
-                    <p className="inline-flex items-center gap-1.5 text-[11px] text-up">
-                      <span className="lp-pulse h-1.5 w-1.5 rounded-full bg-up" aria-hidden="true" />
-                      Live
-                    </p>
-                  </div>
-                  <div className="mt-2.5 grid grid-cols-3 gap-1.5">
-                    <Ring label="Volatility" value={d.report.volatility} color="#ffb020" delay="0s" />
-                    <Ring label="Opportunity" value={d.report.opportunity} color="#2fd39a" delay="0.15s" />
-                    <Ring label="Direction" value={d.report.direction} color="#9fb3c8" delay="0.3s" />
-                  </div>
-                  <p className="mt-2.5 text-xs leading-normal text-ink-2">{d.report.summary}</p>
-                </div>
-              )}
-
-              {d.today.length > 0 && (
-                <div className="lp-glass mt-2.5 rounded-[18px] p-3">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-semibold text-ink-2">Today&apos;s setups</p>
-                    <p className="font-mono-nums text-[11px] text-ink-3">{d.today.length} published</p>
-                  </div>
-                  <div className="mt-2 flex flex-col gap-1.5">
-                    {d.today.slice(0, 3).map((t, i) => (
-                      <div
-                        key={t.ticker}
-                        className="lp-in flex items-center justify-between gap-2 rounded-xl bg-white/[0.03] px-2.5 py-2"
-                        style={{ "--lp-delay": `${0.6 + i * 0.3}s` } as React.CSSProperties}
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="font-display text-base">{t.ticker}</span>
-                          <DirectionBadge direction={t.direction} />
-                        </div>
-                        <span className="inline-flex items-center gap-1.5 font-mono-nums text-[11px] text-ink-3">
-                          <Lock /> entry · target
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                  <Link href={TRIAL_HREF} className="mt-2 block text-center text-[11.5px] font-semibold text-accent">
-                    Unlock today&apos;s setups free →
-                  </Link>
-                </div>
-              )}
-
-              {spyClose != null && spyPrev != null && (
-                <div className="lp-glass mt-2.5 rounded-[18px] px-3 pb-2 pt-3">
-                  <div className="flex items-baseline justify-between">
-                    <p className="text-xs font-semibold text-ink-2">S&amp;P 500 · {d.spy.length} days</p>
-                    <LiveSpy close={spyClose} prevClose={spyPrev} />
-                  </div>
-                  <svg viewBox="0 0 300 64" preserveAspectRatio="none" className="mt-1.5 h-16 w-full" aria-hidden="true">
-                    <polyline
-                      points={sparkPoints(d.spy)}
-                      fill="none"
-                      stroke="#00c27f"
-                      strokeWidth="2"
-                      strokeLinejoin="round"
-                      strokeLinecap="round"
-                      pathLength={100}
-                      className="lp-draw"
-                    />
-                  </svg>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 2 · Proof */}
-      <section className="mx-auto max-w-6xl px-5 pt-9" aria-label="HighStrike in numbers">
-        <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
-          {[
-            { node: <CountUp to={traders} suffix={tradersSuffix} />, label: "traders" },
-            { node: <CountUp to={countries} />, label: "countries" },
-            { node: "2018", label: "teaching options since" },
-            { node: <CountUp to={150} suffix="K" />, label: "trades of data behind the AI" },
-          ].map((s) => (
-            <div key={s.label} className="lp-glass rounded-[18px] px-4 py-[18px]">
-              <p className="font-display text-[32px] tracking-[-0.01em]">{s.node}</p>
-              <p className="mt-1 text-[13px] text-ink-2">{s.label}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* 3 · What you get for $99 */}
-      <section id="what" className="mx-auto max-w-6xl scroll-mt-16 px-5 pb-6 pt-16">
-        <div className="text-center">
-          <p className="text-[13px] font-semibold tracking-[0.06em] text-accent">ONE PLAN · EVERYTHING INCLUDED</p>
-          <h2 className="font-display mx-auto mt-3 max-w-3xl text-[clamp(32px,7.5vw,56px)] leading-[1.06] tracking-[-0.015em]">
-            Three tools. One price. $99 a month.
-          </h2>
-          <p className="mx-auto mt-3.5 max-w-xl text-base leading-relaxed text-ink-2">
-            No tiers and no upsells. The terminal, the daily trade ideas and the full Trading School are all in.
-          </p>
-        </div>
-
-        <div className="mt-9 flex flex-wrap gap-3.5">
-          <div className="lp-glass min-w-0 flex-[1_1_320px] rounded-3xl p-3.5">
-            <div className="rounded-2xl border border-white/[0.06] bg-[#0b0e12] p-3 font-mono-nums text-xs">
-              <div className="flex justify-between text-[10.5px] text-ink-3">
-                <span>FLOW SCANNER</span>
-                <span>5,400+ SYMBOLS</span>
-              </div>
-              {d.today.map((t) => (
-                <div key={t.ticker} className="mt-1.5 grid grid-cols-[48px_minmax(0,1fr)_36px_52px] items-center gap-2 rounded-lg bg-white/[0.025] px-1.5 py-2">
-                  <span className="font-semibold">{t.ticker}</span>
-                  <span className="h-1 overflow-hidden rounded bg-white/[0.07]">
-                    <span
-                      className={`block h-full ${t.direction === "long" ? "bg-up" : "bg-down"}`}
-                      style={{ width: `${Math.max(4, t.flowScore ?? 0)}%` }}
-                    />
-                  </span>
-                  <span className="text-right">{t.flowScore ?? "—"}</span>
-                  <span className={`text-right font-semibold ${t.direction === "long" ? "text-up" : "text-down"}`}>
-                    {t.direction === "long" ? "LONG" : "SHORT"}
-                  </span>
-                </div>
-              ))}
-            </div>
-            <h3 className="font-display mx-1.5 mt-[18px] text-[22px]">The AI trading terminal</h3>
-            <p className="mx-1.5 mb-1.5 mt-2 text-[14.5px] leading-relaxed text-ink-2">
-              Market weather, a scanner that ranks 5,400+ stocks by options flow, insider filings and alerts. Your
-              whole morning on one screen.
+          <div className="hs-wrap hs-marquee__foot">
+            <p id="hs-marquee-note" className="hs-small hs-muted">
+              The biggest moves among the stocks HighStrike follows, {session ? `${shortDate(session)} close` : "last session"}.
             </p>
-          </div>
-
-          <div className="lp-glass min-w-0 flex-[1_1_320px] rounded-3xl p-3.5">
-            {sample ? (
-              <div className="rounded-2xl border border-white/[0.06] bg-[#0b0e12] p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="flex items-center gap-2">
-                    <span className="font-display text-[17px]">{sample.ticker}</span>
-                    <DirectionBadge direction={sample.direction} />
-                  </span>
-                  <span className="rounded-full bg-accent px-2.5 py-1 text-[11px] font-semibold text-[#03130c]">
-                    Target hit {sample.resultPct != null ? pct(sample.resultPct) : ""}
-                  </span>
-                </div>
-                <div className="mt-3 flex flex-col gap-1.5">
-                  {sample.criteria.map((c, i) => (
-                    <p
-                      key={c}
-                      className="lp-in flex gap-2 text-[12.5px] text-ink-2"
-                      style={{ "--lp-delay": `${0.3 + i * 0.25}s` } as React.CSSProperties}
-                    >
-                      <span className="text-up" aria-hidden="true">
-                        ✓
-                      </span>
-                      {c}
-                    </p>
-                  ))}
-                </div>
-                <p className="font-mono-nums mt-2.5 text-[11px] text-ink-3">
-                  Published {formatDateShort(sample.reportDate)} · {money(sample.entry)} → {money(sample.target)}
-                  {sample.timeFrame ? ` · ${sample.timeFrame}` : ""}
-                </p>
-              </div>
-            ) : null}
-            <h3 className="font-display mx-1.5 mt-[18px] text-[22px]">The trade ideas engine</h3>
-            <p className="mx-1.5 mb-1.5 mt-2 text-[14.5px] leading-relaxed text-ink-2">
-              Finished trades, not ticker lists. Entry rules, target, time window and suggested contracts, with the
-              reasoning written out.
-            </p>
-          </div>
-
-          <div className="lp-glass min-w-0 flex-[1_1_320px] rounded-3xl p-3.5">
-            <div className="overflow-hidden rounded-2xl border border-white/[0.06] bg-[#0b0e12]">
-              <div className="flex h-[120px] items-center justify-center border-b border-white/[0.06] bg-[#10151b]">
-                <span className="flex h-[54px] w-[54px] items-center justify-center rounded-full bg-ink" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" width="22" height="22">
-                    <path d="M8 5v14l11-7z" fill="#06080b" />
-                  </svg>
-                </span>
-              </div>
-              <div className="flex flex-col gap-1 p-3">
-                {lessons.map((l) => (
-                  <p key={l.n} className="flex items-center gap-2.5 text-[13px]">
-                    <span className="font-mono-nums text-[11px] text-ink-3">{l.n}</span>
-                    <span className="min-w-0 flex-1 text-ink-2">{l.title}</span>
-                    <span
-                      className={`font-mono-nums text-xs ${
-                        l.state === "done" ? "text-up" : l.state === "now" ? "text-[#ffb020]" : "text-ink-3"
-                      }`}
-                      aria-hidden="true"
-                    >
-                      {l.state === "done" ? "✓" : l.state === "now" ? "▶" : "○"}
-                    </span>
-                  </p>
-                ))}
-              </div>
-            </div>
-            <h3 className="font-display mx-1.5 mt-[18px] text-[22px]">The education library</h3>
-            <p className="mx-1.5 mb-1.5 mt-2 text-[14.5px] leading-relaxed text-ink-2">
-              The complete HighStrike Trading School, from options mechanics to trade review. A $397 program,
-              included.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* 4 · Trades: graded in public, wins and losses */}
-      <section id="results" className="mx-auto max-w-6xl scroll-mt-16 px-5 pt-16">
-        <div className="text-center">
-          <p className="text-[13px] font-semibold tracking-[0.06em] text-accent">THE SCOREBOARD</p>
-          <h2 className="font-display mx-auto mt-3 max-w-3xl text-[clamp(30px,7vw,52px)] leading-[1.06] tracking-[-0.015em]">
-            Every setup graded in public. Losses too.
-          </h2>
-          <p className="mx-auto mt-3.5 max-w-xl text-base leading-relaxed text-ink-2">
-            Since August 2026 each setup is recorded with its entry and target, then graded automatically against
-            real prices.
-          </p>
-        </div>
-
-        {d.stats && (
-          <div className="mt-9 grid grid-cols-2 gap-2.5 md:grid-cols-4">
-            {[
-              { v: d.stats.winRate != null ? `${d.stats.winRate}%` : "—", l: "Hit their target" },
-              { v: d.stats.avgGain != null ? `+${d.stats.avgGain}%` : "—", l: "Average gain" },
-              { v: d.stats.avgLoss != null ? `${d.stats.avgLoss}%` : "—", l: "Average loss" },
-              { v: `${d.stats.closedCount}`, l: `closed · ${d.stats.openCount} open` },
-            ].map((t) => (
-              <div key={t.l} className="lp-glass rounded-[18px] px-4 py-[18px]">
-                <p className="font-display text-[28px]">{t.v}</p>
-                <p className="mt-1 text-[13px] text-ink-2">{t.l}</p>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {d.closed.length > 0 && (
-          <div className="lp-glass mt-3 overflow-hidden rounded-[18px]">
-            <p className="border-b border-line px-4 py-3 text-xs font-semibold text-ink-2">Most recently closed</p>
-            {d.closed.map((c) => (
-              <div
-                key={`${c.ticker}-${c.reportDate}`}
-                className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 border-b border-line px-4 py-3 last:border-0"
-              >
-                <span className="flex min-w-0 items-center gap-2">
-                  <span className="font-display text-base">{c.ticker}</span>
-                  <DirectionBadge direction={c.direction} />
-                  <span className="hidden truncate text-xs text-ink-3 sm:inline">{formatDateShort(c.reportDate)}</span>
-                </span>
-                <span className="text-xs text-ink-3">{statusLabel(c.status)}</span>
-                <span className={`font-mono-nums text-sm ${(c.resultPct ?? 0) >= 0 ? "text-up" : "text-down"}`}>
-                  {c.resultPct != null ? pct(c.resultPct) : "—"}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div className="mt-10 text-center">
-          <p className="font-display text-xl">Before the terminal: our options trades</p>
-          <p className="mx-auto mt-1.5 max-w-lg text-sm text-ink-2">Results from HighStrike&apos;s options trading.</p>
-        </div>
-        <div className="mt-5 grid grid-cols-3 gap-2.5">
-          {d.scoreboard.stats.map((s) => (
-            <div key={s.label} className="lp-glass rounded-[18px] px-3 py-4 text-center">
-              <p className={`font-display text-[26px] ${s.value.startsWith("-") ? "text-down" : "text-up"}`}>{s.value}</p>
-              <p className="mt-1 text-xs text-ink-2">{s.label}</p>
-            </div>
-          ))}
-        </div>
-        <div className="mt-2.5 grid gap-2.5 sm:grid-cols-2">
-          {d.scoreboard.trades.map((t) => (
-            <div key={t.ticker} className="lp-glass flex items-center justify-between rounded-[18px] px-5 py-4">
-              <div>
-                <p className="font-display text-xl">{t.ticker}</p>
-                <p className="mt-0.5 text-xs text-ink-2">{t.status}</p>
-              </div>
-              <p className="font-display text-2xl text-up">{t.result}</p>
-            </div>
-          ))}
-        </div>
-        <p className="mt-4 text-center">
-          <Link href="/results" className="text-sm font-semibold text-accent transition hover:text-accent-2">
-            Full scoreboard and methodology →
-          </Link>
-        </p>
-      </section>
-
-      {/* 5 · Testimonials (placeholders: previews only, never production) */}
-      {showPlaceholders && (
-        <section className="mx-auto max-w-6xl px-5 pt-16" aria-label="What members say">
-          <h2 className="font-display text-center text-[clamp(28px,6.5vw,44px)] leading-tight">What members say</h2>
-          <div className="mt-8 grid gap-3 md:grid-cols-3">
-            {PLACEHOLDER_TESTIMONIALS.map((n) => (
-              <figure key={n} className="rounded-3xl border border-dashed border-[#ffb020]/60 bg-[#ffb020]/[0.04] p-5">
-                <p className="text-[11px] font-semibold tracking-[0.06em] text-[#ffb020]">
-                  PLACEHOLDER · REAL MEMBER QUOTE GOES HERE
-                </p>
-                <blockquote className="mt-3 text-[15px] leading-relaxed text-ink-2">
-                  [A real member&apos;s words about HighStrike, with their permission.]
-                </blockquote>
-                <figcaption className="mt-4 text-sm text-ink-3">[Name, trading since 20XX]</figcaption>
-              </figure>
-            ))}
+            <label htmlFor="hs-marquee-pause" className="hs-marquee__pause">
+              <span className="sr-only-hs">Pause the moving list</span>
+              <svg className="when-on" width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+                <rect x="2.5" y="1.5" width="3" height="11" rx="1" fill="currentColor" />
+                <rect x="8.5" y="1.5" width="3" height="11" rx="1" fill="currentColor" />
+              </svg>
+              <svg className="when-off" width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+                <path d="M3.5 1.8v10.4a.8.8 0 0 0 1.2.7l8.3-5.2a.8.8 0 0 0 0-1.4L4.7 1.1a.8.8 0 0 0-1.2.7Z" fill="currentColor" />
+              </svg>
+            </label>
           </div>
         </section>
       )}
 
-      {/* 6 · The offer, FAQ, last call */}
-      <section id="trial" className="mx-auto max-w-6xl scroll-mt-16 px-5 pb-20 pt-16">
-        <div className="mx-auto max-w-3xl rounded-[28px] border border-accent/30 bg-accent/[0.07] px-5 py-7 text-center">
-          <p className="font-display text-[clamp(40px,9vw,56px)] leading-none tracking-[-0.01em]">
-            $99<span className="font-body text-lg font-medium text-ink-2">/month</span>
-          </p>
-          <ul className="mx-auto mt-5 max-w-md space-y-2.5 text-left text-sm text-ink-2">
-            {includes.map((i) => (
-              <li key={i} className="flex items-start gap-2.5">
-                <span className="mt-0.5 text-up" aria-hidden="true">
-                  ✓
-                </span>
-                {i}
-              </li>
-            ))}
-          </ul>
-          <Link
-            href={TRIAL_HREF}
-            className="press lp-cta mt-6 inline-flex min-h-[54px] items-center justify-center rounded-full bg-accent px-7 font-semibold text-[#03130c] transition hover:bg-accent-2"
-          >
-            Start your 7-day free trial
-          </Link>
-          <p className="mt-2.5 text-[12.5px] text-ink-3">$0 today. Cancel anytime before day 7 and you won&apos;t be charged.</p>
+      {/* The live thing: type a ticker, read what the desk has on it */}
+      <section id="lookup" className="hs-wrap hs-lookup" aria-labelledby="hs-lookup-title">
+        <h2 id="hs-lookup-title" className="sr-only-hs">
+          Look up a ticker
+        </h2>
+        <div className="hs-lookup__grid">
+          <TickerLookup start={LOOKUP_START} initial={lookup} examples={["CVX", "TSLA", "SPY", "HD"]} tracked={movers.length || 48} />
+          <figure className="hs-lookup__photo" data-reveal="" style={{ "--i": 1 } as React.CSSProperties}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/landing/lower-manhattan-sunrise.jpg"
+              alt="The Lower Manhattan skyline at sunrise, seen across the harbor, One World Trade Center at the left"
+              width={1600}
+              height={900}
+              loading="lazy"
+              decoding="async"
+            />
+            <figcaption>Lower Manhattan, 7:20 a.m.</figcaption>
+          </figure>
         </div>
+      </section>
 
-        <div className="mx-auto mt-14 max-w-3xl">
-          <h2 className="font-display text-center text-[clamp(28px,6.5vw,40px)]">Questions, answered</h2>
-          <div className="mt-6 divide-y divide-line border-y border-line">
-            {faqs.map((f) => (
-              <details key={f.q} className="group py-5">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-medium">
-                  {f.q}
-                  <span className="text-ink-3 transition group-open:rotate-45" aria-hidden="true">
-                    +
+      {/* How a setup happens: the fragment pinned while four statements change it */}
+      <section id="how" className="hs-wrap hs-story">
+        <HowItWorks
+          title="How a setup happens"
+          steps={steps}
+          stages={[
+            <ScannerSlice key="scan" today={today} movers={movers} />,
+            example ? <SetupCard key="setup" setup={example} /> : null,
+            example ? (
+              <div key="alert" style={{ position: "relative", paddingTop: 36 }}>
+                <SetupCard setup={example} />
+                <AlertToast
+                  setup={example}
+                  style={{ position: "absolute", top: 0, left: 28, right: 28, boxShadow: "0 18px 40px -18px rgba(10,11,13,0.35)" }}
+                />
+              </div>
+            ) : null,
+            example ? <GradedStamp key="graded" setup={example} /> : null,
+          ]}
+        />
+      </section>
+
+      {/* Everything on the desk: six cells, fragments docked in a checkerboard */}
+      <section className="hs-wrap hs-desk" aria-labelledby="hs-desk-title">
+        <h2 id="hs-desk-title" className="hs-heading" data-reveal="">
+          Everything on the desk
+        </h2>
+        <div className="hs-cells">
+          {[
+            {
+              title: "Market weather",
+              text: "Volatility, opportunity and direction, scored 0 to 100 before every open, with a written note on the tape.",
+              frag: report ? <WeatherRow report={report} /> : null,
+            },
+            {
+              title: "Flow scanner",
+              text: "5,400+ stocks ranked by options flow against their own baseline, not the market's.",
+              frag: <ScannerSlice today={today} movers={movers} className="hs-cell__frag" />,
+            },
+            {
+              title: "Trade setups",
+              text: "Entry rules, a target, a time window and suggested contracts on every idea, with the reasoning.",
+              frag: example ? <SetupCard setup={example} className="hs-cell__frag" /> : null,
+            },
+            {
+              title: "Alerts",
+              text: "A message the moment a setup's entry rules trigger, so you are not watching the tape all day.",
+              frag: alerts.length ? <AlertFeed setups={alerts} className="hs-cell__frag" /> : null,
+            },
+            {
+              title: "Insiders and chatter",
+              text: "Form 4 buys and sells from the last 30 days and the crowd's mood, on every name on the slate.",
+              frag: reads.length ? <InsiderChatter reads={reads} className="hs-cell__frag" /> : null,
+            },
+            {
+              title: "Trading School",
+              text: "The full HighStrike curriculum, from options mechanics to grading your own trades, included.",
+              frag: <SchoolModules className="hs-cell__frag" />,
+            },
+          ].map((c, i) => (
+            <article
+              key={c.title}
+              className={`hs-cell${[1, 3, 5].includes(i) ? " hs-cell--flip" : ""}`}
+              data-reveal=""
+              style={{ "--i": i % 3 } as React.CSSProperties}
+            >
+              <div className="hs-cell__text">
+                <h3>{c.title}</h3>
+                <p>{c.text}</p>
+              </div>
+              {c.frag}
+            </article>
+          ))}
+        </div>
+      </section>
+
+      {/* The record, as a table: the latest closed setups, wins and losses */}
+      {rows.length > 0 && (
+        <section id="record" className="hs-wrap hs-record" aria-labelledby="hs-record-title">
+          <h2 id="hs-record-title" className="hs-display hs-record__title hs-lines hs-mask">
+            <span className="hs-line">
+              <span data-line="">Graded</span>
+            </span>
+            <span className="hs-line">
+              <span data-line="" style={{ "--i": 1 } as React.CSSProperties}>
+                in public
+              </span>
+            </span>
+          </h2>
+          <p className="hs-record__lead hs-body hs-muted" data-reveal="" style={{ "--i": 1 } as React.CSSProperties}>
+            Every setup is recorded with its entry and target, then graded automatically against real prices. Wins and
+            losses stay on the page.
+          </p>
+          <table data-reveal="" style={{ "--i": 2 } as React.CSSProperties}>
+            <caption className="sr-only-hs">The most recently closed setups</caption>
+            <thead>
+              <tr>
+                <th scope="col">
+                  <span className="sr-only-hs">Published</span>
+                </th>
+                <th scope="col">
+                  <span className="sr-only-hs">Setup</span>
+                </th>
+                <th scope="col">
+                  <span className="sr-only-hs">Plan</span>
+                </th>
+                <th scope="col">
+                  <span className="sr-only-hs">Result</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((c, i) => (
+                <tr key={`${c.ticker}-${c.reportDate}`}>
+                  <td className="date">{i === 0 || rows[i - 1].reportDate !== c.reportDate ? shortDate(c.reportDate) : ""}</td>
+                  <td>
+                    <span className="ticker">{c.ticker}</span>
+                    <span className={c.direction.toLowerCase() === "short" ? "hs-down" : "hs-up"}>{sideLabel(c.direction)}</span>
+                  </td>
+                  <td className="plan hs-num">
+                    ${price(c.entry)} to ${price(c.target)}
+                    {c.timeFrame ? `, ${c.timeFrame}` : ""}
+                  </td>
+                  <td className="right hs-num">
+                    <span className="hs-muted">{statusLabel(c.status)}</span>{" "}
+                    {c.resultPct != null && <span className={c.resultPct >= 0 ? "hs-up" : "hs-down"}>{signedPct(c.resultPct)}</span>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="hs-small" style={{ marginTop: 28 }}>
+            <Link href="/results" className="hs-link">
+              The full record and methodology
+            </Link>
+          </p>
+        </section>
+      )}
+
+      {/* The record as a series: setups closed per week, standing on the edge */}
+      {stats && weeks.length > 0 && (
+        <section className="hs-bars" aria-labelledby="hs-bars-title">
+          <div className="hs-wrap">
+            <p className="hs-display hs-bars__figure hs-lines hs-mask" aria-hidden="true">
+              <span className="hs-line">
+                <span data-line="">{stats.closedCount}</span>
+              </span>
+            </p>
+            <h2 id="hs-bars-title" className="hs-heading hs-bars__claim">
+              <span className="sr-only-hs">{stats.closedCount} </span>
+              Setups graded since August
+            </h2>
+            <p className="hs-body hs-muted" style={{ marginTop: 12, maxWidth: "48ch" }}>
+              {stats.winRate != null ? `${stats.winRate}% hit their target. ` : ""}
+              {stats.avgGain != null ? `Average gain ${signedPct(stats.avgGain, 1)}, ` : ""}
+              {stats.avgLoss != null ? `average loss ${signedPct(stats.avgLoss, 1)}.` : ""}
+            </p>
+          </div>
+          <div className="hs-bars__grid" data-ui="" role="list" aria-label="Setups closed per week">
+            {weeks.map((w, i) => {
+              const label = `Week of ${shortDate(w.week)}: ${w.closed} closed, ${w.hits} hit target`;
+              return (
+                <div
+                  key={w.week}
+                  role="listitem"
+                  tabIndex={0}
+                  aria-label={label}
+                  className={`hs-bar${w.week === accentWeek ? " hs-bar--accent" : ""}`}
+                  style={{ "--i": i, "--pct": Math.round((w.closed / maxClosed) * 100) } as React.CSSProperties}
+                >
+                  <span className="hs-bar__tip" aria-hidden="true">
+                    {label}
                   </span>
-                </summary>
-                <p className="mt-3 text-sm leading-relaxed text-ink-2">{f.a}</p>
-              </details>
-            ))}
+                  <span className="hs-bar__value" aria-hidden="true">
+                    {w.closed}
+                  </span>
+                  <span className="hs-bar__fill" aria-hidden="true" />
+                  <span className="hs-bar__week" aria-hidden="true">
+                    {shortDate(w.week)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* One plan, the price very large */}
+      <section id="pricing" className="hs-wrap hs-price" aria-labelledby="hs-price-title">
+        {/* Four parts: on wide screens the intro and the list share the left
+            column and the price and the action the right; on narrow ones they
+            stack as a price card would: intro, price, list, action. */}
+        <div className="hs-price__grid">
+          <div className="hs-price__intro" data-reveal="">
+            <h2 id="hs-price-title" className="hs-heading">
+              One plan, everything in it
+            </h2>
+            <p className="hs-body hs-muted">
+              The terminal, the daily setups and the full Trading School, for one price. {badges.traders} traders in{" "}
+              {badges.countries} countries have learned with HighStrike since 2018.
+            </p>
+          </div>
+          <div className="hs-display hs-price__figure" data-reveal="" style={{ "--i": 1 } as React.CSSProperties}>
+            <span className="hs-price__cur">$</span>
+            <span data-roll="">99</span>
+            <span className="hs-price__per">per month</span>
+          </div>
+          <ul className="hs-price__list" data-reveal="">
+            <li>The AI terminal and flow scanner</li>
+            <li>Daily setups with entry, target and reasoning</li>
+            <li>Trading School, the full curriculum</li>
+            <li>Alerts when a setup triggers</li>
+          </ul>
+          <div className="hs-price__cta" data-reveal="" style={{ "--i": 1 } as React.CSSProperties}>
+            <Link href={TRIAL} className="hs-button">
+              Start free trial
+            </Link>
+            <span className="hs-small hs-muted">7 days free, then $99 a month. Cancel anytime.</span>
           </div>
         </div>
+      </section>
 
-        <div className="mt-14 text-center">
-          <h2 className="font-display text-[clamp(30px,7vw,48px)] leading-tight">
-            Tomorrow&apos;s setups publish <span className="text-accent">before the open.</span>
-          </h2>
-          <Link
-            href={TRIAL_HREF}
-            className="press lp-cta mt-6 inline-flex min-h-[54px] items-center justify-center rounded-full bg-accent px-7 font-semibold text-[#03130c] transition hover:bg-accent-2"
-          >
-            Start your 7-day free trial
-          </Link>
-          <p className="mt-2.5 text-[13px] text-ink-3">Then $99/month. Cancel anytime.</p>
+      {/* Questions: an index and one answer */}
+      <section className="hs-wrap hs-faq" aria-label="Questions">
+        <FaqIndex title="Questions" faqs={faqs} />
+      </section>
+
+      {/* The close: one row of tiles, cropped by both edges */}
+      <section className="hs-wrap hs-close" aria-labelledby="hs-close-title">
+        <div className="hs-tiles">
+          <div className="hs-tile hs-tile--main">
+            <h2 id="hs-close-title" className="hs-heading">
+              Start before tomorrow&apos;s open
+            </h2>
+            <p>Seven days free, then $99 a month. Tomorrow&apos;s slate publishes before 9:30 ET.</p>
+            <div>
+              <Link href={TRIAL} className="hs-button hs-button--ink">
+                Start free trial
+              </Link>
+            </div>
+          </div>
+          <div className="hs-tiles__pair">
+            <div className="hs-tile hs-tile--photo">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/landing/nyse-trading-floor.jpg"
+                alt="A wall of trading screens on the floor of the New York Stock Exchange, two traders in silhouette"
+                width={1600}
+                height={1246}
+                loading="lazy"
+                decoding="async"
+              />
+            </div>
+            <div className="hs-tile hs-tile--ink" aria-hidden="true" />
+          </div>
         </div>
       </section>
     </main>
