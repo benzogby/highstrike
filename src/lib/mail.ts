@@ -2,6 +2,8 @@
 // 2026-11-02 (scripts/resend.mjs): before that the account (newhighstrike@gmail.com) could only write to itself. The key is
 // RESEND_API_KEY on Vercel. Never throws: the reason a message didn't go out comes back instead.
 
+import { after } from "next/server";
+
 export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.highstrike.com").replace(/\/$/, "");
 
 /** The everyday sender, for buyers. */
@@ -42,7 +44,14 @@ async function logMail(mail: Mail, from: string, status: "sent" | "failed", erro
 export async function sendMail(mail: Mail): Promise<{ ok: true } | { ok: false; error: string }> {
   const from = mail.from ?? MAIL_FROM;
   const result = await deliver(mail, from);
-  await logMail(mail, from, result.ok ? "sent" : "failed", result.ok ? null : result.error, result.ok ? result.id : null);
+  // Logged after the answer goes back (next/server's after), so the log never delays or fails a send; outside a
+  // request, where after() can't run, it's written in the background.
+  const log = () => logMail(mail, from, result.ok ? "sent" : "failed", result.ok ? null : result.error, result.ok ? result.id : null);
+  try {
+    after(log);
+  } catch {
+    void log();
+  }
   return result.ok ? { ok: true } : result;
 }
 

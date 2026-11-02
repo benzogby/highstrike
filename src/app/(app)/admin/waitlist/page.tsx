@@ -26,22 +26,22 @@ export default async function AdminWaitlistPage() {
       <section className={`${CARD} overflow-x-auto`}>
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-left text-xs text-ink-3">
+            <tr className="border-b border-line text-left text-xs font-medium text-ink-3">
               <th className="px-4 py-2 font-medium">Email</th>
               <th className="px-2 py-2 font-medium">Source</th>
               <th className="px-2 py-2 font-medium">Account</th>
               <th className="px-4 py-2 text-right font-medium">Signed up</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-line">
             {rows.map((r) => {
               const plan = account.get(r.email.toLowerCase());
               return (
-                <tr key={r.id} className="border-t border-line">
+                <tr key={r.id}>
                   <td className="px-4 py-2 text-ink">{r.email}</td>
                   <td className="px-2 py-2 text-ink-2">{r.source ?? "—"}</td>
                   <td className="px-2 py-2 text-ink-2">{plan === undefined ? "—" : plan === "lifetime" ? "Lifetime member" : "Account, not paid"}</td>
-                  <td className="whitespace-nowrap px-4 py-2 text-right tabular-nums text-ink-2">
+                  <td className="whitespace-nowrap px-4 py-2 text-right font-mono-nums text-ink-2">
                     {DATE.format(new Date(r.created_at))} <span className="text-ink-3">{TIME.format(new Date(r.created_at))}</span>
                   </td>
                 </tr>

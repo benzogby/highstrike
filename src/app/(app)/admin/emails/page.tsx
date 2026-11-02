@@ -35,7 +35,7 @@ export default async function AdminEmailsPage({ searchParams }: { searchParams: 
       <section className={`${CARD} overflow-x-auto`}>
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-left text-xs text-ink-3">
+            <tr className="border-b border-line text-left text-xs font-medium text-ink-3">
               <th className="px-4 py-2 font-medium">Sent</th>
               <th className="px-2 py-2 font-medium">To</th>
               <th className="px-2 py-2 font-medium">Subject</th>
@@ -43,10 +43,10 @@ export default async function AdminEmailsPage({ searchParams }: { searchParams: 
               <th className="px-4 py-2 font-medium">Status</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-line">
             {rows.map((r) => (
-              <tr key={r.id} className="relative border-t border-line hover:bg-panel-2/60">
-                <td className="whitespace-nowrap px-4 py-2 tabular-nums text-ink-2">
+              <tr key={r.id} className="relative hover:bg-panel-2">
+                <td className="whitespace-nowrap px-4 py-2 font-mono-nums text-ink-2">
                   <Link href={`/admin/emails/${r.id}`} prefetch={false} className="after:absolute after:inset-0">
                     {DATE.format(new Date(r.created_at))} <span className="text-ink-3">{TIME.format(new Date(r.created_at))}</span>
                   </Link>

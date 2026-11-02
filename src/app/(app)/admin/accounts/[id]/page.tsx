@@ -79,7 +79,7 @@ export default async function AdminAccountPage({ params }: { params: Promise<{ i
           {traffic.pages.map(([path, n]) => (
             <li key={path} className="flex justify-between px-4 py-2">
               <span className="font-mono text-xs text-ink-2">{path}</span>
-              <span className="tabular-nums text-ink-2">{n}</span>
+              <span className="font-mono-nums text-ink-2">{n}</span>
             </li>
           ))}
           {traffic.pages.length === 0 && <li className="px-4 py-3 text-ink-3">No visits recorded while signed in.</li>}

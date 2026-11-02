@@ -53,7 +53,7 @@ export default function AdminTabs() {
                 href={t.href}
                 aria-current={on ? "page" : undefined}
                 className={`whitespace-nowrap rounded-md px-2.5 py-1.5 text-[13px] font-medium transition ${
-                  on ? "bg-accent-soft text-accent-ink" : "text-ink-2 hover:bg-panel-2 hover:text-ink"
+                  on ? "bg-panel-2 text-ink" : "text-ink-2 hover:bg-panel-2 hover:text-ink"
                 }`}
               >
                 {t.label}

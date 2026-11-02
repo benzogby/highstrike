@@ -49,20 +49,20 @@ export default async function AdminOverviewPage() {
           <h2 className="border-b border-line px-4 py-2.5 text-sm font-medium text-ink">By day (14 days)</h2>
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs text-ink-3">
+              <tr className="border-b border-line text-left text-xs font-medium text-ink-3">
                 <th className="px-4 py-2 font-medium">Day</th>
                 <th className="px-2 py-2 text-right font-medium">New accounts</th>
                 <th className="px-2 py-2 text-right font-medium">Sales</th>
                 <th className="px-4 py-2 text-right font-medium">Revenue</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-line">
               {days.map((d) => (
-                <tr key={d.day} className="border-t border-line">
+                <tr key={d.day}>
                   <td className="px-4 py-1.5 text-ink-2">{DAY.format(new Date(`${d.day}T12:00:00Z`))}</td>
-                  <td className="px-2 py-1.5 text-right tabular-nums text-ink">{d.signups}</td>
-                  <td className="px-2 py-1.5 text-right tabular-nums text-ink">{d.sales}</td>
-                  <td className="px-4 py-1.5 text-right tabular-nums text-ink">{money(d.revenue)}</td>
+                  <td className="px-2 py-1.5 text-right font-mono-nums text-ink">{d.signups}</td>
+                  <td className="px-2 py-1.5 text-right font-mono-nums text-ink">{d.sales}</td>
+                  <td className="px-4 py-1.5 text-right font-mono-nums text-ink">{money(d.revenue)}</td>
                 </tr>
               ))}
               {days.length === 0 && (
@@ -91,7 +91,7 @@ export default async function AdminOverviewPage() {
                     {a.email ?? a.id.slice(0, 8)}
                   </Link>
                   {a.plan === LIFETIME.plan ? <Badge tone="up">Lifetime</Badge> : a.is_admin ? <Badge tone="accent">Admin</Badge> : <Badge>Not paid</Badge>}
-                  <span className="whitespace-nowrap text-xs tabular-nums text-ink-3">{DATE.format(new Date(a.created_at))}</span>
+                  <span className="whitespace-nowrap text-xs font-mono-nums text-ink-3">{DATE.format(new Date(a.created_at))}</span>
                 </li>
               ))}
             </ul>

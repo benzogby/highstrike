@@ -55,7 +55,7 @@ export default function GrowthChart({ days }: { days: Day[] }) {
       <section className={`${CARD} p-4`}>
         <div className="mb-2 flex items-baseline justify-between text-sm">
           <span className="text-ink-2">{LABEL.format(noon(days[shown].day))}</span>
-          <span className="font-medium tabular-nums text-ink">{tab.fmt(values[shown])}</span>
+          <span className="font-medium font-mono-nums text-ink">{tab.fmt(values[shown])}</span>
         </div>
         <svg viewBox={`0 0 ${W} ${H + 20}`} className="h-auto w-full" onMouseLeave={() => setHover(null)} role="img" aria-label={`${tab.label} by day`}>
           {values.map((v, i) => {

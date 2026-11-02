@@ -32,7 +32,7 @@ export default function PaymentsTable({ rows, capped, compact = false }: { rows:
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-left text-xs text-ink-3">
+            <tr className="border-b border-line text-left text-xs font-medium text-ink-3">
               <th className="px-4 py-2 font-medium">When</th>
               {!compact && <th className={th} title="The billing address's country, else the country the card was issued in">Payer</th>}
               <th className={`${th} text-right`}>Amount</th>
@@ -42,10 +42,10 @@ export default function PaymentsTable({ rows, capped, compact = false }: { rows:
               <th className="px-4 py-2 font-medium"><span className="sr-only">Stripe</span></th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-line">
             {rows.map((r) => (
-              <tr key={r.id} className="border-t border-line align-top hover:bg-panel-2/60">
-                <td className="whitespace-nowrap px-4 py-2 tabular-nums text-ink">
+              <tr key={r.id} className="align-top hover:bg-panel-2">
+                <td className="whitespace-nowrap px-4 py-2 font-mono-nums text-ink">
                   {DATE.format(r.at)}
                   <span className="block text-xs text-ink-3">{TIME.format(r.at)} ET</span>
                 </td>
@@ -67,7 +67,7 @@ export default function PaymentsTable({ rows, capped, compact = false }: { rows:
                     </span>
                   </td>
                 )}
-                <td className={`whitespace-nowrap px-2 py-2 text-right font-medium tabular-nums ${r.status === "declined" ? "text-ink-3" : "text-ink"}`}>{r.amount}</td>
+                <td className={`whitespace-nowrap px-2 py-2 text-right font-medium font-mono-nums ${r.status === "declined" ? "text-ink-3" : "text-ink"}`}>{r.amount}</td>
                 <td className="px-2 py-2">
                   <Badge tone={TONE[r.status]}>{PAYMENT_STATUS_LABEL[r.status]}</Badge>
                 </td>
