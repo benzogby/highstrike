@@ -1,4 +1,7 @@
 import { supabaseServer } from "@/lib/supabase/server";
+import { LESSONS_BUCKET } from "@/lib/educationShared";
+
+export { LESSONS_BUCKET, moduleLabel, clock, lessonHref } from "@/lib/educationShared";
 
 // HighStrike Trading School, the course library for members (Ben, 2026-11-02; imported from Whop's Alpha Mastermind and
 // renamed the same day), laid out like getripping.com's Ripping University: one module per course chapter, each a list of
@@ -9,7 +12,6 @@ import { supabaseServer } from "@/lib/supabase/server";
 
 type Client = Awaited<ReturnType<typeof supabaseServer>>;
 
-export const LESSONS_BUCKET = "lessons";
 /** How long a poster or an attachment link lasts: longer than anyone stays on one lesson. */
 export const LINK_SECONDS = 6 * 60 * 60;
 
@@ -22,15 +24,6 @@ export type Progress = { positionSec: number; completedAt: string | null };
 export type LessonKind = "video" | "processing" | "youtube" | "text";
 export type LessonState = { kind: LessonKind; durationSec: number | null; done: boolean; positionSec: number };
 export type LessonStates = Record<string, LessonState>;
-
-/** A module's chapter title split for its card: "BONUS: Module 12: Mobile Trading Playbook" → "Bonus · Module 12" over the rest. */
-export function moduleLabel(title: string): { eyebrow: string; name: string } {
-  const m = /^(BONUS:\s*)?Module\s+(\d+)\s*:\s*(.+)$/i.exec(title.trim());
-  if (m) return { eyebrow: `${m[1] ? "Bonus · " : ""}Module ${m[2]}`, name: m[3] };
-  if (/recordings/i.test(title)) return { eyebrow: "Recordings", name: title };
-  if (/welcome/i.test(title)) return { eyebrow: "Start here", name: title };
-  return { eyebrow: "Module", name: title };
-}
 
 /** Every module in order, and every lesson in library order (module, then its place in the module). */
 export async function outline(supabase: Client): Promise<{ modules: Module[]; lessons: Lesson[] }> {
@@ -113,20 +106,10 @@ export async function librarySummary(supabase: Client): Promise<{ modules: numbe
   return r ? { modules: r.modules, lessons: r.lessons, videoHours: Number(r.video_hours) || 0 } : null;
 }
 
-export const lessonHref = (id: string) => `/education/${encodeURIComponent(id)}`;
 export const moduleAnchor = (position: number) => `module-${position + 1}`;
 /** The lesson's HLS master playlist: the stream route signs every piece for the signed-in member. */
 export const streamSrc = (id: string) => `/api/education/${encodeURIComponent(id)}/stream/master.m3u8`;
 export const isLessonId = (id: unknown): id is string => typeof id === "string" && /^lesn_[A-Za-z0-9]{8,40}$/.test(id);
-
-/** 252 → "4:12", 3725 → "1:02:05". */
-export function clock(sec: number): string {
-  const s = Math.max(0, Math.round(sec || 0));
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const rest = String(s % 60).padStart(2, "0");
-  return h ? `${h}:${String(m).padStart(2, "0")}:${rest}` : `${m}:${rest}`;
-}
 
 /** 9000 → "2h 30m", 1500 → "25m". */
 export function hours(sec: number): string {
