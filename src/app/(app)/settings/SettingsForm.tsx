@@ -10,57 +10,25 @@ const inputClass =
   "h-11 w-full rounded-lg border border-line bg-panel-2 px-3.5 text-sm text-ink placeholder:text-ink-3 outline-none transition focus:border-accent/60 focus:ring-2 focus:ring-accent/20";
 const labelClass = "mb-1 block text-[10px] uppercase tracking-wider text-ink-3";
 
-const PLANS = [
-  {
-    key: "free",
-    name: "Free",
-    price: "$0",
-    cadence: "account only",
-    blurb: "Waitlist access and the blog — terminal locked.",
-  },
-  {
-    key: "room",
-    name: "Trading Room",
-    price: "$199",
-    cadence: "per month",
-    blurb: "The full AI terminal, live every market day.",
-  },
-  {
-    key: "school",
-    name: "Trading School",
-    price: "$397",
-    cadence: "one-time payment",
-    blurb: "The complete options curriculum, yours for life.",
-  },
-  {
-    key: "mastermind",
-    name: "Alpha Mastermind",
-    price: "$4,995",
-    cadence: "one-time payment",
-    blurb: "Trading Room + School + direct team access.",
-  },
-] as const;
 
 type Initial = {
   name: string;
   bio: string;
   avatarUrl: string | null;
-  plan: string;
 };
 
 export default function SettingsForm({
   userId,
   email,
   hasPassword,
-  billing,
-  billingNotice,
+  membership,
   initial,
 }: {
   userId: string;
   email: string;
   hasPassword: boolean;
-  billing: boolean;
-  billingNotice: "success" | "cancelled" | null;
+  /** What the account has: the $397 lifetime membership, or an admin's access. */
+  membership: "lifetime" | "admin";
   initial: Initial;
 }) {
   const router = useRouter();
@@ -78,11 +46,6 @@ export default function SettingsForm({
   const [pw2, setPw2] = useState("");
   const [pwBusy, setPwBusy] = useState(false);
   const [pwMsg, setPwMsg] = useState<{ ok: boolean; text: string } | null>(null);
-
-  // Plan
-  const [plan, setPlan] = useState(initial.plan);
-  const [planBusy, setPlanBusy] = useState<string | null>(null);
-  const [planMsg, setPlanMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   async function saveProfile() {
     setProfileBusy(true);
@@ -169,65 +132,6 @@ export default function SettingsForm({
     setPw("");
     setPw2("");
     toastSuccess(hasPassword ? "Password updated" : "Password set — email sign-in now works too");
-  }
-
-  async function choosePlan(key: string) {
-    if (key === plan) return;
-    if (!billing) {
-      setPlanMsg({
-        ok: false,
-        text: "Checkout is being updated — plan changes are temporarily unavailable.",
-      });
-      return;
-    }
-    setPlanBusy(key);
-    setPlanMsg(null);
-
-    // Live billing: paid plans go through Stripe Checkout; downgrades go
-    // through the customer portal (cancel there).
-    if (billing && key !== "free") {
-      try {
-        const res = await fetch("/api/billing/checkout", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ plan: key }),
-        });
-        const data = await res.json();
-        if (!res.ok || !data.url) throw new Error(data.error ?? "Checkout failed");
-        window.location.href = data.url;
-        return;
-      } catch (e) {
-        setPlanBusy(null);
-        setPlanMsg({ ok: false, text: e instanceof Error ? e.message : "Checkout failed" });
-        return;
-      }
-    }
-    if (billing && key === "free") {
-      const opened = await openPortal(false);
-      setPlanBusy(null);
-      if (!opened) {
-        setPlanMsg({
-          ok: false,
-          text: "No active billing found for this account — contact support@highstrike.com.",
-        });
-      }
-      return;
-    }
-  }
-
-  async function openPortal(report = true): Promise<boolean> {
-    try {
-      const res = await fetch("/api/billing/portal", { method: "POST" });
-      const data = await res.json();
-      if (!res.ok || !data.url) throw new Error(data.error ?? "Couldn't open billing portal");
-      window.location.href = data.url;
-      return true;
-    } catch (e) {
-      if (report) {
-        setPlanMsg({ ok: false, text: e instanceof Error ? e.message : "Couldn't open billing portal" });
-      }
-      return false;
-    }
   }
 
   const displayName = name.trim() || email.split("@")[0];
@@ -396,87 +300,35 @@ export default function SettingsForm({
         </form>
       </section>
 
-      {/* Plan */}
+      {/* Membership: one payment, nothing to manage */}
       <section className="rounded-2xl border border-line bg-panel p-6">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-ink-2">
-            Plan
-          </h2>
-          {planMsg && (
-            <span className={`text-sm ${planMsg.ok ? "text-up" : "text-down"}`}>
-              {planMsg.text}
-            </span>
-          )}
+        <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-ink-2">
+          Membership
+        </h2>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-accent/40 bg-panel-2 px-5 py-4">
+          <div>
+            <p className="font-display text-base font-semibold">
+              {membership === "admin" ? "Admin access" : "Lifetime access"}
+            </p>
+            <p className="mt-0.5 text-sm text-ink-2">
+              {membership === "admin"
+                ? "Everything in HighStrike is open to this account."
+                : "Paid once. The daily trades, the tools and the Alpha Mastermind are yours, with nothing to renew."}
+            </p>
+          </div>
+          <span className="rounded-full bg-accent px-2.5 py-0.5 font-display text-[10px] font-bold text-bg">
+            ACTIVE
+          </span>
         </div>
-        {billingNotice === "success" && (
-          <p className="mt-3 rounded-lg border border-accent/40 bg-panel-2 px-4 py-3 text-sm text-ink">
-            <span className="mr-2 text-up">✓</span>
-            Payment received — your plan updates within a few seconds. Refresh if it
-            hasn&apos;t switched yet.
+        {membership === "lifetime" && (
+          <p className="mt-3 text-sm text-ink-3">
+            Stripe emailed your receipt when you paid. Questions about a payment go to{" "}
+            <a href="mailto:support@highstrike.com" className="text-ink-2 underline-offset-2 hover:underline">
+              support@highstrike.com
+            </a>
+            .
           </p>
         )}
-        {billingNotice === "cancelled" && (
-          <p className="mt-3 rounded-lg border border-line bg-panel-2 px-4 py-3 text-sm text-ink-2">
-            Checkout cancelled — no charge was made.
-          </p>
-        )}
-        {billing ? (
-          <p className="mt-2 text-sm text-ink-2">
-            Secure checkout and billing management are handled by Stripe.
-          </p>
-        ) : (
-          <p className="mt-2 text-sm text-ink-2">
-            Checkout is being updated — plan changes are temporarily unavailable.
-          </p>
-        )}
-        {billing && plan !== "free" && (
-          <button
-            type="button"
-            onClick={() => openPortal()}
-            className="mt-3 rounded-lg border border-line-strong px-4 py-2 font-display text-sm font-semibold text-ink-2 transition hover:border-accent/50 hover:text-accent"
-          >
-            Manage billing →
-          </button>
-        )}
-        <div className="mt-5 grid gap-4 sm:grid-cols-2">
-          {PLANS.map((p) => {
-            const current = plan === p.key;
-            return (
-              <div
-                key={p.key}
-                className={`flex flex-col rounded-2xl border p-5 ${
-                  current ? "border-accent bg-panel-2" : "border-line"
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <h3 className="font-display text-base font-semibold">{p.name}</h3>
-                  {current && (
-                    <span className="rounded-full bg-accent px-2 py-0.5 font-display text-[10px] font-bold text-bg">
-                      CURRENT
-                    </span>
-                  )}
-                </div>
-                <p className="mt-1">
-                  <span className="font-display text-2xl font-bold">{p.price}</span>
-                  <span className="ml-1.5 text-xs text-ink-3">{p.cadence}</span>
-                </p>
-                <p className="mt-2 flex-1 text-sm text-ink-2">{p.blurb}</p>
-                <button
-                  type="button"
-                  disabled={current || planBusy !== null}
-                  onClick={() => choosePlan(p.key)}
-                  className={`mt-4 rounded-lg py-2 font-display text-sm font-semibold transition disabled:opacity-60 ${
-                    current
-                      ? "border border-line text-ink-3"
-                      : "bg-accent text-bg hover:bg-accent-2"
-                  }`}
-                >
-                  {planBusy === p.key ? "Switching…" : current ? "Current plan" : `Switch to ${p.name}`}
-                </button>
-              </div>
-            );
-          })}
-        </div>
       </section>
     </div>
   );

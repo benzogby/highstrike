@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { supabaseServer } from "@/lib/supabase/server";
 import AppShell from "@/components/AppShell";
+import MemberGate from "@/components/join/MemberGate";
+import { librarySummary } from "@/lib/education";
+import { billingReady, completeLifetime } from "@/lib/lifetime";
+import { memberContext } from "@/lib/membership";
 import { Gauge } from "@/components/TerminalMockup";
 import { NowDateLong, NowGreeting, UpcomingFriday } from "@/components/Now";
 import { fetchMarketNews, newsTime } from "@/lib/news";
@@ -16,17 +18,23 @@ export const metadata: Metadata = {
 
 
 export default async function DashboardPage() {
-  const supabase = await supabaseServer();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/signin?next=/dashboard");
+  const { supabase, user, profile, member } = await memberContext("/dashboard");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("is_admin, name, avatar_url, tour_done")
-    .eq("id", user.id)
-    .single();
+  // Without the $397 membership: the paywall, over a shell with nothing in it, and nothing read for it. A payment that
+  // went through without its browser coming back to /welcome turns access on here first.
+  const unlocked =
+    member ||
+    (billingReady() && (await completeLifetime({ id: user.id, email: user.email ?? null }).catch(() => "unpaid")) === "member");
+  if (!unlocked) {
+    return (
+      <>
+        <AppShell email={user.email ?? ""} isAdmin={false} active="home" displayName={profile?.name} avatarUrl={profile?.avatar_url}>
+          {null}
+        </AppShell>
+        <MemberGate email={user.email ?? ""} library={await librarySummary(supabase)} />
+      </>
+    );
+  }
   const isAdmin = Boolean(profile?.is_admin);
 
   const firstName = profile?.name || (user.email ?? "trader").split("@")[0];

@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase/client";
 
-export default function GoogleAuthButton({ label }: { label: string }) {
+/** `next`: where Google's way back lands once signed in (the homepage's popup passes "/?join=1" to reopen at checkout). */
+export default function GoogleAuthButton({ label, next = "/dashboard" }: { label: string; next?: string }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -15,7 +16,7 @@ export default function GoogleAuthButton({ label }: { label: string }) {
     const { error: err } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
       },
     });
     // On success the browser navigates away; we only get here on failure.

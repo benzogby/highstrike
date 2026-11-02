@@ -1,4 +1,5 @@
 import Link from "next/link";
+import JoinButton from "@/components/join/JoinButton";
 import LandingMotion from "@/components/landing/LandingMotion";
 import { Bull } from "@/components/landing/Pieces";
 import "./landing.css";
@@ -27,14 +28,13 @@ export default function LandingLayout({ children }: Readonly<{ children: React.R
             <a href="#how">How it works</a>
             <a href="#record">Record</a>
             <a href="#desk">The desk</a>
+            <a href="#mastermind">Mastermind</a>
             <a href="#pricing">Pricing</a>
           </nav>
           <Link href="/signin" className="hs-bar__signin">
             Sign in
           </Link>
-          <Link href="/signup" className="hs-btn hs-btn--sm">
-            Start free trial
-          </Link>
+          <JoinButton className="hs-btn hs-btn--sm">Get access</JoinButton>
         </div>
       </header>
 
@@ -49,7 +49,7 @@ export default function LandingLayout({ children }: Readonly<{ children: React.R
               <img className="hs-brand__word" src="/brand/wordmark.png" alt="" width={85} height={17} />
             </Link>
             <nav className="hs-foot__links" aria-label="Footer">
-              <Link href="/pricing">Pricing</Link>
+              <a href="#pricing">Pricing</a>
               <Link href="/results">Results</Link>
               <Link href="/about">About</Link>
               <a href="mailto:support@highstrike.com">Support</a>

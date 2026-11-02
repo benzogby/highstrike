@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { supabaseServer } from "@/lib/supabase/server";
+import { requireMember } from "@/lib/membership";
 import AppShell from "@/components/AppShell";
 
 export const metadata: Metadata = {
@@ -40,17 +39,7 @@ function dateLabel(d: string) {
 }
 
 export default async function SetupsPage() {
-  const supabase = await supabaseServer();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/signin?next=/setups");
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("is_admin, name, avatar_url")
-    .eq("id", user.id)
-    .single();
+  const { supabase, user, profile } = await requireMember("/setups");
 
   const [{ data: rows }, { data: statsRows }] = await Promise.all([
     supabase

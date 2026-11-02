@@ -5,10 +5,11 @@ import { useEffect, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import BrandMark from "@/components/BrandMark";
 import ThemeToggle from "@/components/ThemeToggle";
+import { JOIN_LINK } from "@/components/join/events";
 
 const nav = [
   { href: "/results", label: "Results" },
-  { href: "/pricing", label: "Pricing" },
+  { href: "/#pricing", label: "Pricing" },
   { href: "/blog", label: "Blog" },
   { href: "/about", label: "About" },
   { href: "/company", label: "Company" },
@@ -63,10 +64,10 @@ export default function Header() {
                 Sign in
               </Link>
               <Link
-                href="/signup"
+                href={JOIN_LINK}
                 className="rounded-lg bg-accent px-4 py-2 font-display text-sm font-semibold text-bg transition hover:bg-accent-2"
               >
-                Sign up
+                Get access
               </Link>
             </>
           )}

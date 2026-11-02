@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { supabaseServer } from "@/lib/supabase/server";
+import { requireMember } from "@/lib/membership";
 import AppShell from "@/components/AppShell";
 
 export const metadata: Metadata = {
@@ -9,17 +8,7 @@ export const metadata: Metadata = {
 };
 
 export default async function ChatterPage() {
-  const supabase = await supabaseServer();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/signin?next=/chatter");
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("is_admin, name, avatar_url")
-    .eq("id", user.id)
-    .single();
+  const { supabase, user, profile } = await requireMember("/chatter");
 
   const { data: latestDay } = await supabase
     .from("chatter_stats")

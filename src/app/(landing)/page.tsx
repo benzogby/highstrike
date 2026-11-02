@@ -5,6 +5,10 @@ import FaqIndex from "@/components/landing/FaqIndex";
 import Field from "@/components/landing/Field";
 import { Bull, Pill, Tag, Toast, Tri, compact, price, shortDate, sideLabel, signedPct, statusLabel, triggerOf, weekdayDate } from "@/components/landing/Pieces";
 import SetupChart, { entryIndexOf, hitIndex } from "@/components/landing/SetupChart";
+import JoinButton from "@/components/join/JoinButton";
+import JoinDialog from "@/components/join/JoinDialog";
+import { moduleLabel } from "@/lib/education";
+import { LIFETIME_PRICE, lifetimeIncludes, type Library } from "@/lib/offer";
 import { LOOKUP_START, getLandingData, type HeroSetup } from "./data";
 
 // The homepage in the HighStrike reels system (design/keyframes-2026-11-02,
@@ -12,13 +16,15 @@ import { LOOKUP_START, getLandingData, type HeroSetup } from "./data";
 // and Inter, HighStrike green for the accent and for gains, red only for
 // losses, smoked glass, the price tag as the key word, and live charts drawn
 // from HighStrike's real graded setups. Styles in landing.css. Refresh the
-// report, setups and record every 30 minutes.
+// report, setups and record every 30 minutes. It sells one thing (Ben,
+// 2026-11-02): $397 once for lifetime access to the daily trades, the tools and
+// the Alpha Mastermind, bought in the popup (components/join/JoinDialog).
 export const revalidate = 1800;
 
 export const metadata: Metadata = {
   title: "HighStrike — Finished trades before the bell",
   description:
-    "Every morning HighStrike's AI scans 5,400+ stocks and publishes the day's options setups with the entry, the target and the reasoning. $99 a month, first 7 days free.",
+    "Every morning HighStrike's AI scans 5,400+ stocks and publishes the day's options setups with the entry, the target and the reasoning. Lifetime access to the trades, the tools and the Alpha Mastermind course: $397 once.",
   openGraph: {
     title: "HighStrike — Finished trades before the bell",
     description:
@@ -27,34 +33,40 @@ export const metadata: Metadata = {
   },
 };
 
-const TRIAL = "/signup";
-
-const faqs = [
-  {
-    q: "What do I get for $99 a month?",
-    a: "Everything: the AI terminal with market weather, the flow scanner, insider filings and alerts; the daily setups with entry, target, time window and suggested contracts; and the full Trading School. One plan, no upsells.",
-  },
-  {
-    q: "How does the free trial work?",
-    a: "You start with 7 days free. Cancel from your account before day 7 and you pay nothing; after that it is $99 a month, and you can cancel any time.",
-  },
-  {
-    q: "When do setups publish?",
-    a: "Before the open on every market day. The report and the slate are ready before 9:30 ET, and an alert arrives when a setup's entry rules trigger.",
-  },
-  {
-    q: "Do I connect my brokerage?",
-    a: "No, and you can't. HighStrike is analytics software: it never touches your broker, your positions or your money. You trade wherever you already trade.",
-  },
-  {
-    q: "What experience do I need?",
-    a: "You should know what a call and a put are. Every setup is a worked example with its reasoning written out, and Trading School covers the rest.",
-  },
-  {
-    q: "Is this financial advice?",
-    a: "No. HighStrike is an analytics and education tool, and setups are market commentary, not recommendations. Trading involves substantial risk, including loss of principal.",
-  },
-];
+// The questions, with the course's real size where the answer gives it.
+function faqsFor(library: Library | null) {
+  const course = library ? `the Alpha Mastermind course, ${library.modules} modules and ${library.lessons} lessons` : "the full Alpha Mastermind course";
+  return [
+    {
+      q: `What do I get for ${LIFETIME_PRICE}?`,
+      a: `Everything, for life: the daily setups with entry, target, time window and suggested contracts; the AI terminal with market weather, the flow scanner, insider filings and alerts; and ${course}, the live recordings included. One payment, no tiers, no upsells.`,
+    },
+    {
+      q: "Is it really one payment?",
+      a: `Yes. ${LIFETIME_PRICE} once, by card through Stripe. There's no subscription and nothing renews. Lifetime means for as long as HighStrike runs.`,
+    },
+    {
+      q: "How fast do I get in?",
+      a: "Right away. Make your account and pay in the same window, and the app opens the moment the payment goes through, today's slate included.",
+    },
+    {
+      q: "When do setups publish?",
+      a: "Before the open on every market day. The report and the slate are ready before 9:30 ET, and an alert arrives when a setup's entry rules trigger.",
+    },
+    {
+      q: "Do I connect my brokerage?",
+      a: "No, and you can't. HighStrike is analytics software: it never touches your broker, your positions or your money. You trade wherever you already trade.",
+    },
+    {
+      q: "What experience do I need?",
+      a: "You should know what a call and a put are. Every setup is a worked example with its reasoning written out, and the Alpha Mastermind covers the rest, from setting up to selling options.",
+    },
+    {
+      q: "Is this financial advice?",
+      a: "No. HighStrike is an analytics and education tool, and setups are market commentary, not recommendations. Trading involves substantial risk, including loss of principal.",
+    },
+  ];
+}
 
 const moments = [
   {
@@ -81,7 +93,7 @@ const tools = [
   { name: "Trade setups", text: "Entry rules, a target, a time window and suggested contracts on every idea." },
   { name: "Alerts", text: "A message the moment a setup's entry rules trigger." },
   { name: "Insiders and chatter", text: "Form 4 sells and buys from the last 30 days, and the crowd's mood." },
-  { name: "Trading School", text: "The full curriculum, from options mechanics to grading your own trades." },
+  { name: "The Alpha Mastermind", text: "The course beside the desk, from your first setup to selling options, with every live session recorded." },
 ];
 
 // The first session from the setup's morning whose close met its price rule
@@ -125,7 +137,7 @@ function shade(v: number) {
 }
 
 export default async function Home() {
-  const { report, today, closed, spy, qqq, stats, weeks, movers, hero, reads, lookup, badges, slateToday } = await getLandingData();
+  const { report, today, closed, spy, qqq, stats, weeks, movers, hero, reads, lookup, badges, slateToday, course } = await getLandingData();
 
   const session = spy[spy.length - 1]?.date;
   // The day after a holiday repeats the last close, so every move reads zero:
@@ -151,6 +163,10 @@ export default async function Home() {
     .sort((a, b) => (b.chatter?.watchers ?? 0) - (a.chatter?.watchers ?? 0))
     .slice(0, 5);
   const map = [...movers].sort((a, b) => Math.abs(b.changePct) - Math.abs(a.changePct));
+  // The Alpha Mastermind as the membership includes it.
+  const lessons = course.reduce((n, m) => n + m.lessons, 0);
+  const recorded = course.filter((m) => /recordings/i.test(m.title)).reduce((n, m) => n + m.lessons, 0);
+  const library: Library | null = course.length && lessons ? { modules: course.length, lessons } : null;
 
   return (
     <main className="hs-page">
@@ -171,15 +187,13 @@ export default async function Home() {
               Every morning HighStrike&apos;s AI scans 5,400+ stocks and publishes the day&apos;s options setups: the entry, the target and the reasoning.
             </p>
             <div className="hs-hero__actions" data-reveal="" style={{ "--i": 3 } as React.CSSProperties}>
-              <Link href={TRIAL} className="hs-btn">
-                Start free trial
-              </Link>
+              <JoinButton className="hs-btn">Get lifetime access</JoinButton>
               <a href="#lookup" className="hs-link">
                 Look up a ticker
               </a>
             </div>
             <p className="hs-hero__price" data-reveal="" style={{ "--i": 3 } as React.CSSProperties}>
-              $99 a month after a 7-day free trial. Cancel anytime.
+              {LIFETIME_PRICE} once for the daily trades, the tools and the Alpha Mastermind. No subscription.
             </p>
             {report && (
               <p className="hs-hero__bell" data-reveal="" style={{ "--i": 4 } as React.CSSProperties}>
@@ -505,7 +519,7 @@ export default async function Home() {
               Everything on the desk
             </h2>
             <p className="hs-lead" data-reveal="" style={{ "--i": 1 } as React.CSSProperties}>
-              One terminal for the whole morning: the market&apos;s weather, the scanner, the setups, the alerts, insider filings and the crowd, with Trading School beside them.
+              One terminal for the whole morning: the market&apos;s weather, the scanner, the setups, the alerts, insider filings and the crowd, with the Alpha Mastermind beside them.
             </p>
           </div>
           <div className="hs-desk__grid">
@@ -530,7 +544,7 @@ export default async function Home() {
                   <span>Scanner</span>
                   <span>Setups</span>
                   <span>Alerts</span>
-                  <span>School</span>
+                  <span>Mastermind</span>
                 </span>
               </div>
               <div className="hs-term__body">
@@ -617,24 +631,78 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* One plan, sold as an order ticket */}
+      {/* The education package: the Alpha Mastermind, as its module index */}
+      {library && (
+        <section id="mastermind" className="hs-room hs-section hs-school" aria-labelledby="hs-school-title">
+          <Field spy={spy} qqq={qqq} seed={29} />
+          <div className="hs-wrap">
+            <div className="hs-school__head">
+              <div>
+                <h2 id="hs-school-title" className="hs-display hs-h2">
+                  <span className="hs-line" data-reveal="">
+                    Alpha Mastermind
+                  </span>
+                  <span className="hs-line" data-reveal="" style={{ "--i": 1 } as React.CSSProperties}>
+                    <Tag className="hs-tag--land">included</Tag>
+                  </span>
+                </h2>
+                <p className="hs-lead" data-reveal="" style={{ "--i": 2 } as React.CSSProperties}>
+                  HighStrike&apos;s full course: technical analysis, options from the basics to selling them, swing trades, smart money concepts, futures and prop firms, and every live trading and education session, recorded. It opens the day you join.
+                </p>
+              </div>
+              <dl className="hs-school__figs" data-reveal="" style={{ "--i": 3 } as React.CSSProperties}>
+                <div>
+                  <dt>lessons</dt>
+                  <dd>{lessons}</dd>
+                </div>
+                <div>
+                  <dt>modules</dt>
+                  <dd>{course.length}</dd>
+                </div>
+                {recorded > 0 && (
+                  <div>
+                    <dt>live sessions recorded</dt>
+                    <dd>{recorded}</dd>
+                  </div>
+                )}
+              </dl>
+            </div>
+            <ol className="hs-glass hs-syllabus" data-land="" aria-label="The Alpha Mastermind's modules">
+              {course.map((m, i) => {
+                const { eyebrow, name } = moduleLabel(m.title);
+                return (
+                  <li key={m.position} className={/recordings/i.test(m.title) ? "is-rec" : undefined} style={{ "--i": i } as React.CSSProperties}>
+                    <span className="hs-syllabus__k">{eyebrow}</span>
+                    <span className="hs-syllabus__t">{name.replace(/Highstrike/g, "HighStrike")}</span>
+                    <span className="hs-syllabus__n">
+                      {m.lessons} lesson{m.lessons === 1 ? "" : "s"}
+                    </span>
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+        </section>
+      )}
+
+      {/* One payment, sold as an order ticket */}
       <section id="pricing" className="hs-room hs-section hs-pricing" aria-labelledby="hs-pricing-title">
         <Field spy={spy} qqq={qqq} seed={32} />
         <div className="hs-wrap hs-pricing__grid">
           <div>
             <h2 id="hs-pricing-title" className="hs-display hs-h2">
               <span className="hs-line" data-reveal="">
-                Everything for
+                Everything for life,
               </span>
               <span className="hs-line" data-reveal="" style={{ "--i": 1 } as React.CSSProperties}>
-                <Tag className="hs-tag--land">$99</Tag> a month
+                <Tag className="hs-tag--land">{LIFETIME_PRICE}</Tag> once
               </span>
             </h2>
             <p className="hs-lead" data-reveal="" style={{ "--i": 2 } as React.CSSProperties}>
-              The terminal, the daily setups, the alerts and the full Trading School, for one price. No upsells, no tiers.
+              One payment opens the daily trades, every tool on the desk and the whole Alpha Mastermind. No subscription, nothing renews, and you&apos;re in the moment it goes through.
             </p>
             <ul className="hs-included">
-              {["The AI terminal and the flow scanner", "Daily setups with the entry, the target and the reasoning", "Alerts the moment a setup triggers", "Trading School, the full curriculum"].map((t, i) => (
+              {lifetimeIncludes(library).map((t, i) => (
                 <li key={t} data-reveal="" style={{ "--i": i + 2 } as React.CSSProperties}>
                   {t}
                 </li>
@@ -648,37 +716,35 @@ export default async function Home() {
             <div className="hs-ui-head">
               <Bull className="hs-bull--sm" />
               <span className="hs-ui-head__tk">HighStrike</span>
-              <span className="hs-ui-head__nm">Everything</span>
+              <span className="hs-ui-head__nm">Lifetime</span>
               <span className="hs-ui-head__sp">
-                <Pill>7-day trial</Pill>
+                <Pill>One payment</Pill>
               </span>
             </div>
             <dl>
               <div>
-                <dt>Plan</dt>
-                <dd>One plan, everything in it</dd>
+                <dt>Access</dt>
+                <dd>Trades, tools and Mastermind</dd>
               </div>
               <div>
                 <dt>Price</dt>
-                <dd>$99.00 a month</dd>
+                <dd>{LIFETIME_PRICE}.00 once</dd>
               </div>
               <div>
-                <dt>Free trial</dt>
-                <dd>7 days</dd>
+                <dt>Renews</dt>
+                <dd>Never</dd>
               </div>
               <div>
-                <dt>Cancel</dt>
-                <dd>Anytime, from your account</dd>
+                <dt>Opens</dt>
+                <dd>The moment you pay</dd>
               </div>
             </dl>
             <p className="hs-order__due">
               <span>Due today</span>
-              <b>$0.00</b>
+              <b>{LIFETIME_PRICE}</b>
             </p>
-            <Link href={TRIAL} className="hs-btn hs-btn--wide">
-              Start free trial
-            </Link>
-            <p className="hs-order__after">Then $99 a month from day 8. Cancel before then and you pay nothing.</p>
+            <JoinButton className="hs-btn hs-btn--wide">Get lifetime access</JoinButton>
+            <p className="hs-order__after">By card through Stripe. No subscription, and nothing renews.</p>
           </div>
         </div>
       </section>
@@ -687,7 +753,7 @@ export default async function Home() {
       <section className="hs-room hs-section hs-faq" aria-label="Questions">
         <Field spy={spy} qqq={qqq} seed={39} />
         <div className="hs-wrap">
-          <FaqIndex title="Questions" faqs={faqs} />
+          <FaqIndex title="Questions" faqs={faqsFor(library)} />
         </div>
       </section>
 
@@ -721,16 +787,15 @@ export default async function Home() {
               Start before tomorrow&apos;s open
             </h2>
             <p className="hs-lead" data-reveal="" style={{ "--i": 1 } as React.CSSProperties}>
-              Seven days free, then $99 a month. Tomorrow&apos;s slate is out before 9:30 ET.
+              {LIFETIME_PRICE} once and you&apos;re in for life. Tomorrow&apos;s slate is out before 9:30 ET.
             </p>
             <div data-reveal="" style={{ "--i": 2 } as React.CSSProperties}>
-              <Link href={TRIAL} className="hs-btn">
-                Start free trial
-              </Link>
+              <JoinButton className="hs-btn">Get lifetime access</JoinButton>
             </div>
           </div>
         </div>
       </section>
+      <JoinDialog library={library} />
     </main>
   );
 }

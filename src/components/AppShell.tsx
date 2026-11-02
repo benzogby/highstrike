@@ -67,7 +67,7 @@ export default function AppShell({
   const firstName = displayName || email.split("@")[0];
 
   return (
-    <div className="flex min-h-screen">
+    <div data-app-shell="" className="flex min-h-screen">
       {/* Sidebar */}
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-60 flex-col border-r border-line bg-panel lg:flex">
         <Link href="/" className="flex items-center gap-2.5 px-5 py-5">

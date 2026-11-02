@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { supabaseServer } from "@/lib/supabase/server";
+import { requireMember } from "@/lib/membership";
 import AppShell from "@/components/AppShell";
 
 export const metadata: Metadata = {
@@ -16,17 +15,7 @@ function money(n: number | null) {
 }
 
 export default async function InsidersPage() {
-  const supabase = await supabaseServer();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/signin?next=/insiders");
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("is_admin, name, avatar_url")
-    .eq("id", user.id)
-    .single();
+  const { supabase, user, profile } = await requireMember("/insiders");
 
   const since30 = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
   const since14 = new Date(Date.now() - 14 * 86400000).toISOString().slice(0, 10);

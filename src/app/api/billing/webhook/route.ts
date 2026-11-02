@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { getStripe, planForPriceId, supabaseService } from "@/lib/stripe";
+import { boughtLifetime, grantLifetime } from "@/lib/lifetime";
+import { LIFETIME } from "@/lib/offer";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +38,9 @@ export async function POST(req: Request) {
         const session = event.data.object;
         const userId = session.metadata?.user_id;
         const plan = session.metadata?.plan;
-        if (userId && plan) {
+        // A one-time payment counts once the money is in (Stripe's page for the $397 membership).
+        const paid = session.mode !== "payment" || session.payment_status === "paid";
+        if (userId && plan && paid) {
           await service
             .from("profiles")
             .update({
@@ -46,6 +50,16 @@ export async function POST(req: Request) {
                 : {}),
             })
             .eq("id", userId);
+        }
+        break;
+      }
+
+      // The $397 membership paid in the popup's card form, for a browser that never came back to /welcome.
+      case "payment_intent.succeeded": {
+        const pi = event.data.object;
+        const userId = pi.metadata?.user_id;
+        if (pi.metadata?.product === LIFETIME.plan && userId && boughtLifetime(pi, userId)) {
+          await grantLifetime(userId, typeof pi.customer === "string" ? pi.customer : pi.customer?.id ?? null);
         }
         break;
       }

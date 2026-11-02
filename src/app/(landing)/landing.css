@@ -1961,6 +1961,89 @@
   color: #cffbea;
 }
 
+/* ── The Alpha Mastermind: the education package, as the course's module index ─────────────────────────────── */
+.hs-school__head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 64px;
+  align-items: end;
+  margin-bottom: 64px;
+}
+
+.hs-school .hs-lead {
+  margin-top: 30px;
+}
+
+.hs-school__figs {
+  display: flex;
+  gap: 48px;
+}
+
+.hs-school__figs div {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 12px;
+}
+
+.hs-school__figs dd {
+  font: 400 64px/0.9 var(--cal);
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.hs-school__figs dt {
+  /* Two lines for every label, so the figures above stand on one line. */
+  min-height: 2.6em;
+  max-width: 8em;
+  font-size: 16px;
+  line-height: 1.3;
+  color: var(--ink-2);
+}
+
+.hs-syllabus {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 12px;
+}
+
+.hs-syllabus li {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 132px;
+  padding: 20px 22px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.025);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.hs-syllabus li.is-rec {
+  background: rgba(31, 191, 134, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(31, 191, 134, 0.24);
+}
+
+.hs-syllabus__k {
+  font: 650 13px/1 var(--ui);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--green);
+}
+
+.hs-syllabus__t {
+  flex: 1;
+  font: 400 24px/1.12 var(--cal);
+  color: var(--ink);
+  text-wrap: balance;
+}
+
+.hs-syllabus__n {
+  font-size: 14px;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
 /* ── Pricing: the order ticket ──────────────────────────────────────────────────────────────────────────── */
 .hs-pricing__grid {
   display: grid;
@@ -2533,6 +2616,16 @@
     transition: opacity 0.8s var(--ease-out), translate 0.9s var(--ease-out);
   }
 
+  html.js [data-land]:not(.is-in).hs-syllabus li {
+    opacity: 0;
+    translate: 0 16px;
+    animation: hs-show 0.01s 3s forwards;
+  }
+
+  html.js [data-land].hs-syllabus li {
+    transition: opacity 0.6s var(--ease-out) calc(var(--i, 0) * 40ms), translate 0.7s var(--ease-out) calc(var(--i, 0) * 40ms);
+  }
+
   html.js [data-land]:not(.is-in) .hs-stack__report {
     opacity: 0;
     animation: hs-show 0.01s 3s forwards;
@@ -3024,5 +3117,109 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 18px;
+  }
+}
+
+/* ── The Alpha Mastermind on narrower screens ──────────────────────────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .hs-school__head {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 44px;
+    margin-bottom: 48px;
+  }
+
+  .hs-syllabus {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .hs-school__figs {
+    gap: 28px;
+  }
+
+  .hs-school__figs dd {
+    font-size: 38px;
+  }
+
+  .hs-school__figs dt {
+    font-size: 14px;
+  }
+
+  .hs-syllabus {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+    padding: 8px;
+  }
+
+  .hs-syllabus li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 14px;
+    row-gap: 6px;
+    min-height: 0;
+    padding: 14px 16px;
+  }
+
+  .hs-syllabus__k {
+    grid-column: 1;
+  }
+
+  .hs-syllabus__t {
+    grid-column: 1;
+    font-size: 18px;
+  }
+
+  .hs-syllabus__n {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: center;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+}
+
+/* ── The popup (components/join/JoinDialog): drawn on <body>, outside [data-landing], with the app's form pieces
+   in this room's colours. The tokens are the app's own names (globals.css), set to the homepage's values. ─────── */
+.hs-join {
+  --color-bg: #04070a;
+  --color-panel: #0b1215;
+  --color-panel-2: #121c20;
+  --color-line: rgba(255, 255, 255, 0.08);
+  --color-line-strong: rgba(255, 255, 255, 0.14);
+  --color-ink: #f2f6f4;
+  --color-ink-2: #b4bfba;
+  --color-ink-3: #8b9792;
+  --color-accent: #1fbf86;
+  --color-accent-2: #6ff5c1;
+  --color-up: #1fbf86;
+  --color-down: #ff5d52;
+  color-scheme: dark;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .hs-join[open] {
+    animation: hs-join-in 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .hs-join[open]::backdrop {
+    animation: hs-join-fade 0.32s ease;
+  }
+}
+
+@keyframes hs-join-in {
+  from {
+    opacity: 0;
+    translate: 0 14px;
+    scale: 0.98;
+  }
+}
+
+@keyframes hs-join-fade {
+  from {
+    opacity: 0;
   }
 }

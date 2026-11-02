@@ -74,7 +74,11 @@ export type LandingData = {
   badges: { traders: string; countries: string };
   /** The newest report is this morning's (false before the morning run, on weekends and holidays). */
   slateToday: boolean;
+  /** The Alpha Mastermind, as the membership includes it: each module's title and lesson count (get_landing_education). */
+  course: CourseModule[];
 };
+
+export type CourseModule = { position: number; title: string; lessons: number };
 
 // The ticker the lookup opens on.
 export const LOOKUP_START = "NVDA";
@@ -159,7 +163,7 @@ async function heroSetup(closed: ClosedSetup[]): Promise<HeroSetup | null> {
 
 export async function getLandingData(): Promise<LandingData> {
   const supabase = landingClient();
-  const [reportRes, todayRes, closedRes, spyRes, qqq, statsRes, weeksRes, moversRes, settingsRes] = await Promise.all([
+  const [reportRes, todayRes, closedRes, spyRes, qqq, statsRes, weeksRes, moversRes, settingsRes, courseRes] = await Promise.all([
     supabase
       .from("weather_reports")
       .select("report_date, volatility, opportunity, direction, summary")
@@ -174,6 +178,7 @@ export async function getLandingData(): Promise<LandingData> {
     supabase.rpc("get_landing_weekly_record"),
     supabase.rpc("get_landing_movers"),
     supabase.from("site_settings").select("key, value").in("key", ["hero_badges"]),
+    supabase.rpc("get_landing_education"),
   ]);
 
   const r = reportRes.data;
@@ -266,5 +271,10 @@ export async function getLandingData(): Promise<LandingData> {
     lookup: reads[LOOKUP_START] ?? null,
     badges: parseSetting(settings.hero_badges, DEFAULT_BADGES),
     slateToday: r?.report_date === newYorkDate(Date.now()),
+    course: ((courseRes.data ?? []) as { module_position: number; title: string; lessons: number }[]).map((m) => ({
+      position: m.module_position,
+      title: m.title,
+      lessons: Number(m.lessons),
+    })),
   };
 }

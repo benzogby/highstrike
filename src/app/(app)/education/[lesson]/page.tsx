@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import AppShell from "@/components/AppShell";
 import LessonView from "@/components/education/LessonView";
-import Paywall from "@/components/education/Paywall";
 import { supabaseServer } from "@/lib/supabase/server";
-import { educationContext, isLessonId, lessonDetail, lessonHref, lessonStates, librarySummary, myProgress, outline, posterUrl, publishedVideos } from "@/lib/education";
+import { isLessonId, lessonDetail, lessonHref, lessonStates, myProgress, outline, posterUrl, publishedVideos } from "@/lib/education";
+import { requireMember } from "@/lib/membership";
 
 export const dynamic = "force-dynamic";
 
@@ -21,18 +21,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 /**
  * One lesson with its module's panel beside it (LessonView). An id that isn't a lesson is a 404; an account without
- * Education sees the paywall. This page only loads; LessonView draws.
+ * the membership goes to the paywall. This page only loads; LessonView draws.
  */
 export default async function LessonPage({ params }: Props) {
   const { lesson: id } = await params;
   if (!isLessonId(id)) notFound();
-  const { supabase, user, profile, allowed } = await educationContext(lessonHref(id));
+  const { supabase, user, profile } = await requireMember(lessonHref(id));
   const shell = (children: React.ReactNode) => (
     <AppShell email={user.email ?? ""} isAdmin={Boolean(profile?.is_admin)} active="education" displayName={profile?.name} avatarUrl={profile?.avatar_url}>
       {children}
     </AppShell>
   );
-  if (!allowed) return shell(<Paywall summary={await librarySummary(supabase)} />);
 
   const [{ modules, lessons }, videos, progress, detail] = await Promise.all([outline(supabase), publishedVideos(supabase), myProgress(supabase, user.id), lessonDetail(supabase, id)]);
   const index = lessons.findIndex((l) => l.id === id);

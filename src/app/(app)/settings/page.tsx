@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
-import { supabaseServer } from "@/lib/supabase/server";
 import AppShell from "@/components/AppShell";
-import { stripeEnabled } from "@/lib/stripe";
+import { requireMember } from "@/lib/membership";
 import SettingsForm from "./SettingsForm";
 import AlertsManager from "./AlertsManager";
 
@@ -10,23 +8,8 @@ export const metadata: Metadata = {
   title: "Settings — HighStrike",
 };
 
-export default async function SettingsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ billing?: string }>;
-}) {
-  const { billing } = await searchParams;
-  const supabase = await supabaseServer();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/signin?next=/settings");
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("name, bio, avatar_url, plan, is_admin")
-    .eq("id", user.id)
-    .single();
+export default async function SettingsPage() {
+  const { user, profile } = await requireMember("/settings");
 
   const providers: string[] = Array.isArray(user.app_metadata?.providers)
     ? user.app_metadata.providers
@@ -52,13 +35,11 @@ export default async function SettingsPage({
           userId={user.id}
           email={user.email ?? ""}
           hasPassword={providers.includes("email")}
-          billing={stripeEnabled()}
-          billingNotice={billing === "success" ? "success" : billing === "cancelled" ? "cancelled" : null}
+          membership={profile?.plan === "lifetime" ? "lifetime" : "admin"}
           initial={{
             name: profile?.name ?? "",
             bio: profile?.bio ?? "",
             avatarUrl: profile?.avatar_url ?? null,
-            plan: profile?.plan ?? "free",
           }}
         />
       </div>

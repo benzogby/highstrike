@@ -79,7 +79,7 @@ export default function SignUpPage() {
   return (
     <AuthShell
       title="Create your account"
-      subtitle="Start trading with HighStrike AI Terminal."
+      subtitle="Then one payment of $397 opens everything, for life."
       footer={
         <>
           Already have an account?{" "}

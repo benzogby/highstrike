@@ -1,10 +1,10 @@
-import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
 
-// Education: the Highstrike Alpha Mastermind library for paid members (Ben, 2026-11-02), laid out like getripping.com's
+// Education: the Highstrike Alpha Mastermind library for members (Ben, 2026-11-02), laid out like getripping.com's
 // Ripping University: one module per Mastermind chapter, each a list of lessons. Everything comes from the database
 // (supabase/migrations/20261102170000_education.sql) through the member's own session, so the tables' rules decide
-// what anyone sees: a paid plan or an admin (public.has_education()). The repository is public; no lesson is in it.
+// what anyone sees: the $397 membership or an admin (public.has_education() → is_member()). The repository is public;
+// no lesson is in it.
 
 type Client = Awaited<ReturnType<typeof supabaseServer>>;
 
@@ -29,21 +29,6 @@ export function moduleLabel(title: string): { eyebrow: string; name: string } {
   if (/recordings/i.test(title)) return { eyebrow: "Recordings", name: title };
   if (/welcome/i.test(title)) return { eyebrow: "Start here", name: title };
   return { eyebrow: "Module", name: title };
-}
-
-/**
- * The signed-in member and whether Education is open to them: any paid plan, or an admin. Signed out goes to sign in and
- * comes back to `next`.
- */
-export async function educationContext(next: string) {
-  const supabase = await supabaseServer();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect(`/signin?next=${encodeURIComponent(next)}`);
-  const { data: profile } = await supabase.from("profiles").select("is_admin, name, avatar_url, plan").eq("id", user.id).single();
-  const allowed = Boolean(profile?.is_admin) || (profile?.plan ?? "free") !== "free";
-  return { supabase, user, profile, allowed };
 }
 
 /** Every module in order, and every lesson in library order (module, then its place in the module). */

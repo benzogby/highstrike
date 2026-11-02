@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
-import { supabaseServer } from "@/lib/supabase/server";
+import { requireMember } from "@/lib/membership";
 import AppShell from "@/components/AppShell";
 import ScannerTable from "./ScannerTable";
 
@@ -9,17 +8,7 @@ export const metadata: Metadata = {
 };
 
 export default async function ScannerPage() {
-  const supabase = await supabaseServer();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/signin?next=/scanner");
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("is_admin, name, avatar_url")
-    .eq("id", user.id)
-    .single();
+  const { user, profile } = await requireMember("/scanner");
 
   return (
     <AppShell

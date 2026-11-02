@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
-import { supabaseServer } from "@/lib/supabase/server";
+import { notFound } from "next/navigation";
+import { requireMember } from "@/lib/membership";
 import AppShell from "@/components/AppShell";
 import { fetchQuotes } from "@/lib/quotes";
 import { fetchCompanyNews, newsTime } from "@/lib/news";
@@ -33,19 +33,10 @@ export default async function SymbolPage({
   const ticker = raw.toUpperCase();
   if (!/^[A-Z.-]{1,10}$/.test(ticker)) notFound();
 
-  const supabase = await supabaseServer();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect(`/signin?next=/symbol/${ticker}`);
+  const { supabase, user, profile } = await requireMember(`/symbol/${ticker}`);
 
-  const [{ data: profile }, { data: symbol }, quoteArr, { data: history }] =
+  const [{ data: symbol }, quoteArr, { data: history }] =
     await Promise.all([
-      supabase
-        .from("profiles")
-        .select("is_admin, name, avatar_url")
-        .eq("id", user.id)
-        .single(),
       supabase
         .from("symbols")
         .select("ticker, name, exchange, sector")
