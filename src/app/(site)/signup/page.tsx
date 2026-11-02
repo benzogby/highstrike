@@ -10,6 +10,8 @@ import AuthShell, {
   authLabelClass,
 } from "@/components/AuthShell";
 import GoogleAuthButton, { AuthDivider } from "@/components/GoogleAuthButton";
+import AgreeTerms from "@/components/AgreeTerms";
+import { termsAgreement } from "@/lib/terms";
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -19,10 +21,15 @@ export default function SignUpPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [emailSent, setEmailSent] = useState(false);
+  const [agreed, setAgreed] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    if (!agreed) {
+      setError("Tick the box to agree to the Terms and Privacy Policy first.");
+      return;
+    }
     if (password !== confirm) {
       setError("Passwords don't match.");
       return;
@@ -38,6 +45,7 @@ export default function SignUpPage() {
       password,
       options: {
         emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
+        data: termsAgreement(),
       },
     });
     setLoading(false);
@@ -89,7 +97,8 @@ export default function SignUpPage() {
         </>
       }
     >
-      <GoogleAuthButton label="Continue with Google" />
+      <AgreeTerms checked={agreed} onChange={setAgreed} className="mb-4" />
+      <GoogleAuthButton label="Continue with Google" agreed={agreed} disabled={!agreed} />
       <div className="my-4">
         <AuthDivider />
       </div>
@@ -144,23 +153,6 @@ export default function SignUpPage() {
         <button type="submit" disabled={loading} className={authButtonClass}>
           {loading ? "Creating account…" : "Create account"}
         </button>
-        <p className="text-center text-xs leading-relaxed text-ink-3">
-          By creating an account you agree to our{" "}
-          <a
-            href="https://www.highstrike.com/terms-of-service"
-            className="underline transition hover:text-ink"
-          >
-            Terms of Service
-          </a>{" "}
-          and{" "}
-          <a
-            href="https://www.highstrike.com/privacy-policy"
-            className="underline transition hover:text-ink"
-          >
-            Privacy Policy
-          </a>
-          .
-        </p>
       </form>
     </AuthShell>
   );

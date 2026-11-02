@@ -2,10 +2,14 @@
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabase/client";
+import { readConsent } from "@/lib/consent";
 
 // Fire-and-forget pageview beacon, mounted once in the root layout. Sends one
 // tiny POST to /api/track per route change — no external scripts, no cookies.
 // Visitor id lives in localStorage; session id rotates after 30 idle minutes.
+// COOKIE BANNER (src/lib/consent.ts): those IDs, and anything stored, only once
+// the visitor accepts; until they answer a view counts with no IDs; "Essential
+// only" counts nothing.
 // Any failure is swallowed: tracking must never affect the visitor.
 //
 // HUMAN GATE: headless crawlers and uptime monitors execute JS with fresh
@@ -40,20 +44,28 @@ export default function TrackPageview() {
       // Automation (Puppeteer, Playwright, most crawlers) declares itself.
       if (typeof navigator !== "undefined" && navigator.webdriver) return;
 
-      let vid = localStorage.getItem("hs_vid");
-      if (!vid) {
-        vid = randomId();
-        localStorage.setItem("hs_vid", vid);
-      }
+      const consent = readConsent();
+      if (consent === "essential") return;
+      const ids = consent === "all";
 
-      const now = Date.now();
-      let sid = sessionStorage.getItem("hs_sid");
-      const lastSeen = Number(sessionStorage.getItem("hs_sid_t") || 0);
-      if (!sid || now - lastSeen > 30 * 60 * 1000) {
-        sid = randomId();
-        sessionStorage.setItem("hs_sid", sid);
+      let vid = "";
+      let sid = "";
+      if (ids) {
+        vid = localStorage.getItem("hs_vid") || "";
+        if (!vid) {
+          vid = randomId();
+          localStorage.setItem("hs_vid", vid);
+        }
+
+        const now = Date.now();
+        sid = sessionStorage.getItem("hs_sid") || "";
+        const lastSeen = Number(sessionStorage.getItem("hs_sid_t") || 0);
+        if (!sid || now - lastSeen > 30 * 60 * 1000) {
+          sid = randomId();
+          sessionStorage.setItem("hs_sid", sid);
+        }
+        sessionStorage.setItem("hs_sid_t", String(now));
       }
-      sessionStorage.setItem("hs_sid_t", String(now));
 
       const send = async (path: string, ref: string, v: string, s: string) => {
         let uid: string | null = null;
@@ -92,7 +104,7 @@ export default function TrackPageview() {
         if (human.current) return;
         human.current = true;
         try {
-          sessionStorage.setItem("hs_h", "1");
+          if (ids) sessionStorage.setItem("hs_h", "1");
         } catch {
           /* still confirmed in-memory */
         }

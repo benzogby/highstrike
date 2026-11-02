@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Space_Grotesk, IBM_Plex_Mono, Cal_Sans } from "next/font/google";
 import TrackPageview from "./TrackPageview";
+import CookieBanner from "./CookieBanner";
 import "./globals.css";
 
 const inter = Inter({
@@ -67,6 +68,7 @@ export default function RootLayout({
       >
         <TrackPageview />
         {children}
+        <CookieBanner />
       </body>
     </html>
   );

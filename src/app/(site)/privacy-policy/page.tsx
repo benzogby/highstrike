@@ -36,7 +36,7 @@ const sections: LegalSection[] = [
         <li>
           <strong>Your account:</strong> your email address and password (stored securely by our sign-in provider; we
           never see it in plain text). If you sign in with Google, we receive your name, email address and profile photo
-          from Google.
+          from Google. We also keep a record of when you agreed to our Terms and this policy.
         </li>
         <li>
           <strong>Your profile:</strong> the name, bio and picture you choose to add.
@@ -51,8 +51,9 @@ const sections: LegalSection[] = [
         <li>
           <strong>Site visits:</strong> for each page view, the page, the site you came from, your device type (phone,
           tablet or desktop), your approximate location (country, region and city, worked out from your connection by our
-          host), a random visitor ID kept in your browser, a session ID, and your account ID if you&apos;re signed in. We
-          don&apos;t store your IP address.
+          host) and your account ID if you&apos;re signed in. Only if you accept cookies, we also keep a random visitor ID
+          and session ID in your browser to count return visits. If you choose &ldquo;Essential only&rdquo;, we don&apos;t
+          count your visits at all. We don&apos;t store your IP address.
         </li>
         <li>
           <strong>Messages:</strong> anything you send us by email, and your email address if you joined a waitlist.
@@ -95,9 +96,11 @@ const sections: LegalSection[] = [
     title: "Cookies and browser storage",
     body: (
       <p>
-        We use cookies to keep you signed in, and your browser&apos;s storage to remember things like your theme and the
-        random visitor ID above. Stripe sets its own cookies on the payment step to prevent fraud. We don&apos;t use
-        advertising or cross-site tracking cookies.
+        We use essential cookies to keep you signed in, and your browser&apos;s storage to remember your theme and your
+        cookie choice. The first time you visit, a banner asks whether you accept the visit-counting ID described above;
+        you can choose &ldquo;Essential only&rdquo; instead, and the site works the same either way. To change your
+        answer, clear this site&apos;s data in your browser and the banner will ask again. Stripe sets its own cookies on
+        the payment step to prevent fraud. We don&apos;t use advertising or cross-site tracking cookies.
       </p>
     ),
   },

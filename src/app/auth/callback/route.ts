@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "@/lib/supabaseConfig";
+import { agreedToTerms, termsAgreement } from "@/lib/terms";
 
 export const dynamic = "force-dynamic";
 
@@ -35,8 +36,15 @@ export async function GET(request: NextRequest) {
   });
 
   if (code) {
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) return response;
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+    if (!error) {
+      // Google from a form whose Terms box was ticked: record it on the account, once.
+      if (url.searchParams.get("terms") === "1" && !agreedToTerms(data.user)) {
+        const { error: noted } = await supabase.auth.updateUser({ data: termsAgreement() });
+        if (noted) console.error("auth callback: couldn't record the Terms agreement:", noted.message);
+      }
+      return response;
+    }
     console.error("auth callback: code exchange failed:", error.message);
   } else if (tokenHash && type) {
     const { error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash });

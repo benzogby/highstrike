@@ -6,6 +6,8 @@ import Link from "next/link";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import GoogleAuthButton, { AuthDivider } from "@/components/GoogleAuthButton";
 import { authInputClass, authLabelClass } from "@/components/AuthShell";
+import AgreeTerms from "@/components/AgreeTerms";
+import { termsAgreement } from "@/lib/terms";
 import { LIFETIME_PRICE, type Library } from "@/lib/offer";
 import { JOIN_EVENT, JOIN_LINK, type JoinIntent } from "./events";
 import LifetimeCheckout, { PAY_BUTTON, Spinner } from "./LifetimeCheckout";
@@ -41,6 +43,7 @@ export default function JoinDialog({ library }: { library: Library | null }) {
   const [step, setStep] = useState<Step>({ at: "closed" });
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [agreed, setAgreed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [paying, setPaying] = useState(false);
   const [problem, setProblem] = useState("");
@@ -115,6 +118,10 @@ export default function JoinDialog({ library }: { library: Library | null }) {
     event.preventDefault();
     if (busy) return;
     const address = email.trim().toLowerCase();
+    if (!agreed) {
+      setProblem("Tick the box to agree to the Terms and Privacy Policy first.");
+      return;
+    }
     if (password.length < 8) {
       setProblem("Use at least 8 characters for your password.");
       passwordBox.current?.focus();
@@ -126,7 +133,7 @@ export default function JoinDialog({ library }: { library: Library | null }) {
       .auth.signUp({
         email: address,
         password,
-        options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(JOIN_LINK)}` },
+        options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(JOIN_LINK)}`, data: termsAgreement() },
       })
       .catch(() => ({ data: null, error: { message: UNREACHABLE } }));
     setBusy(false);
@@ -228,8 +235,9 @@ export default function JoinDialog({ library }: { library: Library | null }) {
           <p className="text-sm leading-relaxed text-ink-2">
             First your account, then checkout: {LIFETIME_PRICE} once, and everything opens the moment it goes through.
           </p>
-          <div className="mt-5">
-            <GoogleAuthButton label="Continue with Google" next={JOIN_LINK} />
+          <AgreeTerms id="hs-join-agree" checked={agreed} onChange={setAgreed} className="mt-4" />
+          <div className="mt-4">
+            <GoogleAuthButton label="Continue with Google" next={JOIN_LINK} agreed={agreed} disabled={!agreed} />
           </div>
           <div className="my-4">
             <AuthDivider />
@@ -247,17 +255,6 @@ export default function JoinDialog({ library }: { library: Library | null }) {
             {busy && <Spinner />}
             {busy ? "Creating your account…" : "Continue to checkout"}
           </button>
-          <p className="mt-3 text-center text-xs leading-relaxed text-ink-3">
-            By continuing you agree to our{" "}
-            <a href="/terms-of-service" target="_blank" rel="noopener" className="underline hover:text-ink">
-              Terms of Service
-            </a>{" "}
-            and{" "}
-            <a href="/privacy-policy" target="_blank" rel="noopener" className="underline hover:text-ink">
-              Privacy Policy
-            </a>
-            .
-          </p>
           <p className="mt-4 text-center text-xs text-ink-3">
             Have an account?{" "}
             <button type="button" onClick={() => goTo({ at: "login" })} className="font-semibold text-ink underline-offset-2 hover:underline">

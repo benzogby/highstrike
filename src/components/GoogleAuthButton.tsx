@@ -3,20 +3,33 @@
 import { useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase/client";
 
-/** `next`: where Google's way back lands once signed in (the homepage's popup passes "/?join=1" to reopen at checkout). */
-export default function GoogleAuthButton({ label, next = "/dashboard" }: { label: string; next?: string }) {
+/**
+ * `next`: where Google's way back lands once signed in (the homepage's popup passes "/?join=1" to reopen at checkout).
+ * `agreed`: they ticked the Terms box, so the callback records it on the account (src/lib/terms.ts); `disabled` until then.
+ */
+export default function GoogleAuthButton({
+  label,
+  next = "/dashboard",
+  agreed = false,
+  disabled = false,
+}: {
+  label: string;
+  next?: string;
+  agreed?: boolean;
+  disabled?: boolean;
+}) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   async function signIn() {
-    if (loading) return;
+    if (loading || disabled) return;
     setError("");
     setLoading(true);
     const supabase = supabaseBrowser();
     const { error: err } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}${agreed ? "&terms=1" : ""}`,
       },
     });
     // On success the browser navigates away; we only get here on failure.
@@ -35,8 +48,8 @@ export default function GoogleAuthButton({ label, next = "/dashboard" }: { label
       <button
         type="button"
         onClick={signIn}
-        disabled={loading}
-        className="flex h-12 w-full items-center justify-center gap-3 rounded-lg border border-line-strong bg-panel font-display text-sm font-semibold text-ink transition hover:border-accent/50 disabled:opacity-60"
+        disabled={loading || disabled}
+        className="flex h-12 w-full items-center justify-center gap-3 rounded-lg border border-line-strong bg-panel font-display text-sm font-semibold text-ink transition hover:border-accent/50 disabled:cursor-not-allowed disabled:opacity-50"
       >
         <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
           <path

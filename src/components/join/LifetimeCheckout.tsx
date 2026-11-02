@@ -1,9 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent, type MouseEvent } from "react";
 import { loadStripe, type Appearance, type Stripe as StripeJs } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { LIFETIME, dollars, lifetimeIncludes, type Library } from "@/lib/offer";
+import { supabaseBrowser } from "@/lib/supabase/client";
+import { agreedToTerms, termsAgreement } from "@/lib/terms";
+import AgreeTerms from "@/components/AgreeTerms";
 import { STRIPE_FONTS, appearanceFrom } from "./stripeLook";
 
 /** What /api/billing/lifetime made (src/lib/lifetime.ts → Start). */
@@ -65,6 +68,40 @@ function Lock() {
   );
 }
 
+/**
+ * The Terms, for an account with no agreement on record (Google from the sign-in page, or one made before the box):
+ * Pay waits on the tick, and paying writes it to the account first. `blocked` holds Pay; `record` writes it.
+ */
+type Gate = { blocked: boolean; record: () => Promise<boolean> };
+
+function useTermsGate() {
+  const [needed, setNeeded] = useState<boolean | null>(null);
+  const [ticked, setTicked] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    supabaseBrowser()
+      .auth.getUser()
+      .then(({ data }) => alive && setNeeded(!agreedToTerms(data.user)))
+      .catch(() => alive && setNeeded(true));
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const record = useCallback(async () => {
+    if (!needed) return true;
+    const { error } = await supabaseBrowser()
+      .auth.updateUser({ data: termsAgreement() })
+      .catch(() => ({ error: { message: "unreachable" } }));
+    if (error) return false;
+    setNeeded(false);
+    return true;
+  }, [needed]);
+  const gate: Gate = { blocked: needed === null || (needed && !ticked), record };
+  return { needed: Boolean(needed), ticked, setTicked, gate };
+}
+
+const NOT_RECORDED = "We couldn't save your agreement to the Terms. Check your connection and try again. Nothing was charged.";
+
 export const PAY_BUTTON =
   "flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-accent px-4 font-display text-[15px] font-semibold text-bg transition hover:bg-accent-2 disabled:cursor-not-allowed disabled:opacity-60";
 
@@ -105,6 +142,7 @@ export default function LifetimeCheckout({ library, back, onPaying }: { library:
   const box = useRef<HTMLDivElement>(null);
   const [start, setStart] = useState<{ ready: Start; appearance: Appearance } | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
+  const terms = useTermsGate();
 
   const apply = useCallback((asked: Asked) => {
     if ("error" in asked) return setFailed(asked.error);
@@ -133,6 +171,7 @@ export default function LifetimeCheckout({ library, back, onPaying }: { library:
   return (
     <div ref={box}>
       <OfferCard library={library} />
+      {terms.needed && <AgreeTerms id="hs-pay-agree" checked={terms.ticked} onChange={terms.setTicked} className="mt-4" />}
       <div className="mt-5">
         {failed ? (
           <p role="alert" className="rounded-lg border border-down/30 bg-down/10 px-3 py-2.5 text-sm text-down">
@@ -149,10 +188,10 @@ export default function LifetimeCheckout({ library, back, onPaying }: { library:
             stripe={stripeFor(ready.publishableKey)}
             options={{ clientSecret: ready.clientSecret, appearance: start.appearance, fonts: STRIPE_FONTS }}
           >
-            <PayForm paymentIntent={ready.paymentIntent} cents={ready.cents} onPaying={(on) => onPaying?.(on)} onUnavailable={unavailable} />
+            <PayForm paymentIntent={ready.paymentIntent} cents={ready.cents} gate={terms.gate} onPaying={(on) => onPaying?.(on)} onUnavailable={unavailable} />
           </Elements>
         ) : (
-          <HostedPay url={ready.url} cents={ready.cents} />
+          <HostedPay url={ready.url} cents={ready.cents} gate={terms.gate} />
         )}
       </div>
       <p className="mt-4 text-balance text-center text-xs text-ink-3">
@@ -191,7 +230,19 @@ function TermsLine() {
   );
 }
 
-function PayForm({ paymentIntent, cents, onPaying, onUnavailable }: { paymentIntent: string; cents: number; onPaying: (on: boolean) => void; onUnavailable: () => void }) {
+function PayForm({
+  paymentIntent,
+  cents,
+  gate,
+  onPaying,
+  onUnavailable,
+}: {
+  paymentIntent: string;
+  cents: number;
+  gate: Gate;
+  onPaying: (on: boolean) => void;
+  onUnavailable: () => void;
+}) {
   const stripe = useStripe();
   const elements = useElements();
   const [shown, setShown] = useState(false);
@@ -205,13 +256,15 @@ function PayForm({ paymentIntent, cents, onPaying, onUnavailable }: { paymentInt
   };
   const pay = async (e: FormEvent) => {
     e.preventDefault();
-    if (!stripe || !elements || busy) return;
+    if (!stripe || !elements || busy || gate.blocked) return;
     setBusy(true);
     setError(null);
     onPaying(true);
     // The card's details first, while the press still counts as the buyer's (a wallet's sheet needs that).
     const { error: invalid } = await elements.submit();
     if (invalid) return fail(invalid.message ?? "Check the card details.");
+    // After the sheet is up, so waiting on this doesn't cost the wallet its press.
+    if (!(await gate.record())) return fail(NOT_RECORDED);
     // A card that clears stays here; one whose bank asks for 3-D Secure comes back to /welcome with the payment's id.
     const { error: declined, paymentIntent: paid } = await stripe.confirmPayment({
       elements,
@@ -231,7 +284,9 @@ function PayForm({ paymentIntent, cents, onPaying, onUnavailable }: { paymentInt
           console.error("card form didn't load:", e.error.message);
           onUnavailable();
         }}
-        options={{ layout: "tabs" }}
+        // Apple Pay in Safari and Google Pay in Chrome, as tabs beside the card (the site's domain is registered with
+        // Stripe by startLifetime).
+        options={{ layout: "tabs", wallets: { applePay: "auto", googlePay: "auto" } }}
       />
       {!shown && (
         <p className="flex items-center justify-center gap-2 py-8 text-sm text-ink-2">
@@ -247,7 +302,7 @@ function PayForm({ paymentIntent, cents, onPaying, onUnavailable }: { paymentInt
           {error}
         </p>
       )}
-      <button type="submit" disabled={!shown || busy || !stripe} className={`mt-4 ${PAY_BUTTON}`}>
+      <button type="submit" disabled={!shown || busy || !stripe || gate.blocked} className={`mt-4 ${PAY_BUTTON}`}>
         {busy && <Spinner />}
         {busy ? "Paying…" : `Pay ${dollars(cents)}`}
       </button>
@@ -259,16 +314,34 @@ function PayForm({ paymentIntent, cents, onPaying, onUnavailable }: { paymentInt
   );
 }
 
-function HostedPay({ url, cents }: { url: string; cents: number }) {
+function HostedPay({ url, cents, gate }: { url: string; cents: number; gate: Gate }) {
   const [going, setGoing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const go = async (e: MouseEvent) => {
+    e.preventDefault();
+    if (going || gate.blocked) return;
+    setGoing(true);
+    setError(null);
+    if (!(await gate.record())) {
+      setGoing(false);
+      return setError(NOT_RECORDED);
+    }
+    window.location.assign(url);
+  };
+  const off = going || gate.blocked;
   return (
     <div>
       <DueToday cents={cents} />
+      {error && (
+        <p role="alert" className="mt-3 rounded-lg border border-down/30 bg-down/10 px-3 py-2.5 text-sm text-down">
+          {error}
+        </p>
+      )}
       <a
         href={url}
-        onClick={() => setGoing(true)}
-        aria-disabled={going}
-        className={`mt-4 ${PAY_BUTTON} ${going ? "pointer-events-none opacity-60" : ""}`}
+        onClick={(e) => void go(e)}
+        aria-disabled={off}
+        className={`mt-4 ${PAY_BUTTON} ${off ? "pointer-events-none opacity-60" : ""}`}
       >
         {going && <Spinner />}
         {going ? "Opening Stripe…" : `Pay ${dollars(cents)}`}

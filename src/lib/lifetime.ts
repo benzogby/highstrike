@@ -96,6 +96,35 @@ async function profileOf(userId: string) {
   return data as { plan: string | null; is_admin: boolean | null; stripe_customer_id: string | null } | null;
 }
 
+const walletHosts = new Set<string>();
+
+/**
+ * Apple Pay (and Google Pay) in the popup's card form, which Stripe shows only on a domain registered with it
+ * (Ben, 2026-11-02: "add apple pay as a payment option"). Registers and validates this host once per server; Stripe's
+ * own checkout page needs none of it. Never in the way of a payment: a failure is logged and the card form opens as ever.
+ */
+async function walletDomain(stripe: Stripe, origin: string) {
+  let host: string;
+  try {
+    host = new URL(origin).hostname;
+  } catch {
+    return;
+  }
+  if (walletHosts.has(host) || host === "localhost" || /^[\d.]+$|:/.test(host)) return;
+  try {
+    const { data } = await stripe.paymentMethodDomains.list({ domain_name: host, limit: 1 });
+    let domain = data[0] ?? (await stripe.paymentMethodDomains.create({ domain_name: host, enabled: true }));
+    if (!domain.enabled) domain = await stripe.paymentMethodDomains.update(domain.id, { enabled: true });
+    if (domain.apple_pay.status !== "active") domain = await stripe.paymentMethodDomains.validate(domain.id);
+    walletHosts.add(host);
+    if (domain.apple_pay.status !== "active") {
+      console.error(`Apple Pay isn't active on ${host}:`, domain.apple_pay.status_details?.error_message ?? domain.apple_pay.status);
+    }
+  } catch (e) {
+    console.error(`Couldn't register ${host} for Apple Pay:`, e instanceof Error ? e.message : e);
+  }
+}
+
 export type Start =
   | { member: true }
   | { member: false; mode: "embedded"; clientSecret: string; paymentIntent: string; publishableKey: string; cents: number }
@@ -120,6 +149,7 @@ export async function startLifetime(buyer: Buyer, origin: string, back: string, 
   const metadata = { user_id: buyer.id, product: LIFETIME.plan };
   const key = hosted ? null : publishableKey();
   if (key) {
+    await walletDomain(stripe, origin);
     const pi =
       open ??
       (await stripe.paymentIntents.create({
