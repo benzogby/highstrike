@@ -1,7 +1,9 @@
+import Image from "next/image";
 import Link from "next/link";
 import DoneBar from "@/components/education/DoneBar";
 import { hours, lessonHref, moduleAnchor, moduleLabel, plural, type Lesson, type LessonStates, type Module } from "@/lib/education";
 import { PageHeader } from "@/components/ui";
+import { moduleArt } from "@/lib/moduleArt";
 
 /** Where "Continue" goes in a module: its first lesson not done yet, else its first. */
 function continueLesson(lessons: Lesson[], states: LessonStates): Lesson | undefined {
@@ -9,8 +11,8 @@ function continueLesson(lessons: Lesson[], states: LessonStates): Lesson | undef
 }
 
 /**
- * One module, Skool-style: what it is, how many lessons and how much video, the member's progress, and a button into its
- * lesson panel at the lesson to pick up next.
+ * One module, Skool-style: its key image across the top half (1920x1080, src/lib/moduleArt.ts), what it is, how many
+ * lessons and how much video, the member's progress, and a button into its lesson panel at the lesson to pick up next.
  */
 function ModuleCard({ module: m, lessons, states, index }: { module: Module; lessons: Lesson[]; states: LessonStates; index: number }) {
   const { eyebrow, name } = moduleLabel(m.title);
@@ -20,33 +22,47 @@ function ModuleCard({ module: m, lessons, states, index }: { module: Module; les
   const going = lessons.some((l) => states[l.id]?.done || (states[l.id]?.positionSec ?? 0) > 0);
   const next = continueLesson(lessons, states);
   const id = moduleAnchor(m.position);
+  const art = moduleArt(m.id);
   const facts = [plural(lessons.length, "lesson"), seconds > 0 ? `${hours(seconds)} of video` : null, youtube > 0 && seconds === 0 ? "YouTube videos" : null].filter(Boolean).join(" · ");
   return (
     <section
       id={id}
       aria-labelledby={`${id}-title`}
-      className="anim-rise flex scroll-mt-20 flex-col rounded-xl border border-line bg-panel p-5"
+      className="anim-rise flex scroll-mt-20 flex-col overflow-hidden rounded-xl border border-line bg-panel"
       style={{ "--rise-delay": `${Math.min(index, 8) * 40}ms` } as React.CSSProperties}
     >
-      <p className="text-xs font-medium text-accent-ink">{eyebrow}</p>
-      <h2 id={`${id}-title`} className="mt-1 font-display text-lg leading-snug text-ink">
-        {name}
-      </h2>
-      <p className="mt-2 font-mono-nums text-xs text-ink-3">{facts}</p>
-      <div className="mt-auto pt-5">
-        <DoneBar done={done} total={lessons.length} />
-        {next && (
-          <Link
-            href={lessonHref(next.id)}
-            aria-label={`${going ? "Continue" : "Start"} ${eyebrow}: ${name}`}
-            className={`mt-4 flex h-9 w-full items-center justify-center gap-1.5 rounded-lg text-sm font-medium transition ${
-              going ? "bg-accent text-on-accent hover:bg-accent-2" : "border border-line-strong bg-panel-2 text-ink hover:bg-panel-3"
-            }`}
-          >
-            {going ? "Continue" : "Start"}
-            <span aria-hidden="true">→</span>
-          </Link>
-        )}
+      {art && (
+        <Image
+          src={art}
+          alt=""
+          width={1920}
+          height={1080}
+          sizes="(min-width: 1152px) 368px, (min-width: 1024px) 31vw, (min-width: 768px) 48vw, 100vw"
+          loading={index < 3 ? "eager" : "lazy"}
+          className="aspect-video w-full border-b border-line object-cover"
+        />
+      )}
+      <div className="flex flex-1 flex-col p-5">
+        <p className="text-xs font-medium text-accent-ink">{eyebrow}</p>
+        <h2 id={`${id}-title`} className="mt-1 font-display text-lg leading-snug text-ink">
+          {name}
+        </h2>
+        <p className="mt-2 font-mono-nums text-xs text-ink-3">{facts}</p>
+        <div className="mt-auto pt-5">
+          <DoneBar done={done} total={lessons.length} />
+          {next && (
+            <Link
+              href={lessonHref(next.id)}
+              aria-label={`${going ? "Continue" : "Start"} ${eyebrow}: ${name}`}
+              className={`mt-4 flex h-9 w-full items-center justify-center gap-1.5 rounded-lg text-sm font-medium transition ${
+                going ? "bg-accent text-on-accent hover:bg-accent-2" : "border border-line-strong bg-panel-2 text-ink hover:bg-panel-3"
+              }`}
+            >
+              {going ? "Continue" : "Start"}
+              <span aria-hidden="true">→</span>
+            </Link>
+          )}
+        </div>
       </div>
     </section>
   );

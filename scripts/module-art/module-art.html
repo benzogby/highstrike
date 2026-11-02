@@ -1,0 +1,125 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Cal+Sans&family=IBM+Plex+Mono:wght@500&display=block" rel="stylesheet">
+<style>*{margin:0}html,body{width:1920px;height:1080px;overflow:hidden;background:#0a0f12}
+.noise{position:absolute;inset:0;opacity:.06;mix-blend-mode:overlay;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='300'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/></filter><rect width='300' height='300' filter='url(%23n)'/></svg>")}
+.lab{position:absolute;left:100px;top:84px;display:flex;align-items:center;gap:22px;font:500 50px 'IBM Plex Mono';letter-spacing:.2em;color:#55dfaa}
+.lab i{width:24px;height:24px;border-radius:50%;background:#1fbf86;box-shadow:0 0 24px #1fbf86}</style></head><body>
+<script>
+const q=new URLSearchParams(location.search);const N=+(q.get('n')??0);const LABEL=q.get('label')||'';
+let seed=(N+3)*48271;const r=()=>(seed=(seed*16807)%2147483647)/2147483647;
+const G='#1fbf86',G2='#55dfaa',RED='#ff6b61',INK='#eef3f1',INK2='#aebbb5',INK3='#85938d',P1='#111a1f',P2='#18242a',P3='#213039',L1='#1d2a31',L2='#293942',BG='#0a0f12';
+const T=(x,y,t,col=INK3,size=40,anchor='start',w=500)=>`<text x="${x}" y="${y}" fill="${col}" font-family="IBM Plex Mono" font-weight="${w}" font-size="${size}" letter-spacing="3" text-anchor="${anchor}">${t}</text>`;
+const glow=(d,col=G2,w=10,fill='none')=>`<path d="${d}" stroke="${col}" stroke-width="${w*2.6}" fill="none" filter="url(#blur)" opacity=".55" stroke-linejoin="round" stroke-linecap="round"/><path d="${d}" stroke="${col}" stroke-width="${w}" fill="${fill}" stroke-linejoin="round" stroke-linecap="round"/>`;
+const panel=(x,y,w,h,rr=36,fill=P1,stroke=L2,sw=4)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rr}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"/><rect x="${x+sw}" y="${y+sw/2}" width="${w-sw*2}" height="3" rx="1.5" fill="#fff" opacity=".07"/>`;
+const shadow=(x,y,w,h,rr=36)=>`<rect x="${x}" y="${y+40}" width="${w}" height="${h}" rx="${rr}" fill="#000" opacity=".55" filter="url(#soft)"/>`;
+const halo=(cx,cy,rx,ry,op=.35)=>`<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="url(#halo)" opacity="${op/.35}"/>`;
+// candles inside a box; returns svg; values normalized
+function series(n,trend=.01,vol=.12){let p=.4;const o=[];for(let i=0;i<n;i++){const a=p;p=Math.min(.95,Math.max(.05,p+(r()-.5)*vol+trend));o.push({o:a,c:p,h:Math.max(a,p)+r()*vol*.45,l:Math.min(a,p)-r()*vol*.45})}
+ const mn=Math.min(...o.map(k=>k.l)),mx=Math.max(...o.map(k=>k.h)),f=v=>(v-mn)/(mx-mn);return o.map(k=>({o:f(k.o),c:f(k.c),h:f(k.h),l:f(k.l)}))}
+function candles(d,x,y,w,h,sw=5,op=1){const cw=w/d.length;return d.map((k,i)=>{const X=x+(i+.5)*cw,Y=v=>y+h-v*h,up=k.c>=k.o,col=up?G:RED;
+ return `<g opacity="${op}"><line x1="${X}" x2="${X}" y1="${Y(k.h)}" y2="${Y(k.l)}" stroke="${col}" stroke-width="${sw}" stroke-linecap="round"/><rect x="${X-cw*.31}" y="${Y(Math.max(k.o,k.c))}" width="${cw*.62}" height="${Math.max(sw,Math.abs(Y(k.o)-Y(k.c)))}" rx="${sw*.6}" fill="${col}"/></g>`}).join('')}
+const lineOf=(d,x,y,w,h,key='c')=>d.map((k,i)=>(i?'L':'M')+(x+(i+.5)*w/d.length).toFixed(1)+' '+(y+h-k[key]*h).toFixed(1)).join('');
+// ---------- the background theme: a faint wall of candles ----------
+function backdrop(){const d=series(64,.004,.16);return `<rect width="1920" height="1080" fill="url(#grid)"/>
+ <g opacity=".16">${candles(d,-20,140,1960,860,6)}</g><rect width="1920" height="1080" fill="url(#glow)"/>`}
+// ---------- key images ----------
+const S={
+0(){ // Welcome: the roadmap — four steps up to a flag
+ const pts=[[520,860],[820,700],[1120,760],[1420,520]];const d=`M${pts.map(p=>p.join(' ')).join(' L')}`;
+ return halo(1000,620,700,380)+glow(d,G2,12)+pts.map((p,i)=>`<circle cx="${p[0]}" cy="${p[1]}" r="46" fill="${BG}" stroke="${i<3?G2:INK}" stroke-width="10"/>${T(p[0],p[1]+16,String(i+1),INK,44,'middle')}`).join('')+
+ `<line x1="1420" y1="474" x2="1420" y2="250" stroke="${INK}" stroke-width="10" stroke-linecap="round"/>${glow('M1420 260 L1600 310 L1420 370 Z',G,8,G)}
+ ${T(520,960,'START',INK3,36,'middle')}${T(1420,620,'',INK3)}`},
+1(){ // Setting up: the trading station — two monitors on a desk
+ const mon=(x,y,w,h,seedOff)=>{seed+=seedOff;const d=series(18,.015,.14);return shadow(x,y,w,h,24)+panel(x,y,w,h,24,P1,L2,5)+`<rect x="${x+26}" y="${y+26}" width="${w-52}" height="${h-52}" rx="10" fill="${BG}"/>`+candles(d,x+50,y+60,w-100,h-130,5)+glow(lineOf(d,x+50,y+60,w-100,h-130),G2,5)}
+ return halo(960,560,780,400)+mon(330,250,640,420,11)+mon(990,250,640,420,77)+
+ `<rect x="910" y="670" width="160" height="90" fill="${P2}"/><rect x="760" y="752" width="460" height="26" rx="13" fill="${P3}" stroke="${L2}" stroke-width="4"/>
+ <rect x="250" y="800" width="1460" height="24" rx="12" fill="${P2}" stroke="${L2}" stroke-width="4"/>
+ ${panel(700,850,520,90,20,P2,L2,4)}${[...Array(3)].map((_,j)=>[...Array(12)].map((_,i)=>`<rect x="${722+i*41}" y="${866+j*22}" width="32" height="14" rx="4" fill="${L2}"/>`).join('')).join('')}
+ <rect x="1290" y="862" width="70" height="104" rx="35" fill="${P2}" stroke="${L2}" stroke-width="4"/><line x1="1325" x2="1325" y1="872" y2="904" stroke="${L2}" stroke-width="4"/>`},
+2(){ // Technical analysis: big candles, support/resistance, breakout
+ const d=series(14,.035,.16);const x=360,y=230,w=1200,h=640;const res=y+h*.32,sup=y+h*.78;
+ return halo(960,560,700,380)+`<line x1="300" x2="1620" y1="${res}" y2="${res}" stroke="${G2}" stroke-width="5" stroke-dasharray="20 16" opacity=".9"/><line x1="300" x2="1620" y1="${sup}" y2="${sup}" stroke="${RED}" stroke-width="5" stroke-dasharray="20 16" opacity=".8"/>`+
+ T(300,res-22,'RESISTANCE',G2,36)+T(1620,sup+56,'SUPPORT',RED,36,'end')+candles(d,x,y,w,h,12)+glow(`M1300 ${res+60} L1480 ${y+10}`,INK,10)+glow(`M1440 ${y+10} L1480 ${y+10} L1480 ${y+50}`,INK,10)},
+3(){ // Options: up and down — a call arrow and a put arrow from the strike
+ const sx=760,sy=600;return halo(960,560,760,420,.4)+`<line x1="260" x2="1660" y1="${sy}" y2="${sy}" stroke="${INK3}" stroke-width="4" stroke-dasharray="14 14"/>`+
+ glow(`M${sx} ${sy} C ${sx+180} ${sy} ${sx+300} ${sy-140} ${sx+560} ${sy-360}`,G,18)+glow(`M${sx+470} ${sy-360} L${sx+560} ${sy-360} L${sx+560} ${sy-270}`,G,18)+
+ glow(`M${sx} ${sy} C ${sx+180} ${sy} ${sx+300} ${sy+120} ${sx+560} ${sy+300}`,RED,18)+glow(`M${sx+470} ${sy+300} L${sx+560} ${sy+300} L${sx+560} ${sy+210}`,RED,18)+
+ `<circle cx="${sx}" cy="${sy}" r="30" fill="${BG}" stroke="${INK}" stroke-width="10"/>`+T(sx,sy+90,'STRIKE',INK2,38,'middle')+
+ panel(sx+620,sy-430,260,100,50,'#0f2a20',G,4)+T(sx+750,sy-364,'CALL',G2,46,'middle')+panel(sx+620,sy+250,260,100,50,'#2a1414',RED,4)+T(sx+750,sy+316,'PUT',RED,46,'middle')},
+4(){ // Advanced strategies toolkit: a crosshair locked on the entry, EMA ribbon
+ const d=series(22,.012,.16);const x=300,y=240,w=1320,h=620;const i=14,k=d[i],cx=x+(i+.5)*w/d.length,cy=y+h-k.l*h;
+ return halo(cx,cy,520,360,.4)+candles(d,x,y,w,h,8,.9)+glow(lineOf(d.map((_,j)=>({c:d.slice(Math.max(0,j-4),j+1).reduce((a,b)=>a+b.c,0)/Math.min(j+1,5)})),x,y,w,h),G2,6)+
+ glow(lineOf(d.map((_,j)=>({c:d.slice(Math.max(0,j-9),j+1).reduce((a,b)=>a+b.c,0)/Math.min(j+1,10)})),x,y,w,h),'#2a8f6a',6)+
+ `<circle cx="${cx}" cy="${cy}" r="120" fill="none" stroke="${INK}" stroke-width="8"/><circle cx="${cx}" cy="${cy}" r="12" fill="${INK}"/>`+
+ [[0,-1],[0,1],[-1,0],[1,0]].map(([a,b])=>`<line x1="${cx+a*70}" y1="${cy+b*70}" x2="${cx+a*170}" y2="${cy+b*170}" stroke="${INK}" stroke-width="8" stroke-linecap="round"/>`).join('')+panel(cx+190,cy+60,250,90,45,'#0f2a20',G,4)+T(cx+315,cy+120,'ENTRY',G2,40,'middle')},
+5(){ // Psychology and journaling: an open journal, a calm pulse across it
+ return halo(960,580,760,400)+shadow(430,270,1060,600,30)+panel(430,270,520,600,30,P1,L2,5)+panel(970,270,520,600,30,P1,L2,5)+`<rect x="946" y="270" width="28" height="600" fill="${P3}"/>`+
+ [0,1,2,3,4,5].map(i=>`<line x1="490" x2="890" y1="${400+i*72}" y2="${400+i*72}" stroke="${L2}" stroke-width="4"/>`).join('')+
+ [0,1,2,3].map(i=>`<rect x="1030" y="${370+i*110}" width="44" height="44" rx="10" fill="${i<3?'#0f2a20':'none'}" stroke="${i<3?G:L2}" stroke-width="5"/>${i<3?glow(`M1040 ${392+i*110} L1050 ${402+i*110} L1066 ${380+i*110}`,G2,6):''}<rect x="1100" y="${384+i*110}" width="${300-i*40}" height="16" rx="8" fill="${L2}"/>`).join('')+
+ glow('M500 760 C 560 720 600 800 660 760 S 760 720 820 760',G2,8)+`<g transform="rotate(-38 1520 380)"><rect x="1490" y="160" width="60" height="440" rx="30" fill="${P3}" stroke="${G2}" stroke-width="5"/><path d="M1490 600 L1520 680 L1550 600 Z" fill="${INK}"/></g>`+T(490,350,'JOURNAL',INK2,38)},
+6(){ // Futures and prop firms: the equity curve hits the target — FUNDED
+ const d=series(30,.03,.1);const x=320,y=330,w=1180,h=520;const tgt=y+20;
+ return halo(1000,560,740,400)+`<line x1="300" x2="1640" y1="${tgt}" y2="${tgt}" stroke="${G2}" stroke-width="5" stroke-dasharray="20 16"/>`+T(300,tgt-24,'PROFIT TARGET',G2,36)+
+ `<path d="${lineOf(d,x,y,w,h)} L${x+w} ${y+h+60} L${x} ${y+h+60} Z" fill="url(#area)"/>`+glow(lineOf(d,x,y,w,h),G2,11)+
+ `<g transform="translate(1380 180)">${shadow(0,0,320,320,160)}<circle cx="160" cy="160" r="150" fill="#0f2a20" stroke="${G}" stroke-width="8"/><circle cx="160" cy="160" r="118" fill="none" stroke="${G2}" stroke-width="3" stroke-dasharray="6 10"/>${glow('M100 165 L145 210 L225 120',INK,16)}</g>`+panel(1350,520,380,96,48,'#0f2a20',G,4)+T(1540,584,'FUNDED',G2,48,'middle')},
+7(){ // Smart money: market structure, an order block, a liquidity sweep
+ const p=[[300,760],[520,520],[680,640],[920,380],[1060,520],[1180,840],[1340,560],[1600,300]];
+ return halo(960,560,760,400)+`<rect x="560" y="610" width="1100" height="90" fill="${G}" opacity=".14"/><rect x="560" y="610" width="1100" height="90" fill="none" stroke="${G}" stroke-width="4" opacity=".7"/>`+T(1640,740,'ORDER BLOCK',G2,36,'end')+
+ `<line x1="300" x2="1660" y1="770" y2="770" stroke="${RED}" stroke-width="4" stroke-dasharray="12 14"/>`+T(1660,820,'LIQUIDITY',RED,36,'end')+glow(`M${p.map(a=>a.join(' ')).join(' L')}`,INK,10)+
+ [['HH',920,330],['HL',1110,500],['HH',1600,250],['SWEEP',1180,900]].map(([t,x,y])=>T(x,y,t,t==='SWEEP'?RED:G2,38,'middle')).join('')+p.map(a=>`<circle cx="${a[0]}" cy="${a[1]}" r="16" fill="${BG}" stroke="${G2}" stroke-width="7"/>`).join('')},
+8(){ // Selling options: time decay — an hourglass and the theta curve
+ return halo(960,560,760,400)+glow('M330 300 C 700 320 1050 380 1250 560 S 1450 830 1600 860',G2,12)+`<path d="M330 300 C 700 320 1050 380 1250 560 S 1450 830 1600 860 L1600 900 L330 900 Z" fill="url(#area)"/>`+T(330,250,'PREMIUM',INK3,36)+T(1600,950,'EXPIRY',INK3,36,'end')+
+ `<g transform="translate(640 250)">${shadow(0,0,300,560,40)}<rect x="0" y="0" width="300" height="40" rx="14" fill="${P3}" stroke="${L2}" stroke-width="4"/><rect x="0" y="520" width="300" height="40" rx="14" fill="${P3}" stroke="${L2}" stroke-width="4"/>
+ <path d="M40 40 L260 40 C 260 170 170 230 150 280 C 170 330 260 390 260 520 L40 520 C 40 390 130 330 150 280 C 130 230 40 170 40 40 Z" fill="${P1}" fill-opacity=".85" stroke="${INK}" stroke-width="8"/>
+ <path d="M90 120 L210 120 C 200 180 160 220 150 260 C 140 220 100 180 90 120Z" fill="${G}" opacity=".9"/><path d="M60 500 C 80 430 120 410 150 400 C 180 410 220 430 240 500Z" fill="${G}"/><line x1="150" x2="150" y1="265" y2="395" stroke="${G2}" stroke-width="6" stroke-dasharray="6 10"/></g>`+
+ `<text x="1420" y="520" fill="${G2}" font-family="Cal Sans" font-size="220" text-anchor="middle" opacity=".95">θ</text>`},
+9(){ // Swing trading: one big swing, buy the low, sell the high
+ const d='M260 640 C 420 640 480 860 640 860 S 900 300 1100 300 S 1380 820 1660 560';
+ return halo(960,580,760,400)+`<g opacity=".5">${candles(series(26,.0,.22),260,300,1400,560,7)}</g>`+glow(d,G2,14)+
+ `<circle cx="640" cy="860" r="26" fill="${BG}" stroke="${G}" stroke-width="10"/><circle cx="1100" cy="300" r="26" fill="${BG}" stroke="${RED}" stroke-width="10"/>`+panel(520,890,240,90,45,'#0f2a20',G,4)+T(640,950,'BUY',G2,44,'middle')+panel(980,180,240,90,45,'#2a1414',RED,4)+T(1100,240,'SELL',RED,44,'middle')},
+10(){ // Miscellaneous: the screener heat map
+ const cols=[[G,.9],[G,.55],[RED,.6],[G,.35],[RED,.3],[G,.75],[RED,.85],[G,.25]];let out='';const tiles=[[360,240,420,300],[800,240,300,300],[1120,240,440,170],[1120,430,210,110],[1350,430,210,110],[360,560,250,320],[630,560,470,190],[630,770,220,110],[870,770,230,110],[1120,560,440,320]];
+ tiles.forEach((t,i)=>{const [c,a]=cols[i%cols.length];out+=`<rect x="${t[0]}" y="${t[1]}" width="${t[2]}" height="${t[3]}" rx="14" fill="${c}" fill-opacity="${a*.55}" stroke="${BG}" stroke-width="6"/>`+T(t[0]+26,t[1]+58,['SPY','QQQ','AAPL','AMD','MU','NVDA','TSLA','JPM','XOM','MSFT'][i],INK,t[2]>250?40:30,'start',500)+T(t[0]+26,t[1]+(t[2]>250?108:96),(c===G?'+':'−')+(a*4).toFixed(2)+'%',INK,t[2]>250?32:24)});
+ return halo(960,560,760,400)+shadow(340,220,1240,680,24)+`<rect x="340" y="220" width="1240" height="680" rx="24" fill="${P1}" stroke="${L2}" stroke-width="5"/>`+out},
+11(){ // Advanced trading: reading the tape — a Level II ladder
+ const rows=8;let out='';for(let i=0;i<rows;i++){const y=280+i*72;const bw=120+r()*260,aw=120+r()*260;
+  out+=`<rect x="${930-Math.min(bw,250)}" y="${y}" width="${Math.min(bw,250)}" height="56" rx="8" fill="${G}" opacity="${.25+.5*(1-i/rows)}"/><rect x="990" y="${y}" width="${Math.min(aw,250)}" height="56" rx="8" fill="${RED}" opacity="${.25+.5*(1-i/rows)}"/>`+T(530,y+42,(497.3-i*.05).toFixed(2),INK2,32)+T(1360,y+42,(497.4+i*.05).toFixed(2),INK2,32,'end')}
+ return halo(960,560,760,400)+shadow(480,200,960,700,30)+panel(480,200,960,700,30,P1,L2,5)+T(560,260,'BID',G2,34)+T(1360,260,'ASK',RED,34,'end')+out+`<line x1="960" x2="960" y1="270" y2="860" stroke="${L2}" stroke-width="4"/>`+
+ panel(1480,300,300,520,24,P2,L2,4)+[...Array(7)].map((_,i)=>T(1510,370+i*66,(i%3?'+':'−')+' '+(100*(1+Math.floor(r()*9))),i%3?G2:RED,30)).join('')+T(1510,340,'',INK3)},
+12(){ // Mobile trading: a phone with the chart on it
+ const d=series(16,.02,.16);return halo(960,560,600,420,.45)+`<g transform="rotate(-8 960 560)">${shadow(760,150,400,820,64)}<rect x="760" y="150" width="400" height="820" rx="64" fill="${P2}" stroke="${L2}" stroke-width="6"/><rect x="784" y="176" width="352" height="768" rx="46" fill="${BG}"/><rect x="900" y="196" width="120" height="30" rx="15" fill="${P2}"/>
+ ${T(814,300,'SPY',INK,40)}${T(814,350,'+1.84%',G2,32)}${candles(d,800,400,320,330,6)}${glow(lineOf(d,800,400,320,330),G2,5)}<rect x="806" y="800" width="150" height="80" rx="20" fill="${G}"/>${T(881,852,'BUY',BG,32,'middle')}<rect x="966" y="800" width="150" height="80" rx="20" fill="${RED}"/>${T(1041,852,'SELL',BG,32,'middle')}</g>`},
+13(){ // Crypto: a chain of blocks and a coin
+ const blk=(x,y,s,op=1)=>`<g opacity="${op}"><path d="M${x} ${y-s} L${x+s*.87} ${y-s/2} L${x+s*.87} ${y+s/2} L${x} ${y+s} L${x-s*.87} ${y+s/2} L${x-s*.87} ${y-s/2} Z" fill="${P1}" stroke="${G2}" stroke-width="6"/><path d="M${x} ${y} L${x} ${y+s} M${x} ${y} L${x+s*.87} ${y-s/2} M${x} ${y} L${x-s*.87} ${y-s/2}" stroke="${G}" stroke-width="4" opacity=".7"/></g>`;
+ return halo(960,560,760,400)+`<line x1="380" x2="1540" y1="700" y2="700" stroke="${G}" stroke-width="6" stroke-dasharray="4 18"/>`+blk(420,700,90,.6)+blk(700,700,110,.8)+blk(1220,700,110,.8)+blk(1500,700,90,.6)+
+ `<g transform="translate(960 470)">${shadow(-220,-220,440,440,220)}<circle r="220" fill="#0f2a20" stroke="${G}" stroke-width="10"/><circle r="180" fill="none" stroke="${G2}" stroke-width="4" stroke-dasharray="4 12"/><text x="8" y="95" fill="${G2}" font-family="Cal Sans" font-size="270" text-anchor="middle">B</text><path d="M-28 -130 V-92 M28 -130 V-92 M-28 92 V130 M28 92 V130" stroke="${G2}" stroke-width="22" stroke-linecap="round"/></g>`},
+14(){ // Small account accelerator: $100 to $1,000, bars stepping up
+ const hs=[90,130,170,230,300,390,500,640];return halo(1000,600,760,400)+hs.map((h,i)=>`<rect x="${420+i*140}" y="${900-h}" width="96" height="${h}" rx="14" fill="${G}" opacity="${.35+i*.08}"/>`).join('')+
+ glow(`M468 790 ${hs.map((h,i)=>`L${468+i*140} ${880-h}`).join(' ')} L1560 160`,INK,10)+glow('M1490 160 L1560 160 L1560 230',INK,10)+
+ panel(330,640,240,96,48,P2,L2,4)+T(450,704,'$100',INK2,46,'middle')+panel(1240,150,300,110,55,'#0f2a20',G,4)+T(1390,224,'$1,000',G2,54,'middle')},
+15(){ // Case studies and live sessions: a trade recap card with entry, exit and the P/L
+ const d=series(20,.018,.15);const x=420,y=370,w=1080,h=380;const ei=5,xi=16;const ex=x+(ei+.5)*w/20,xx=x+(xi+.5)*w/20;
+ return halo(960,560,760,400)+shadow(360,200,1200,700,30)+panel(360,200,1200,700,30,P1,L2,5)+T(420,280,'TSLA · PUTS',INK,40)+panel(760,226,210,70,35,'#2a1414',RED,4)+`<circle cx="805" cy="261" r="12" fill="${RED}"/>`+T(885,276,'LIVE',RED,34,'middle')+
+ candles(d,x,y,w,h,8)+[[ex,y+h-d[ei].l*h+40,'IN',G2],[xx,y+h-d[xi].h*h-40,'OUT',INK]].map(([X,Y,t,c])=>`<circle cx="${X}" cy="${Y}" r="16" fill="${BG}" stroke="${c}" stroke-width="7"/>`+T(X,Y+(t==='IN'?64:-34),t,c,34,'middle')).join('')+
+ panel(1180,780,320,90,45,'#0f2a20',G,4)+T(1340,840,'+148%',G2,46,'middle')},
+16(){ // Live trading recordings: a recorded trading screen with a play button
+ const d=series(30,.01,.14);return halo(960,560,760,420)+shadow(300,180,1320,740,30)+panel(300,180,1320,740,30,P1,L2,5)+`<rect x="330" y="210" width="1260" height="600" rx="14" fill="${BG}"/>`+`<g opacity=".7">${candles(d,370,250,1180,520,8)}</g>`+
+ panel(350,230,190,70,35,'#2a1414',RED,4)+`<circle cx="392" cy="265" r="13" fill="${RED}"/>`+T(470,279,'REC',RED,36,'middle')+
+ `<circle cx="960" cy="510" r="120" fill="${BG}" fill-opacity=".75" stroke="${INK}" stroke-width="8"/><path d="M925 445 L1040 510 L925 575 Z" fill="${INK}"/>`+
+ `<rect x="360" y="852" width="1200" height="12" rx="6" fill="${L2}"/><rect x="360" y="852" width="520" height="12" rx="6" fill="${G}"/><circle cx="880" cy="858" r="20" fill="${INK}"/>`},
+17(){ // Live education recordings: a class on screen — the lesson slide and the teacher's camera
+ return halo(960,560,760,420)+shadow(300,180,1320,740,30)+panel(300,180,1320,740,30,P1,L2,5)+`<rect x="330" y="210" width="1260" height="600" rx="14" fill="${BG}"/>`+
+ T(400,320,'TODAY',INK3,34)+`<text x="400" y="420" fill="${INK}" font-family="Cal Sans" font-size="86">Reading the chart</text>`+[0,1,2].map(i=>`<circle cx="420" cy="${500+i*80}" r="12" fill="${G}"/><rect x="460" y="${490+i*80}" width="${520-i*90}" height="22" rx="11" fill="${L2}"/>`).join('')+
+ glow('M1060 700 L1160 600 L1240 650 L1360 480 L1480 520',G2,9)+
+ `<g transform="translate(1300 230)"><rect width="260" height="200" rx="24" fill="${P2}" stroke="${G}" stroke-width="5"/><circle cx="130" cy="88" r="40" fill="${L2}"/><path d="M60 190 C 70 140 190 140 200 190 Z" fill="${L2}"/></g>`+
+ panel(350,230,0,0,0)+`<rect x="360" y="852" width="1200" height="12" rx="6" fill="${L2}"/><rect x="360" y="852" width="860" height="12" rx="6" fill="${G}"/><circle cx="1220" cy="858" r="20" fill="${INK}"/>`},
+};
+document.body.innerHTML=`<svg width="1920" height="1080" viewBox="0 0 1920 1080" style="position:absolute;inset:0"><defs>
+<pattern id="grid" width="80" height="80" patternUnits="userSpaceOnUse"><path d="M80 0H0V80" fill="none" stroke="${L1}" stroke-width="1.5"/></pattern>
+<radialGradient id="glow" cx="55%" cy="52%" r="65%"><stop offset="0" stop-color="${G}" stop-opacity=".16"/><stop offset="1" stop-color="${G}" stop-opacity="0"/></radialGradient>
+<radialGradient id="halo"><stop offset="0" stop-color="${G}" stop-opacity=".35"/><stop offset="1" stop-color="${G}" stop-opacity="0"/></radialGradient>
+<radialGradient id="vig" cx="50%" cy="50%" r="75%"><stop offset=".6" stop-color="${BG}" stop-opacity="0"/><stop offset="1" stop-color="${BG}" stop-opacity=".9"/></radialGradient>
+<linearGradient id="area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${G}" stop-opacity=".3"/><stop offset="1" stop-color="${G}" stop-opacity="0"/></linearGradient>
+<filter id="blur" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="12"/></filter><filter id="soft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="40"/></filter></defs>
+${backdrop()}${(S[N]||S[0])()}<rect width="1920" height="1080" fill="url(#vig)"/></svg>${LABEL?`<div class="lab"><i></i>${LABEL}</div>`:''}<div class="noise"></div>`;
+</script></body></html>
