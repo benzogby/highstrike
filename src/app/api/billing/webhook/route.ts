@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { getStripe, planForPriceId, supabaseService } from "@/lib/stripe";
-import { boughtLifetime, grantLifetime } from "@/lib/lifetime";
+import { settleLifetime } from "@/lib/lifetime";
 import { LIFETIME } from "@/lib/offer";
 
 export const dynamic = "force-dynamic";
@@ -36,6 +36,14 @@ export async function POST(req: Request) {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object;
+        // The $397 membership on Stripe's own page: settled like any other (src/lib/lifetime.ts), once the money is in.
+        if (session.metadata?.product === LIFETIME.plan) {
+          const pi = session.payment_intent;
+          if (session.payment_status === "paid" && pi) {
+            await settleLifetime(typeof pi === "string" ? await getStripe().paymentIntents.retrieve(pi) : pi);
+          }
+          break;
+        }
         const userId = session.metadata?.user_id;
         const plan = session.metadata?.plan;
         // A one-time payment counts once the money is in (Stripe's page for the $397 membership).
@@ -54,13 +62,11 @@ export async function POST(req: Request) {
         break;
       }
 
-      // The $397 membership paid in the popup's card form, for a browser that never came back to /welcome.
+      // The $397 membership paid in the popup's card form: the account under its email gets it (made if there's none)
+      // and the confirmation email goes out, for a browser that never came back (src/lib/lifetime.ts → settleLifetime).
       case "payment_intent.succeeded": {
         const pi = event.data.object;
-        const userId = pi.metadata?.user_id;
-        if (pi.metadata?.product === LIFETIME.plan && userId && boughtLifetime(pi, userId)) {
-          await grantLifetime(userId, typeof pi.customer === "string" ? pi.customer : pi.customer?.id ?? null);
-        }
+        if (pi.metadata?.product === LIFETIME.plan) await settleLifetime(pi);
         break;
       }
 

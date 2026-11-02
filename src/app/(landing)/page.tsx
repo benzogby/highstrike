@@ -47,7 +47,7 @@ function faqsFor(library: Library | null) {
     },
     {
       q: "How fast do I get in?",
-      a: "Right away. Make your account and pay in the same window, and the app opens the moment the payment goes through, today's slate included.",
+      a: "Right away. Pay in the popup with your email: your account opens under it the moment the payment goes through and you're signed in, today's slate included. Already have an account under that email? It's upgraded instead.",
     },
     {
       q: "When do setups publish?",

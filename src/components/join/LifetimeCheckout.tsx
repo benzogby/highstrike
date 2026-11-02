@@ -1,32 +1,42 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type FormEvent, type MouseEvent } from "react";
+import { useCallback, useState, type FormEvent, type ReactNode } from "react";
 import { loadStripe, type Appearance, type Stripe as StripeJs } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { LIFETIME, dollars, lifetimeIncludes, type Library } from "@/lib/offer";
-import { supabaseBrowser } from "@/lib/supabase/client";
-import { agreedToTerms, termsAgreement } from "@/lib/terms";
 import AgreeTerms from "@/components/AgreeTerms";
+import { authInputClass, authLabelClass } from "@/components/AuthShell";
 import { STRIPE_FONTS, appearanceFrom } from "./stripeLook";
 
-/** What /api/billing/lifetime made (src/lib/lifetime.ts → Start). */
-type Start =
-  | { member: true }
-  | { member: false; mode: "embedded"; clientSecret: string; paymentIntent: string; publishableKey: string; cents: number }
-  | { member: false; mode: "hosted"; url: string; cents: number };
+/** What POST /api/billing/lifetime answers (src/lib/lifetime.ts → Start), or why it couldn't. */
+type Start = { alreadyMember: true; email: string } | { clientSecret: string; paymentIntent: string } | { url: string } | { error: string };
 
-type Asked = { start: Start } | { error: string };
+/** What Pay sends: the email to open (null: the signed-in account's) and the Terms tick. */
+type Order = { email: string | null; agreed: boolean };
 
-/** Asks the server for the checkout: the card form's payment, or Stripe's own page (`hosted`). */
-async function ask(back: string, hosted: boolean): Promise<Asked> {
+/** The checkout for this order, made as Pay is pressed: the card form's payment, Stripe's own page (`hosted`), or nothing to pay. */
+async function begin(order: Order, back: string, hosted: boolean): Promise<Start> {
   try {
-    const r = await fetch("/api/billing/lifetime", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ back, hosted }) });
+    const r = await fetch("/api/billing/lifetime", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ...order, back, hosted }),
+    });
     const j = (await r.json().catch(() => ({}))) as Partial<Start> & { error?: string };
-    if (!r.ok || !("member" in j)) return { error: j.error ?? "Checkout couldn't start. Nothing was charged." };
-    return { start: j as Start };
+    if (!r.ok) return { error: j.error ?? "Checkout couldn't start. Nothing was charged." };
+    return j as Start;
   } catch {
-    return { error: "Checkout couldn't start. Check your connection and try again." };
+    return { error: "Checkout couldn't start. Check your connection and try again. Nothing was charged." };
   }
+}
+
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Why Pay can't go yet, or null. */
+function problemWith(order: Order) {
+  if (order.email !== null && !EMAIL.test(order.email)) return "Enter the email for your account.";
+  if (!order.agreed) return "Tick the box to agree to the Terms and Privacy Policy first.";
+  return null;
 }
 
 const stripes = new Map<string, Promise<StripeJs | null>>();
@@ -68,40 +78,6 @@ function Lock() {
   );
 }
 
-/**
- * The Terms, for an account with no agreement on record (Google from the sign-in page, or one made before the box):
- * Pay waits on the tick, and paying writes it to the account first. `blocked` holds Pay; `record` writes it.
- */
-type Gate = { blocked: boolean; record: () => Promise<boolean> };
-
-function useTermsGate() {
-  const [needed, setNeeded] = useState<boolean | null>(null);
-  const [ticked, setTicked] = useState(false);
-  useEffect(() => {
-    let alive = true;
-    supabaseBrowser()
-      .auth.getUser()
-      .then(({ data }) => alive && setNeeded(!agreedToTerms(data.user)))
-      .catch(() => alive && setNeeded(true));
-    return () => {
-      alive = false;
-    };
-  }, []);
-  const record = useCallback(async () => {
-    if (!needed) return true;
-    const { error } = await supabaseBrowser()
-      .auth.updateUser({ data: termsAgreement() })
-      .catch(() => ({ error: { message: "unreachable" } }));
-    if (error) return false;
-    setNeeded(false);
-    return true;
-  }, [needed]);
-  const gate: Gate = { blocked: needed === null || (needed && !ticked), record };
-  return { needed: Boolean(needed), ticked, setTicked, gate };
-}
-
-const NOT_RECORDED = "We couldn't save your agreement to the Terms. Check your connection and try again. Nothing was charged.";
-
 export const PAY_BUTTON =
   "flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-accent px-4 font-display text-[15px] font-semibold text-bg transition hover:bg-accent-2 disabled:cursor-not-allowed disabled:opacity-60";
 
@@ -129,69 +105,91 @@ export function OfferCard({ library }: { library: Library | null }) {
   );
 }
 
+export type Buyer = {
+  /** The signed-in account's email, which the payment is for; null for a visitor, who types one. */
+  email: string | null;
+  /** The signed-in account agreed to the Terms already, so the box isn't asked again. */
+  termsOnRecord: boolean;
+};
+
 /**
- * The $397 checkout, in the popup on the homepage (JoinDialog) and in the paywall over the app (MemberGate), as
- * getripping.com's one-time checkout draws it: the membership's card, then Stripe's Payment Element in the page's colours,
- * Due today and Pay. Paid, the browser goes to /welcome with the payment's id, which turns access on before the page
- * draws. Without Stripe's publishable key on the server the card form can't be embedded, so Pay opens Stripe's own
- * checkout page, which comes back to /welcome the same way; so it does if the card form fails to load (a key from
- * another Stripe account, Stripe unreachable), so nobody is ever left without a way to pay. `back` is where that page
- * returns if they leave it.
+ * The $397 checkout, as getripping.com's one-time checkout draws it: the membership's card, the email, the Terms box,
+ * Stripe's card form in the page's colours (Apple Pay and Google Pay beside it), Due today and Pay. Ben, 2026-11-02:
+ * "Lifetime access should just open to the payment popup. Account is created upon payment". A visitor types the email
+ * their account is made with (or upgraded under, if it has one); a signed-in account pays for itself. The card form needs
+ * no payment to draw: Pay makes it (begin), then confirms it. Paid, the browser goes to
+ * /api/billing/lifetime/complete, which opens the membership, signs a brand-new account in, and goes on to /welcome.
+ * Without Stripe's publishable key, or when the card form can't load, Pay opens Stripe's own checkout page instead, which
+ * comes back the same way, so nobody is ever left without a way to pay. `back` is where that page returns if they leave.
  */
-export default function LifetimeCheckout({ library, back, onPaying }: { library: Library | null; back: string; onPaying?: (on: boolean) => void }) {
-  const box = useRef<HTMLDivElement>(null);
-  const [start, setStart] = useState<{ ready: Start; appearance: Appearance } | null>(null);
-  const [failed, setFailed] = useState<string | null>(null);
-  const terms = useTermsGate();
-
-  const apply = useCallback((asked: Asked) => {
-    if ("error" in asked) return setFailed(asked.error);
-    if (asked.start.member) return window.location.assign(new URL("/dashboard", window.location.origin).href);
-    setStart({ ready: asked.start, appearance: appearanceFrom(box.current) });
+export default function LifetimeCheckout({
+  library,
+  back,
+  buyer,
+  publishableKey,
+  onPaying,
+}: {
+  library: Library | null;
+  back: string;
+  buyer: Buyer;
+  publishableKey: string | null;
+  onPaying?: (on: boolean) => void;
+}) {
+  const [appearance, setAppearance] = useState<Appearance | null>(null);
+  const [hosted, setHosted] = useState(!publishableKey);
+  const [email, setEmail] = useState("");
+  const [agreed, setAgreed] = useState(false);
+  // Stripe's fields take the colours around them, read once the box is on the page.
+  const measure = useCallback((el: HTMLDivElement | null) => {
+    if (el) setAppearance((a) => a ?? appearanceFrom(el));
   }, []);
+  const order: Order = { email: buyer.email ? null : email.trim().toLowerCase(), agreed: buyer.termsOnRecord || agreed };
+  const agreement = buyer.termsOnRecord ? null : <AgreeTerms id="hs-pay-agree" checked={agreed} onChange={setAgreed} />;
+  const paying = (on: boolean) => onPaying?.(on);
 
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      const asked = await ask(back, false);
-      if (alive) apply(asked);
-    })();
-    return () => {
-      alive = false;
-    };
-  }, [back, apply]);
-
-  /** The card form couldn't load: Stripe's own page instead. */
-  const unavailable = useCallback(() => {
-    setStart(null);
-    void ask(back, true).then(apply);
-  }, [back, apply]);
-
-  const ready = start?.ready;
   return (
-    <div ref={box}>
+    <div ref={measure}>
       <OfferCard library={library} />
-      {terms.needed && <AgreeTerms id="hs-pay-agree" checked={terms.ticked} onChange={terms.setTicked} className="mt-4" />}
       <div className="mt-5">
-        {failed ? (
-          <p role="alert" className="rounded-lg border border-down/30 bg-down/10 px-3 py-2.5 text-sm text-down">
-            {failed}
+        {buyer.email ? (
+          <p className="text-sm text-ink-2">
+            For your account, <b className="font-semibold text-ink">{buyer.email}</b>
           </p>
-        ) : !ready || ready.member ? (
-          <p className="flex items-center justify-center gap-2 py-10 text-sm text-ink-2">
-            <Spinner />
-            {ready?.member ? "You're a member already. Opening HighStrike" : "Getting checkout ready"}
-          </p>
-        ) : ready.mode === "embedded" ? (
-          <Elements
-            key={ready.clientSecret}
-            stripe={stripeFor(ready.publishableKey)}
-            options={{ clientSecret: ready.clientSecret, appearance: start.appearance, fonts: STRIPE_FONTS }}
-          >
-            <PayForm paymentIntent={ready.paymentIntent} cents={ready.cents} gate={terms.gate} onPaying={(on) => onPaying?.(on)} onUnavailable={unavailable} />
-          </Elements>
         ) : (
-          <HostedPay url={ready.url} cents={ready.cents} gate={terms.gate} />
+          <div>
+            <label htmlFor="hs-pay-email" className={authLabelClass}>
+              Email
+            </label>
+            <input
+              id="hs-pay-email"
+              type="email"
+              required
+              autoComplete="email"
+              inputMode="email"
+              autoCapitalize="none"
+              spellCheck={false}
+              maxLength={254}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              className={authInputClass}
+            />
+            <p className="mt-1.5 text-xs leading-relaxed text-ink-3">Your account opens under this email the moment you pay. Already have one? It&apos;s upgraded.</p>
+          </div>
+        )}
+      </div>
+      <div className="mt-5">
+        {hosted || !publishableKey ? (
+          <HostedPay order={order} back={back} agreement={agreement} />
+        ) : !appearance ? (
+          <Loading text="Loading the card form" />
+        ) : (
+          <Elements
+            stripe={stripeFor(publishableKey)}
+            options={{ mode: "payment", amount: LIFETIME.cents, currency: "usd", paymentMethodTypes: ["card"], appearance, fonts: STRIPE_FONTS }}
+          >
+            <PayForm order={order} back={back} agreement={agreement} onPaying={paying} onUnavailable={() => setHosted(true)} />
+          </Elements>
         )}
       </div>
       <p className="mt-4 text-balance text-center text-xs text-ink-3">
@@ -202,12 +200,21 @@ export default function LifetimeCheckout({ library, back, onPaying }: { library:
   );
 }
 
-function DueToday({ cents }: { cents: number }) {
+function Loading({ text }: { text: string }) {
+  return (
+    <p className="flex items-center justify-center gap-2 py-8 text-sm text-ink-2">
+      <Spinner />
+      {text}
+    </p>
+  );
+}
+
+function DueToday() {
   return (
     <>
       <div className="flex items-baseline justify-between border-t border-line pt-4 text-[15px] text-ink">
         <span className="font-medium">Due today</span>
-        <span className="text-lg font-bold tabular-nums">{(cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" })}</span>
+        <span className="text-lg font-bold tabular-nums">{(LIFETIME.cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" })}</span>
       </div>
       <p className="mt-1 text-[13px] text-ink-3">One payment. No subscription, and nothing renews.</p>
     </>
@@ -230,16 +237,38 @@ function TermsLine() {
   );
 }
 
+/** A problem, in the red box; "already a member" comes with the way to sign in. */
+type Problem = { text: string } | { member: string } | null;
+
+function ProblemBox({ problem }: { problem: Problem }) {
+  if (!problem) return null;
+  return (
+    <p role="alert" className="mt-3 rounded-lg border border-down/30 bg-down/10 px-3 py-2.5 text-sm text-down">
+      {"member" in problem ? (
+        <>
+          {problem.member} already has lifetime access, so nothing was charged.{" "}
+          <a href="/signin?next=/dashboard" className="font-semibold underline underline-offset-2">
+            Sign in
+          </a>{" "}
+          to open HighStrike.
+        </>
+      ) : (
+        problem.text
+      )}
+    </p>
+  );
+}
+
 function PayForm({
-  paymentIntent,
-  cents,
-  gate,
+  order,
+  back,
+  agreement,
   onPaying,
   onUnavailable,
 }: {
-  paymentIntent: string;
-  cents: number;
-  gate: Gate;
+  order: Order;
+  back: string;
+  agreement: ReactNode;
   onPaying: (on: boolean) => void;
   onUnavailable: () => void;
 }) {
@@ -247,37 +276,44 @@ function PayForm({
   const elements = useElements();
   const [shown, setShown] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [problem, setProblem] = useState<Problem>(null);
 
-  const fail = (message: string) => {
-    setError(message);
+  const fail = (p: Problem) => {
+    setProblem(p);
     setBusy(false);
     onPaying(false);
   };
   const pay = async (e: FormEvent) => {
     e.preventDefault();
-    if (!stripe || !elements || busy || gate.blocked) return;
+    if (!stripe || !elements || busy) return;
+    const wrong = problemWith(order);
+    if (wrong) return setProblem({ text: wrong });
     setBusy(true);
-    setError(null);
+    setProblem(null);
     onPaying(true);
     // The card's details first, while the press still counts as the buyer's (a wallet's sheet needs that).
     const { error: invalid } = await elements.submit();
-    if (invalid) return fail(invalid.message ?? "Check the card details.");
-    // After the sheet is up, so waiting on this doesn't cost the wallet its press.
-    if (!(await gate.record())) return fail(NOT_RECORDED);
-    // A card that clears stays here; one whose bank asks for 3-D Secure comes back to /welcome with the payment's id.
-    const { error: declined, paymentIntent: paid } = await stripe.confirmPayment({
+    if (invalid) return fail({ text: invalid.message ?? "Check the card details." });
+    const start = await begin(order, back, false);
+    if ("error" in start) return fail({ text: start.error });
+    if ("alreadyMember" in start) return fail({ member: start.email });
+    if ("url" in start) return window.location.assign(start.url);
+    // A card that clears stays here; one whose bank asks for 3-D Secure comes back to the same place with the payment.
+    const done = `${window.location.origin}/api/billing/lifetime/complete`;
+    const { error: declined, paymentIntent } = await stripe.confirmPayment({
       elements,
-      confirmParams: { return_url: `${window.location.origin}/welcome` },
+      clientSecret: start.clientSecret,
+      confirmParams: { return_url: done },
       redirect: "if_required",
     });
-    if (declined) return fail(declined.message ?? "That payment didn't go through. Nothing was charged.");
+    if (declined) return fail({ text: declined.message ?? "That payment didn't go through. Nothing was charged." });
+    const q = new URLSearchParams({ payment_intent: paymentIntent?.id ?? start.paymentIntent, payment_intent_client_secret: start.clientSecret });
     // A full load, so the app draws fresh for a member.
-    window.location.assign(new URL(`/welcome?payment_intent=${encodeURIComponent(paid?.id ?? paymentIntent)}`, window.location.origin).href);
+    window.location.assign(new URL(`/api/billing/lifetime/complete?${q}`, window.location.origin).href);
   };
 
   return (
-    <form onSubmit={(e) => void pay(e)}>
+    <form onSubmit={(e) => void pay(e)} noValidate>
       <PaymentElement
         onReady={() => setShown(true)}
         onLoadError={(e) => {
@@ -285,26 +321,18 @@ function PayForm({
           onUnavailable();
         }}
         // Apple Pay in Safari and Google Pay in Chrome, as tabs beside the card (the site's domain is registered with
-        // Stripe by startLifetime).
+        // Stripe by the popup's first look, GET /api/billing/lifetime).
         options={{ layout: "tabs", wallets: { applePay: "auto", googlePay: "auto" } }}
       />
-      {!shown && (
-        <p className="flex items-center justify-center gap-2 py-8 text-sm text-ink-2">
-          <Spinner />
-          Loading the card form
-        </p>
-      )}
+      {!shown && <Loading text="Loading the card form" />}
+      {agreement && <div className="mt-5">{agreement}</div>}
       <div className="mt-5">
-        <DueToday cents={cents} />
+        <DueToday />
       </div>
-      {error && (
-        <p role="alert" className="mt-3 rounded-lg border border-down/30 bg-down/10 px-3 py-2.5 text-sm text-down">
-          {error}
-        </p>
-      )}
-      <button type="submit" disabled={!shown || busy || !stripe || gate.blocked} className={`mt-4 ${PAY_BUTTON}`}>
+      <ProblemBox problem={problem} />
+      <button type="submit" disabled={!shown || busy || !stripe} className={`mt-4 ${PAY_BUTTON}`}>
         {busy && <Spinner />}
-        {busy ? "Paying…" : `Pay ${dollars(cents)}`}
+        {busy ? "Paying…" : `Pay ${dollars(LIFETIME.cents)}`}
       </button>
       <p className={FINE}>
         {LIFE}
@@ -314,42 +342,34 @@ function PayForm({
   );
 }
 
-function HostedPay({ url, cents, gate }: { url: string; cents: number; gate: Gate }) {
+function HostedPay({ order, back, agreement }: { order: Order; back: string; agreement: ReactNode }) {
   const [going, setGoing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const go = async (e: MouseEvent) => {
+  const [problem, setProblem] = useState<Problem>(null);
+  const go = async (e: FormEvent) => {
     e.preventDefault();
-    if (going || gate.blocked) return;
+    if (going) return;
+    const wrong = problemWith(order);
+    if (wrong) return setProblem({ text: wrong });
     setGoing(true);
-    setError(null);
-    if (!(await gate.record())) {
-      setGoing(false);
-      return setError(NOT_RECORDED);
-    }
-    window.location.assign(url);
+    setProblem(null);
+    const start = await begin(order, back, true);
+    if ("url" in start) return window.location.assign(start.url);
+    setGoing(false);
+    setProblem("alreadyMember" in start ? { member: start.email } : "error" in start ? { text: start.error } : { text: "Checkout couldn't start. Nothing was charged." });
   };
-  const off = going || gate.blocked;
   return (
-    <div>
-      <DueToday cents={cents} />
-      {error && (
-        <p role="alert" className="mt-3 rounded-lg border border-down/30 bg-down/10 px-3 py-2.5 text-sm text-down">
-          {error}
-        </p>
-      )}
-      <a
-        href={url}
-        onClick={(e) => void go(e)}
-        aria-disabled={off}
-        className={`mt-4 ${PAY_BUTTON} ${off ? "pointer-events-none opacity-60" : ""}`}
-      >
+    <form onSubmit={(e) => void go(e)} noValidate>
+      {agreement && <div className="mb-5">{agreement}</div>}
+      <DueToday />
+      <ProblemBox problem={problem} />
+      <button type="submit" disabled={going} className={`mt-4 ${PAY_BUTTON}`}>
         {going && <Spinner />}
-        {going ? "Opening Stripe…" : `Pay ${dollars(cents)}`}
-      </a>
+        {going ? "Opening Stripe…" : `Pay ${dollars(LIFETIME.cents)}`}
+      </button>
       <p className={FINE}>
         You&apos;ll pay on Stripe&apos;s secure page and come straight back with access. {LIFE}
         <TermsLine />
       </p>
-    </div>
+    </form>
   );
 }

@@ -3,8 +3,9 @@ import Link from "next/link";
 import AppShell from "@/components/AppShell";
 import MemberGate from "@/components/join/MemberGate";
 import { librarySummary } from "@/lib/education";
-import { billingReady, completeLifetime } from "@/lib/lifetime";
+import { billingReady, healMembership, publishableKey } from "@/lib/lifetime";
 import { memberContext } from "@/lib/membership";
+import { agreedToTerms } from "@/lib/terms";
 import { Gauge } from "@/components/TerminalMockup";
 import { NowDateLong, NowGreeting, UpcomingFriday } from "@/components/Now";
 import { fetchMarketNews, newsTime } from "@/lib/news";
@@ -22,16 +23,19 @@ export default async function DashboardPage() {
 
   // Without the $397 membership: the paywall, over a shell with nothing in it, and nothing read for it. A payment that
   // went through without its browser coming back to /welcome turns access on here first.
-  const unlocked =
-    member ||
-    (billingReady() && (await completeLifetime({ id: user.id, email: user.email ?? null }).catch(() => "unpaid")) === "member");
+  const unlocked = member || (billingReady() && (await healMembership(user).catch(() => false)));
   if (!unlocked) {
     return (
       <>
         <AppShell email={user.email ?? ""} isAdmin={false} active="home" displayName={profile?.name} avatarUrl={profile?.avatar_url}>
           {null}
         </AppShell>
-        <MemberGate email={user.email ?? ""} library={await librarySummary(supabase)} />
+        <MemberGate
+          email={user.email ?? ""}
+          termsOnRecord={agreedToTerms(user)}
+          publishableKey={publishableKey()}
+          library={await librarySummary(supabase)}
+        />
       </>
     );
   }

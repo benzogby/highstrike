@@ -11,7 +11,18 @@ import LifetimeCheckout from "./LifetimeCheckout";
  * on are paying (the same checkout as the homepage's popup) and Sign out. The page renders it beside AppShell, not in
  * it, so it stays live while the shell goes inert.
  */
-export default function MemberGate({ email, library }: { email: string; library: Library | null }) {
+export default function MemberGate({
+  email,
+  termsOnRecord,
+  publishableKey,
+  library,
+}: {
+  email: string;
+  /** The account agreed to the Terms already, so the checkout doesn't ask again. */
+  termsOnRecord: boolean;
+  publishableKey: string | null;
+  library: Library | null;
+}) {
   const [paying, setPaying] = useState(false);
 
   useEffect(() => {
@@ -31,7 +42,7 @@ export default function MemberGate({ email, library }: { email: string; library:
             Your account is ready. One payment of {LIFETIME_PRICE} opens the daily trades, the tools and the Alpha Mastermind, for life.
           </p>
           <div className="mt-6 rounded-2xl border border-line-strong bg-panel p-5 shadow-2xl">
-            <LifetimeCheckout library={library} back="/dashboard" onPaying={setPaying} />
+            <LifetimeCheckout library={library} back="/dashboard" buyer={{ email, termsOnRecord }} publishableKey={publishableKey} onPaying={setPaying} />
           </div>
           <form action="/auth/signout" method="post" className="mt-5 text-center text-sm text-ink-3">
             Signed in as {email} ·{" "}
