@@ -12,6 +12,7 @@ import { fetchMarketNews, newsTime } from "@/lib/news";
 import WatchlistPanel from "./WatchlistPanel";
 import ActivityFeed from "./ActivityFeed";
 import FirstRunTour from "./FirstRunTour";
+import { PageHeader } from "@/components/ui";
 
 export const metadata: Metadata = {
   title: "Dashboard — HighStrike",
@@ -97,30 +98,25 @@ export default async function DashboardPage() {
     >
       
           {/* Greeting */}
-          <div className="anim-rise flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-            <div>
-              <p className="text-xs uppercase tracking-wider text-ink-3">
-                <NowDateLong />
-              </p>
-              <h1 className="mt-1 font-display text-2xl font-bold sm:text-3xl">
+          <PageHeader
+            className="anim-rise"
+            title={
+              <>
                 <NowGreeting />, {firstName}
-              </h1>
-            </div>
-            <p className="rounded-full border border-accent/40 bg-panel px-3.5 py-1.5 text-xs text-ink-2">
-              <span className="font-semibold text-accent">Beta</span> — daily reports
-              and live watchlists are on; flow scanner is next
-            </p>
-          </div>
+              </>
+            }
+            subtitle={<NowDateLong />}
+          />
 
           <FirstRunTour userId={user.id} show={!profile?.tour_done} />
 
           {/* Weather strip */}
           <section id="tour-weather" className="anim-rise mt-8" style={{ "--rise-delay": "80ms" } as React.CSSProperties}>
             <div className="flex items-baseline justify-between">
-              <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-ink-2">
+              <h2 className="font-display text-[15px] text-ink">
                 {reportLabel ? `Weather report — ${reportLabel}` : "Weather report"}
               </h2>
-              <span className="text-[10px] uppercase tracking-wider text-ink-3">
+              <span className="text-xs text-ink-3 font-medium">
                 {weather
                   ? weather.model === "heuristic"
                     ? "Generated from market data"
@@ -152,10 +148,10 @@ export default async function DashboardPage() {
             {/* Setups */}
             <section id="tour-setups" className="anim-rise xl:col-span-2" style={{ "--rise-delay": "160ms" } as React.CSSProperties}>
               <div className="flex items-baseline justify-between">
-                <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-ink-2">
+                <h2 className="font-display text-[15px] text-ink">
                   {reportLabel ? `Setups — ${reportLabel}` : "Setups"}
                 </h2>
-                <span className="text-[10px] uppercase tracking-wider text-ink-3">
+                <span className="text-xs text-ink-3 font-medium">
                   Market commentary — not investment advice
                 </span>
               </div>
@@ -168,12 +164,12 @@ export default async function DashboardPage() {
                 {setups.map((s) => (
                   <div
                     key={s.ticker}
-                    className="card-lift flex flex-col rounded-2xl border border-line bg-panel p-5 hover:border-accent/40 hover:shadow-lg"
+                    className="flex flex-col rounded-xl border border-line bg-panel p-5 transition hover:border-line-strong"
                   >
                     <div className="flex items-center justify-between">
                       <Link
                         href={`/symbol/${s.ticker.replace("$", "")}`}
-                        className="font-display text-lg font-bold transition hover:text-accent"
+                        className="font-display text-lg text-ink transition hover:text-accent"
                       >
                         {s.ticker}
                       </Link>
@@ -243,10 +239,10 @@ export default async function DashboardPage() {
             {/* Right rail */}
             <section id="tour-activity" className="anim-rise" style={{ "--rise-delay": "240ms" } as React.CSSProperties}>
               <div className="flex items-baseline justify-between">
-                <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-ink-2">
+                <h2 className="font-display text-[15px] text-ink">
                   Activity
                 </h2>
-                <span className="text-[10px] uppercase tracking-wider text-ink-3">
+                <span className="text-xs text-ink-3 font-medium">
                   Live feed
                 </span>
               </div>
@@ -255,14 +251,14 @@ export default async function DashboardPage() {
               {marketNews.items.length > 0 && (
                 <>
                   <div className="mt-8 flex items-baseline justify-between">
-                    <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-ink-2">
+                    <h2 className="font-display text-[15px] text-ink">
                       Market news
                     </h2>
-                    <span className="text-[10px] uppercase tracking-wider text-ink-3">
+                    <span className="text-xs text-ink-3 font-medium">
                       Live headlines
                     </span>
                   </div>
-                  <ul className="mt-3 divide-y divide-line rounded-2xl border border-line bg-panel">
+                  <ul className="mt-3 divide-y divide-line rounded-xl border border-line bg-panel">
                     {marketNews.items.map((n) => (
                       <li key={n.url}>
                         <a
@@ -282,7 +278,7 @@ export default async function DashboardPage() {
                 </>
               )}
 
-              <div className="mt-6 rounded-2xl border border-line bg-panel p-6">
+              <div className="mt-6 rounded-xl border border-line bg-panel p-6">
                 <h3 className="font-display text-sm font-semibold">
                   While you wait for your cohort
                 </h3>
@@ -293,13 +289,13 @@ export default async function DashboardPage() {
                 <div className="mt-4 flex gap-3">
                   <Link
                     href="/blog"
-                    className="rounded-lg bg-accent px-4 py-2 font-display text-xs font-semibold text-bg transition hover:bg-accent-2"
+                    className="rounded-lg bg-accent px-4 py-2 text-xs font-medium text-on-accent transition hover:bg-accent-2"
                   >
                     Read the blog
                   </Link>
                   <Link
                     href="/results"
-                    className="rounded-lg border border-line-strong px-4 py-2 font-display text-xs font-semibold text-ink-2 transition hover:border-accent/50 hover:text-accent"
+                    className="rounded-lg border border-line bg-panel px-4 py-2 text-xs font-medium text-ink transition hover:bg-panel-2"
                   >
                     Scoreboard
                   </Link>

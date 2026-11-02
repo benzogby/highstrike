@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
 import AppShell from "@/components/AppShell";
 import AdminTabs from "./AdminTabs";
+import { PageHeader } from "@/components/ui";
 
 export const metadata = {
   title: "Admin — HighStrike",
@@ -33,14 +34,7 @@ export default async function AdminLayout({
       displayName={me?.name}
       avatarUrl={me?.avatar_url}
     >
-      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-        <div>
-          <p className="text-xs uppercase tracking-wider text-ink-3">Admin</p>
-          <h1 className="mt-1 font-display text-2xl font-bold sm:text-3xl">
-            Control room
-          </h1>
-        </div>
-      </div>
+      <PageHeader title="Admin" subtitle="The control room: the setup engine, members, traffic, content and Trading School." />
       <AdminTabs />
       <div className="mt-8">{children}</div>
     </AppShell>

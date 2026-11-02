@@ -253,7 +253,7 @@ export default function WatchlistPanel({ userId }: { userId: string }) {
         className="mt-8 flex scroll-mt-24 flex-wrap items-center justify-between gap-3"
       >
         <div className="flex flex-wrap items-center gap-2">
-          <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-ink-2">
+          <h2 className="font-display text-[15px] text-ink">
             Watchlist
           </h2>
           {lists === null && (
@@ -264,10 +264,10 @@ export default function WatchlistPanel({ userId }: { userId: string }) {
               key={l.id}
               type="button"
               onClick={() => setActiveId(l.id)}
-              className={`rounded-full px-3 py-1 font-display text-xs font-semibold transition ${
+              className={`rounded-md px-2.5 py-1 text-[13px] font-medium transition ${
                 l.id === activeId
-                  ? "bg-accent text-bg"
-                  : "border border-line text-ink-2 hover:border-accent/50 hover:text-accent"
+                  ? "bg-accent-soft text-accent-ink"
+                  : "text-ink-2 hover:bg-panel-2 hover:text-ink"
               }`}
             >
               {l.name}
@@ -276,7 +276,7 @@ export default function WatchlistPanel({ userId }: { userId: string }) {
           <button
             type="button"
             onClick={newList}
-            className="rounded-full border border-line px-3 py-1 font-display text-xs font-semibold text-ink-3 transition hover:border-accent/50 hover:text-accent"
+            className="rounded-md px-2.5 py-1 text-[13px] font-medium text-ink-3 transition hover:bg-panel-2 hover:text-ink"
           >
             + New
           </button>
@@ -284,13 +284,13 @@ export default function WatchlistPanel({ userId }: { userId: string }) {
             <button
               type="button"
               onClick={deleteList}
-              className="rounded-full border border-line px-3 py-1 font-display text-xs font-semibold text-ink-3 transition hover:border-down/50 hover:text-down"
+              className="rounded-md px-2.5 py-1 text-[13px] font-medium text-ink-3 transition hover:bg-down-soft hover:text-down"
             >
               Delete
             </button>
           )}
         </div>
-        <span className="text-[10px] uppercase tracking-wider text-ink-3">
+        <span className="text-xs text-ink-3 font-medium">
           {live ? "Live quotes · refreshes every 45s" : "Sample quotes — live data pending"}
         </span>
       </div>
@@ -305,7 +305,7 @@ export default function WatchlistPanel({ userId }: { userId: string }) {
           }}
           placeholder="Add symbol — type a ticker or company name…"
           aria-label="Add symbol to watchlist"
-          className="h-10 w-full rounded-lg border border-line bg-panel px-3.5 text-sm text-ink placeholder:text-ink-3 outline-none transition focus:border-accent/60 focus:ring-2 focus:ring-accent/20"
+          className="h-10 w-full rounded-lg border border-line bg-panel px-3.5 text-sm text-ink placeholder:text-ink-3 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/15"
         />
         {hits.length > 0 && (
           <ul className="absolute z-20 mt-1 w-full overflow-hidden rounded-lg border border-line bg-panel shadow-xl">
@@ -316,7 +316,7 @@ export default function WatchlistPanel({ userId }: { userId: string }) {
                   onClick={() => addTicker(h.ticker)}
                   className="flex w-full items-center justify-between px-3.5 py-2 text-left text-sm transition hover:bg-panel-2"
                 >
-                  <span className="font-display font-semibold">{h.ticker}</span>
+                  <span className="font-mono-nums font-medium">{h.ticker}</span>
                   <span className="ml-3 truncate text-xs text-ink-3">{h.name}</span>
                 </button>
               </li>
@@ -326,10 +326,10 @@ export default function WatchlistPanel({ userId }: { userId: string }) {
         {error && <p className="mt-1.5 text-xs text-down">{error}</p>}
       </div>
 
-      <div className="mt-3 overflow-hidden rounded-2xl border border-line bg-panel">
+      <div className="mt-3 overflow-hidden rounded-xl border border-line bg-panel">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-line text-left text-[10px] uppercase tracking-wider text-ink-3">
+            <tr className="border-b border-line text-left text-xs text-ink-3 font-medium">
               <th className="px-5 py-2.5 font-medium">Ticker</th>
               <th className="px-3 py-2.5 text-right font-medium">Last</th>
               <th className="px-3 py-2.5 text-right font-medium">Change</th>
@@ -345,7 +345,7 @@ export default function WatchlistPanel({ userId }: { userId: string }) {
               const up = (q?.changePct ?? 0) >= 0;
               return (
                 <tr key={t} className="group">
-                  <td className="px-5 py-2.5 font-display font-semibold">
+                  <td className="px-5 py-2.5 font-mono-nums font-medium">
                     <Link
                       href={`/symbol/${t}`}
                       className="transition hover:text-accent"
@@ -427,7 +427,7 @@ export default function WatchlistPanel({ userId }: { userId: string }) {
                       loadItems();
                       toastSuccess("Starter watchlist added — SPY, QQQ, NVDA, AAPL, TSLA");
                     }}
-                    className="press mt-3 rounded-lg bg-accent px-4 py-2 font-display text-sm font-semibold text-bg transition hover:bg-accent-2 disabled:opacity-60"
+                    className="press mt-3 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-on-accent transition hover:bg-accent-2 disabled:opacity-60"
                   >
                     {busy ? "Adding…" : "Add SPY, QQQ, NVDA, AAPL, TSLA"}
                   </button>

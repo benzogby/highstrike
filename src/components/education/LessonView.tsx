@@ -26,7 +26,7 @@ export type LessonViewProps = {
 /** Where the player goes while the lesson's video is still being copied over: the same 16:9 frame. */
 function VideoOnItsWay() {
   return (
-    <div className="flex aspect-video w-full flex-col items-center justify-center gap-2 rounded-2xl border border-line bg-panel-2 px-6 text-center">
+    <div className="flex aspect-video w-full flex-col items-center justify-center gap-2 rounded-xl border border-line bg-panel-2 px-6 text-center">
       <p className="font-display text-base font-semibold">This video is on its way</p>
       <p className="max-w-md text-sm text-ink-3">It&apos;s being copied into HighStrike right now. Check back shortly; the notes below are ready.</p>
     </div>
@@ -34,7 +34,7 @@ function VideoOnItsWay() {
 }
 
 function PrevNext({ prev, next }: { prev: Lesson | null; next: Lesson | null }) {
-  const cls = "inline-flex items-center gap-1.5 rounded-lg border border-line-strong px-3 py-1.5 text-sm font-semibold text-ink-2 transition hover:border-accent/50 hover:text-accent";
+  const cls = "inline-flex items-center gap-1.5 rounded-lg border border-line bg-panel px-3 py-1.5 text-sm font-medium text-ink transition hover:bg-panel-2";
   return (
     <nav aria-label="Previous and next lessons" className="flex shrink-0 items-center gap-2">
       {prev && (
@@ -91,7 +91,7 @@ export default function LessonView({ lesson, module: m, moduleLessons, states, p
               <VideoOnItsWay />
             ) : null}
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="font-mono-nums text-xs uppercase tracking-wider text-ink-3">
+              <p className="font-mono-nums text-xs text-ink-3 font-medium">
                 Lesson {place} of {moduleLessons.length}
               </p>
               <PrevNext prev={prev} next={next} />
@@ -99,14 +99,14 @@ export default function LessonView({ lesson, module: m, moduleLessons, states, p
           </div>
 
           <header>
-            <h1 className="font-display text-2xl font-bold sm:text-3xl">{lesson.title}</h1>
+            <h1 className="font-display text-2xl leading-tight text-ink">{lesson.title}</h1>
           </header>
 
           <Notes body={body} />
 
           {files.length > 0 && (
-            <section aria-labelledby="lesson-files" className="max-w-3xl rounded-2xl border border-line bg-panel p-4">
-              <h2 id="lesson-files" className="text-xs uppercase tracking-wider text-ink-3">
+            <section aria-labelledby="lesson-files" className="max-w-3xl rounded-xl border border-line bg-panel p-4">
+              <h2 id="lesson-files" className="text-xs text-ink-3 font-medium">
                 Files
               </h2>
               <ul className="mt-2 space-y-1.5">
@@ -132,10 +132,10 @@ export default function LessonView({ lesson, module: m, moduleLessons, states, p
         </article>
 
         <aside className="lg:sticky lg:top-20">
-          <nav aria-labelledby="module-lessons" className="overflow-hidden rounded-2xl border border-line bg-panel">
+          <nav aria-labelledby="module-lessons" className="overflow-hidden rounded-xl border border-line bg-panel">
             <div className="border-b border-line px-4 py-3">
-              <p className="text-xs uppercase tracking-wider text-accent">{eyebrow}</p>
-              <h2 id="module-lessons" className="mt-0.5 font-display text-sm font-bold">
+              <p className="text-xs text-accent">{eyebrow}</p>
+              <h2 id="module-lessons" className="mt-0.5 font-display text-sm text-ink">
                 {name}
               </h2>
               <DoneBar done={moduleLessons.filter((l) => states[l.id]?.done).length} total={moduleLessons.length} className="mt-2.5" />

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requireMember } from "@/lib/membership";
 import AppShell from "@/components/AppShell";
+import { PageHeader } from "@/components/ui";
 
 export const metadata: Metadata = {
   title: "Setups — HighStrike",
@@ -23,10 +24,10 @@ type SetupRow = {
 };
 
 const STATUS_META: Record<string, { label: string; classes: string }> = {
-  open: { label: "OPEN", classes: "border border-line-strong text-ink-2" },
-  target_hit: { label: "TARGET HIT", classes: "bg-accent text-bg" },
-  stopped: { label: "STOPPED", classes: "bg-down/90 text-bg" },
-  expired: { label: "EXPIRED", classes: "border border-line-strong text-ink-3" },
+  open: { label: "Open", classes: "bg-panel-2 text-ink-2" },
+  target_hit: { label: "Target hit", classes: "bg-up-soft text-up" },
+  stopped: { label: "Stopped", classes: "bg-down-soft text-down" },
+  expired: { label: "Expired", classes: "bg-panel-2 text-ink-3" },
 };
 
 function dateLabel(d: string) {
@@ -88,39 +89,31 @@ export default async function SetupsPage() {
       displayName={profile?.name}
       avatarUrl={profile?.avatar_url}
     >
-      <div className="anim-rise flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-        <div>
-          <p className="text-xs uppercase tracking-wider text-ink-3">Setup Engine</p>
-          <h1 className="mt-1 font-display text-2xl font-bold sm:text-3xl">
-            Setup history
-          </h1>
-        </div>
-        <p className="text-xs text-ink-3">
-          Every published setup is graded automatically — wins and losses together.
-        </p>
-      </div>
+      <PageHeader
+        className="anim-rise"
+        title="Setups"
+        subtitle="Every published setup, graded automatically: wins and losses together."
+      />
 
       {/* Scoreboard */}
-      <div className="anim-rise mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line lg:grid-cols-4" style={{ "--rise-delay": "90ms" } as React.CSSProperties}>
+      <div className="anim-rise mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-line bg-line lg:grid-cols-4" style={{ "--rise-delay": "90ms" } as React.CSSProperties}>
         {tiles.map((t) => (
-          <div key={t.label} className="bg-panel px-5 py-5">
-            <p className="font-display text-2xl font-bold text-accent">{t.value}</p>
-            <p className="mt-0.5 text-[10px] uppercase tracking-wider text-ink-3">
-              {t.label}
-            </p>
+          <div key={t.label} className="bg-panel px-4 py-3.5">
+            <p className="text-[13px] text-ink-3">{t.label}</p>
+            <p className="mt-1 font-display text-2xl leading-none text-ink">{t.value}</p>
           </div>
         ))}
       </div>
 
       {byDate.size === 0 && (
-        <p className="mt-10 rounded-2xl border border-line bg-panel px-5 py-10 text-center text-sm text-ink-3">
+        <p className="mt-10 rounded-xl border border-line bg-panel px-5 py-10 text-center text-sm text-ink-3">
           No setups published yet — the first batch lands before the next open.
         </p>
       )}
 
       {[...byDate.entries()].map(([date, list]) => (
         <section key={date} className="mt-10">
-          <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-ink-2">
+          <h2 className="font-display text-[15px] text-ink">
             {dateLabel(date)}
           </h2>
           <div className="mt-3 grid gap-4 lg:grid-cols-3">
@@ -131,17 +124,17 @@ export default async function SetupsPage() {
               return (
                 <div
                   key={`${date}-${s.ticker}`}
-                  className="flex flex-col rounded-2xl border border-line bg-panel p-5"
+                  className="flex flex-col rounded-xl border border-line bg-panel p-5"
                 >
                   <div className="flex items-center justify-between">
                     <Link
                       href={`/symbol/${s.ticker}`}
-                      className="font-display text-lg font-bold transition hover:text-accent"
+                      className="font-display text-lg text-ink transition hover:text-accent"
                     >
                       ${s.ticker}
                     </Link>
                     <span
-                      className={`rounded-full px-2 py-0.5 font-display text-[10px] font-bold ${meta.classes}`}
+                      className={`rounded-md px-1.5 py-0.5 text-xs font-medium ${meta.classes}`}
                     >
                       {meta.label}
                     </span>

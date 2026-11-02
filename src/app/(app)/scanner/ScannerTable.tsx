@@ -88,17 +88,17 @@ export default function ScannerTable() {
   return (
     <>
       <div className="flex items-center justify-between">
-        <span className="text-[10px] uppercase tracking-wider text-ink-3">
+        <span className="text-xs text-ink-3 font-medium">
           {rows ? `${rows.length} symbols · refreshes every 60s` : "Loading…"}
         </span>
-        <span className="text-[10px] uppercase tracking-wider text-ink-3">
+        <span className="text-xs text-ink-3 font-medium">
           {live ? "Live data" : "Sample data — live pending"}
         </span>
       </div>
-      <div className="mt-3 overflow-x-auto rounded-2xl border border-line bg-panel">
+      <div className="mt-3 overflow-x-auto rounded-xl border border-line bg-panel">
         <table className="w-full min-w-[640px] text-sm">
           <thead>
-            <tr className="border-b border-line text-[10px] uppercase tracking-wider text-ink-3">
+            <tr className="border-b border-line text-xs text-ink-3 font-medium">
               {COLS.map((c) => (
                 <th
                   key={c.key}
@@ -107,7 +107,7 @@ export default function ScannerTable() {
                   <button
                     type="button"
                     onClick={() => sortBy(c.key)}
-                    className={`uppercase tracking-wider transition hover:text-ink ${
+                    className={`transition hover:text-ink ${
                       sortKey === c.key ? "text-accent" : ""
                     }`}
                   >
@@ -125,7 +125,7 @@ export default function ScannerTable() {
                   <span className="inline-flex items-center gap-2">
                     <Link
                       href={`/symbol/${r.ticker}`}
-                      className="font-display font-semibold transition hover:text-accent"
+                      className="font-mono-nums font-medium text-ink transition hover:text-accent"
                     >
                       {r.ticker}
                     </Link>

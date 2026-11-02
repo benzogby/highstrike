@@ -58,7 +58,7 @@ export default function Toaster() {
         >
           <span
             className={`mt-0.5 flex h-5 w-5 flex-none items-center justify-center rounded-full font-display text-[11px] font-bold ${
-              t.kind === "success" ? "bg-accent text-bg" : "bg-down text-bg"
+              t.kind === "success" ? "bg-accent text-on-accent" : "bg-down text-white"
             }`}
             aria-hidden="true"
           >

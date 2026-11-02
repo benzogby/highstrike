@@ -45,7 +45,7 @@ export default function ActivityFeed() {
   }, []);
 
   return (
-    <div className="mt-3 rounded-2xl border border-line bg-panel">
+    <div className="mt-3 rounded-xl border border-line bg-panel">
       {events == null && (
         <p className="px-5 py-8 text-center text-sm text-ink-3">Loading…</p>
       )}
@@ -73,7 +73,7 @@ export default function ActivityFeed() {
               <div className="min-w-0">
                 <p className="text-sm text-ink">
                   {e.user_id && (
-                    <span className="mr-1.5 rounded bg-panel-2 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-ink-3">
+                    <span className="mr-1.5 rounded bg-panel-2 px-1.5 py-0.5 text-xs text-ink-3 font-medium">
                       you
                     </span>
                   )}

@@ -178,14 +178,14 @@ export default function ContentManager() {
       )}
 
       {/* Brand slots */}
-      <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-ink-2">
+      <h2 className="font-display text-[15px] text-ink">
         Brand assets
       </h2>
       <div className="mt-3 grid gap-4 lg:grid-cols-3">
         {SLOTS.map((slot) => {
           const current = settings[slot.key];
           return (
-            <div key={slot.key} className="flex flex-col rounded-2xl border border-line bg-panel p-5">
+            <div key={slot.key} className="flex flex-col rounded-xl border border-line bg-panel p-5">
               <h3 className="font-display text-sm font-semibold">{slot.title}</h3>
               <p className="mt-1 flex-1 text-xs leading-relaxed text-ink-2">{slot.hint}</p>
               <div
@@ -201,7 +201,7 @@ export default function ContentManager() {
                 )}
               </div>
               <div className="mt-4 flex gap-2">
-                <label className="flex-1 cursor-pointer rounded-lg bg-accent py-2 text-center font-display text-xs font-semibold text-bg transition hover:bg-accent-2">
+                <label className="flex-1 cursor-pointer rounded-lg bg-accent py-2 text-center text-xs font-medium text-on-accent transition hover:bg-accent-2">
                   {busy === slot.key ? "Working…" : current ? "Replace" : "Upload"}
                   <input
                     type="file"
@@ -220,7 +220,7 @@ export default function ContentManager() {
                     type="button"
                     disabled={busy !== null}
                     onClick={() => clearSlot(slot)}
-                    className="rounded-lg border border-line-strong px-3 py-2 font-display text-xs font-semibold text-ink-2 transition hover:border-down/50 hover:text-down"
+                    className="rounded-lg border border-line-strong px-3 py-2 text-xs font-medium text-ink-2 transition hover:border-down/50 hover:text-down"
                   >
                     Remove
                   </button>
@@ -233,14 +233,14 @@ export default function ContentManager() {
 
       {/* Photo library */}
       <div className="mt-10 flex items-center justify-between">
-        <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-ink-2">
+        <h2 className="font-display text-[15px] text-ink">
           Photo library
         </h2>
         <button
           type="button"
           disabled={busy !== null}
           onClick={() => libInputRef.current?.click()}
-          className="rounded-lg bg-accent px-4 py-2 font-display text-xs font-semibold text-bg transition hover:bg-accent-2 disabled:opacity-60"
+          className="rounded-lg bg-accent px-4 py-2 text-xs font-medium text-on-accent transition hover:bg-accent-2 disabled:opacity-60"
         >
           {busy === "library" ? "Uploading…" : "+ Upload photo"}
         </button>
@@ -261,13 +261,13 @@ export default function ContentManager() {
       </p>
 
       {library.length === 0 ? (
-        <div className="mt-4 rounded-2xl border border-dashed border-line-strong bg-panel px-6 py-12 text-center text-sm text-ink-3">
+        <div className="mt-4 rounded-xl border border-dashed border-line-strong bg-panel px-6 py-12 text-center text-sm text-ink-3">
           No photos yet — upload the first one.
         </div>
       ) : (
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {library.map((item) => (
-            <div key={item.name} className="overflow-hidden rounded-2xl border border-line bg-panel">
+            <div key={item.name} className="overflow-hidden rounded-xl border border-line bg-panel">
               <div className="flex h-36 items-center justify-center bg-panel-2">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={item.url} alt={item.name} className="h-full w-full object-cover" />
@@ -280,7 +280,7 @@ export default function ContentManager() {
                   <button
                     type="button"
                     onClick={() => copyUrl(item.url)}
-                    className="flex-1 rounded-lg border border-line-strong py-1.5 font-display text-xs font-semibold text-ink-2 transition hover:border-accent/50 hover:text-accent"
+                    className="flex-1 rounded-lg border border-line bg-panel py-1.5 text-xs font-medium text-ink transition hover:bg-panel-2"
                   >
                     {copied === item.url ? "Copied ✓" : "Copy URL"}
                   </button>
@@ -288,7 +288,7 @@ export default function ContentManager() {
                     type="button"
                     disabled={busy !== null}
                     onClick={() => deleteFromLibrary(item)}
-                    className="rounded-lg border border-line-strong px-2.5 py-1.5 font-display text-xs font-semibold text-ink-2 transition hover:border-down/50 hover:text-down"
+                    className="rounded-lg border border-line-strong px-2.5 py-1.5 text-xs font-medium text-ink-2 transition hover:border-down/50 hover:text-down"
                     aria-label={`Delete ${item.name}`}
                   >
                     {busy === item.name ? "…" : "✕"}

@@ -7,8 +7,8 @@ import { SUPABASE_URL } from "@/lib/supabaseConfig";
 import { toastSuccess } from "@/lib/toastBus";
 
 const inputClass =
-  "h-11 w-full rounded-lg border border-line bg-panel-2 px-3.5 text-sm text-ink placeholder:text-ink-3 outline-none transition focus:border-accent/60 focus:ring-2 focus:ring-accent/20";
-const labelClass = "mb-1 block text-[10px] uppercase tracking-wider text-ink-3";
+  "h-9 w-full rounded-lg border border-line bg-panel px-3 text-sm text-ink placeholder:text-ink-3 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/15";
+const labelClass = "mb-1.5 block text-[13px] font-medium text-ink";
 
 
 type Initial = {
@@ -139,8 +139,8 @@ export default function SettingsForm({
   return (
     <div className="space-y-10">
       {/* Profile */}
-      <section className="rounded-2xl border border-line bg-panel p-6">
-        <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-ink-2">
+      <section className="rounded-xl border border-line bg-panel p-6">
+        <h2 className="font-display text-[15px] text-ink">
           Profile
         </h2>
         <div className="mt-5 flex flex-col gap-6 sm:flex-row">
@@ -153,7 +153,7 @@ export default function SettingsForm({
                 className="h-24 w-24 rounded-full border border-line object-cover"
               />
             ) : (
-              <span className="flex h-24 w-24 items-center justify-center rounded-full bg-accent font-display text-2xl font-bold uppercase text-bg">
+              <span className="flex h-24 w-24 items-center justify-center rounded-full bg-accent-soft text-2xl font-medium uppercase text-accent-ink">
                 {displayName.slice(0, 2)}
               </span>
             )}
@@ -162,7 +162,7 @@ export default function SettingsForm({
                 type="button"
                 disabled={profileBusy}
                 onClick={() => avatarInputRef.current?.click()}
-                className="rounded-lg border border-line-strong px-3 py-1.5 font-display text-xs font-semibold text-ink-2 transition hover:border-accent/50 hover:text-accent"
+                className="rounded-lg border border-line bg-panel px-3 py-1.5 text-xs font-medium text-ink transition hover:bg-panel-2"
               >
                 {avatarUrl ? "Replace" : "Upload"}
               </button>
@@ -171,7 +171,7 @@ export default function SettingsForm({
                   type="button"
                   disabled={profileBusy}
                   onClick={removeAvatar}
-                  className="rounded-lg border border-line-strong px-3 py-1.5 font-display text-xs font-semibold text-ink-2 transition hover:border-down/50 hover:text-down"
+                  className="rounded-lg border border-line-strong px-3 py-1.5 text-xs font-medium text-ink-2 transition hover:border-down/50 hover:text-down"
                 >
                   Remove
                 </button>
@@ -221,16 +221,16 @@ export default function SettingsForm({
                 maxLength={300}
                 rows={3}
                 placeholder="A line or two about how you trade"
-                className="w-full rounded-lg border border-line bg-panel-2 p-3.5 text-sm leading-relaxed text-ink placeholder:text-ink-3 outline-none transition focus:border-accent/60 focus:ring-2 focus:ring-accent/20"
+                className="w-full rounded-lg border border-line bg-panel p-3.5 text-sm leading-relaxed text-ink placeholder:text-ink-3 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/15"
               />
-              <p className="mt-1 text-right text-[10px] text-ink-3">{bio.length}/300</p>
+              <p className="mt-1 text-right text-xs text-ink-3">{bio.length}/300</p>
             </div>
             <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={saveProfile}
                 disabled={profileBusy}
-                className="rounded-lg bg-accent px-5 py-2 font-display text-sm font-semibold text-bg transition hover:bg-accent-2 disabled:opacity-60"
+                className="rounded-lg bg-accent px-5 py-2 text-sm font-medium text-on-accent transition hover:bg-accent-2 disabled:opacity-60"
               >
                 {profileBusy ? "Saving…" : "Save profile"}
               </button>
@@ -245,8 +245,8 @@ export default function SettingsForm({
       </section>
 
       {/* Security */}
-      <section className="rounded-2xl border border-line bg-panel p-6">
-        <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-ink-2">
+      <section className="rounded-xl border border-line bg-panel p-6">
+        <h2 className="font-display text-[15px] text-ink">
           Security
         </h2>
         {!hasPassword && (
@@ -289,7 +289,7 @@ export default function SettingsForm({
             <button
               type="submit"
               disabled={pwBusy || !pw}
-              className="rounded-lg bg-accent px-5 py-2 font-display text-sm font-semibold text-bg transition hover:bg-accent-2 disabled:opacity-60"
+              className="rounded-lg bg-accent px-5 py-2 text-sm font-medium text-on-accent transition hover:bg-accent-2 disabled:opacity-60"
             >
               {pwBusy ? "Updating…" : hasPassword ? "Update password" : "Set password"}
             </button>
@@ -301,13 +301,13 @@ export default function SettingsForm({
       </section>
 
       {/* Membership: one payment, nothing to manage */}
-      <section className="rounded-2xl border border-line bg-panel p-6">
-        <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-ink-2">
+      <section className="rounded-xl border border-line bg-panel p-6">
+        <h2 className="font-display text-[15px] text-ink">
           Membership
         </h2>
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-accent/40 bg-panel-2 px-5 py-4">
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-panel-2 px-4 py-3.5">
           <div>
-            <p className="font-display text-base font-semibold">
+            <p className="text-sm font-medium text-ink">
               {membership === "admin" ? "Admin access" : "Lifetime access"}
             </p>
             <p className="mt-0.5 text-sm text-ink-2">
@@ -316,8 +316,8 @@ export default function SettingsForm({
                 : "Paid once. The daily trades, the tools and HighStrike Trading School are yours, with nothing to renew."}
             </p>
           </div>
-          <span className="rounded-full bg-accent px-2.5 py-0.5 font-display text-[10px] font-bold text-bg">
-            ACTIVE
+          <span className="rounded-md bg-accent-soft px-1.5 py-0.5 text-xs font-medium text-accent-ink">
+            Active
           </span>
         </div>
         {membership === "lifetime" && (

@@ -48,42 +48,40 @@ export default async function AdminOverviewPage() {
 
   return (
     <>
-      <div className="mb-8 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-panel px-5 py-4">
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-panel px-5 py-4">
         <div>
-          <p className="font-display text-sm font-semibold">Setup Engine</p>
-          <p className="text-xs text-ink-3">
+          <p className="font-display text-[15px] text-ink">Setup engine</p>
+          <p className="mt-0.5 text-[13px] text-ink-3">
             Runs automatically at 8:30 AM ET — or trigger a fresh report now.
           </p>
         </div>
         <GenerateNowButton />
       </div>
-      <div className="mb-8 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-panel px-5 py-4">
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-panel px-5 py-4">
         <div>
-          <p className="font-display text-sm font-semibold">Sale alerts</p>
-          <p className="text-xs text-ink-3">An email for every $397 purchase, in the classic layout.</p>
+          <p className="font-display text-[15px] text-ink">Sale alerts</p>
+          <p className="mt-0.5 text-[13px] text-ink-3">An email for every $397 purchase, from payments@mail.highstrike.com.</p>
         </div>
         <TestSaleAlertButton to={SALE_ALERT_TO} />
       </div>
-      <div className="grid gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-3">
+      <div className="grid gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-3">
         {stats.map((s) => (
-          <div key={s.label} className="bg-panel px-6 py-7">
-            <p className="font-display text-4xl font-bold text-accent">{s.value}</p>
-            <p className="mt-1 text-xs uppercase tracking-wider text-ink-3">
-              {s.label}
-            </p>
+          <div key={s.label} className="bg-panel px-5 py-4">
+            <p className="text-[13px] text-ink-3">{s.label}</p>
+            <p className="mt-1 font-display text-3xl leading-none text-ink">{s.value}</p>
           </div>
         ))}
       </div>
 
       <div className="mt-10 grid gap-8 xl:grid-cols-2">
         <section>
-          <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-ink-2">
+          <h2 className="font-display text-[15px] text-ink">
             Members {members.data ? `(latest ${members.data.length})` : ""}
           </h2>
-          <div className="mt-3 overflow-hidden rounded-2xl border border-line bg-panel">
+          <div className="mt-3 overflow-hidden rounded-xl border border-line bg-panel">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-line text-left text-[10px] uppercase tracking-wider text-ink-3">
+                <tr className="border-b border-line text-left text-xs text-ink-3 font-medium">
                   <th className="w-full px-5 py-2.5 font-medium">Email</th>
                   <th className="px-3 py-2.5 font-medium">Role</th>
                   <th className="px-5 py-2.5 text-right font-medium">Joined</th>
@@ -95,7 +93,7 @@ export default async function AdminOverviewPage() {
                     <td className="px-5 py-2.5 text-ink">{m.email}</td>
                     <td className="px-3 py-2.5">
                       {m.is_admin ? (
-                        <span className="rounded-full bg-accent px-2 py-0.5 font-display text-[10px] font-bold text-bg">
+                        <span className="rounded-md bg-accent-soft px-1.5 py-0.5 text-xs font-medium text-accent-ink">
                           ADMIN
                         </span>
                       ) : (
@@ -120,13 +118,13 @@ export default async function AdminOverviewPage() {
         </section>
 
         <section>
-          <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-ink-2">
+          <h2 className="font-display text-[15px] text-ink">
             Waitlist {waitlist.data ? `(latest ${waitlist.data.length})` : ""}
           </h2>
-          <div className="mt-3 overflow-hidden rounded-2xl border border-line bg-panel">
+          <div className="mt-3 overflow-hidden rounded-xl border border-line bg-panel">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-line text-left text-[10px] uppercase tracking-wider text-ink-3">
+                <tr className="border-b border-line text-left text-xs text-ink-3 font-medium">
                   <th className="w-full px-5 py-2.5 font-medium">Email</th>
                   <th className="px-3 py-2.5 font-medium">Source</th>
                   <th className="px-5 py-2.5 text-right font-medium">Signed up</th>

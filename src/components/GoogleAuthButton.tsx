@@ -49,7 +49,7 @@ export default function GoogleAuthButton({
         type="button"
         onClick={signIn}
         disabled={loading || disabled}
-        className="flex h-12 w-full items-center justify-center gap-3 rounded-lg border border-line-strong bg-panel font-display text-sm font-semibold text-ink transition hover:border-accent/50 disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex h-10 w-full items-center justify-center gap-2.5 rounded-lg border border-line bg-panel text-sm font-medium text-ink transition hover:bg-panel-2 disabled:cursor-not-allowed disabled:opacity-50"
       >
         <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
           <path
@@ -80,7 +80,7 @@ export function AuthDivider() {
   return (
     <div className="flex items-center gap-3 py-1" aria-hidden="true">
       <span className="h-px flex-1 bg-line" />
-      <span className="text-xs uppercase tracking-wider text-ink-3">or</span>
+      <span className="text-xs text-ink-3 font-medium">or</span>
       <span className="h-px flex-1 bg-line" />
     </div>
   );

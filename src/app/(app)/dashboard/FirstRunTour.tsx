@@ -104,12 +104,12 @@ export default function FirstRunTour({ userId, show }: { userId: string; show: b
         key={idx}
         role="dialog"
         aria-label={`Tour step ${idx + 1} of ${STEPS.length}`}
-        className="anim-pop fixed bottom-6 left-1/2 z-[52] w-[min(92vw,26rem)] -translate-x-1/2 rounded-2xl border border-line bg-panel p-5 shadow-2xl"
+        className="anim-pop fixed bottom-6 left-1/2 z-[52] w-[min(92vw,26rem)] -translate-x-1/2 rounded-xl border border-line bg-panel p-5 shadow-lg"
       >
-        <p className="text-[10px] uppercase tracking-wider text-ink-3">
+        <p className="text-xs text-ink-3 font-medium">
           {idx + 1} of {STEPS.length}
         </p>
-        <h2 className="mt-1 font-display text-lg font-bold">{step.title}</h2>
+        <h2 className="mt-1 font-display text-lg text-ink">{step.title}</h2>
         <p className="mt-2 text-sm leading-relaxed text-ink-2">{step.body}</p>
         <div className="mt-4 flex items-center justify-between">
           <button
@@ -124,7 +124,7 @@ export default function FirstRunTour({ userId, show }: { userId: string; show: b
               <button
                 type="button"
                 onClick={() => setIdx(idx - 1)}
-                className="press rounded-lg border border-line-strong px-4 py-2 font-display text-sm font-semibold text-ink-2 transition hover:text-ink"
+                className="press rounded-lg border border-line bg-panel px-4 py-2 text-sm font-medium text-ink transition hover:bg-panel-2"
               >
                 Back
               </button>
@@ -132,7 +132,7 @@ export default function FirstRunTour({ userId, show }: { userId: string; show: b
             <button
               type="button"
               onClick={() => (last ? finish(true) : setIdx(idx + 1))}
-              className="press rounded-lg bg-accent px-5 py-2 font-display text-sm font-semibold text-bg transition hover:bg-accent-2"
+              className="press rounded-lg bg-accent px-5 py-2 text-sm font-medium text-on-accent transition hover:bg-accent-2"
             >
               {last ? "Finish" : "Next"}
             </button>

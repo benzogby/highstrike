@@ -73,7 +73,7 @@ export default function PriceChart({ ticker }: { ticker: string }) {
   const hoverPt = view && hover != null ? view.data[hover] : null;
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-line bg-panel">
+    <div className="overflow-hidden rounded-xl border border-line bg-panel">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-3">
         <div className="flex items-baseline gap-3">
           {view && (
@@ -89,7 +89,7 @@ export default function PriceChart({ ticker }: { ticker: string }) {
         </div>
         <div className="flex items-center gap-2">
           {!live && (
-            <span className="rounded bg-panel-2 px-2 py-0.5 text-[10px] uppercase tracking-wider text-ink-3">
+            <span className="rounded bg-panel-2 px-2 py-0.5 text-xs text-ink-3 font-medium">
               sample
             </span>
           )}
@@ -98,9 +98,9 @@ export default function PriceChart({ ticker }: { ticker: string }) {
               key={r.key}
               type="button"
               onClick={() => setRange(r.key)}
-              className={`rounded-md px-2.5 py-1 font-display text-xs font-semibold transition ${
+              className={`rounded-md px-2.5 py-1 text-xs font-medium transition ${
                 range === r.key
-                  ? "bg-accent text-bg"
+                  ? "bg-accent-soft text-accent-ink"
                   : "text-ink-2 hover:bg-panel-2 hover:text-ink"
               }`}
             >

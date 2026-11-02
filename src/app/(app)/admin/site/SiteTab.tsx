@@ -51,10 +51,10 @@ export default function SiteTab() {
             key={s.key}
             type="button"
             onClick={() => setSection(s.key)}
-            className={`rounded-full border px-4 py-1.5 font-display text-xs font-semibold transition ${
+            className={`rounded-md border px-3 py-1 text-[13px] font-medium transition ${
               section === s.key
-                ? "border-accent bg-accent text-bg"
-                : "border-line-strong text-ink-2 hover:border-accent/50 hover:text-accent"
+                ? "border-line-strong bg-panel-2 text-ink"
+                : "border-transparent text-ink-2 hover:bg-panel-2 hover:text-ink"
             }`}
           >
             {s.label}
@@ -85,7 +85,7 @@ function SaveRow({
         type="button"
         onClick={onSave}
         disabled={saving}
-        className="rounded-lg bg-accent px-5 py-2 font-display text-sm font-semibold text-bg transition hover:bg-accent-2 disabled:opacity-60"
+        className="rounded-lg bg-accent px-5 py-2 text-sm font-medium text-on-accent transition hover:bg-accent-2 disabled:opacity-60"
       >
         {saving ? "Saving…" : "Save"}
       </button>
@@ -94,7 +94,7 @@ function SaveRow({
           type="button"
           onClick={onReset}
           disabled={saving}
-          className="rounded-lg border border-line-strong px-4 py-2 font-display text-sm font-semibold text-ink-2 transition hover:border-down/50 hover:text-down"
+          className="rounded-lg border border-line-strong px-4 py-2 text-sm font-medium text-ink-2 transition hover:border-down/50 hover:text-down"
         >
           Reset to default
         </button>
@@ -106,8 +106,8 @@ function SaveRow({
 }
 
 const inputClass =
-  "h-11 w-full rounded-lg border border-line bg-panel-2 px-3.5 text-sm text-ink outline-none transition focus:border-accent/60 focus:ring-2 focus:ring-accent/20";
-const labelClass = "mb-1 block text-[10px] uppercase tracking-wider text-ink-3";
+  "h-9 w-full rounded-lg border border-line bg-panel px-3 text-sm text-ink placeholder:text-ink-3 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/15";
+const labelClass = "mb-1.5 block text-[13px] font-medium text-ink";
 
 function HeroSection() {
   const [traders, setTraders] = useState(SITE_DEFAULTS.hero_badges.traders);
@@ -177,17 +177,17 @@ function HeroSection() {
       </div>
 
       {/* Live preview */}
-      <div className="mt-6 rounded-2xl border border-line bg-panel p-5">
-        <p className="mb-3 text-[10px] uppercase tracking-wider text-ink-3">Preview</p>
+      <div className="mt-6 rounded-xl border border-line bg-panel p-5">
+        <p className="mb-3 text-xs text-ink-3 font-medium">Preview</p>
         <div className="flex flex-wrap items-center gap-3">
-          <span className="inline-flex items-center gap-2 rounded-full border border-line bg-panel-2 px-3.5 py-1.5 text-sm text-ink-2">
+          <span className="inline-flex items-center gap-2 rounded-md border border-line bg-panel-2 px-2.5 py-1 text-[13px] text-ink-2">
             <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden="true" />
-            <span className="font-display font-semibold text-ink">{traders}</span>
+            <span className="font-medium text-ink">{traders}</span>
             traders
           </span>
-          <span className="inline-flex items-center gap-2 rounded-full border border-line bg-panel-2 px-3.5 py-1.5 text-sm text-ink-2">
+          <span className="inline-flex items-center gap-2 rounded-md border border-line bg-panel-2 px-2.5 py-1 text-[13px] text-ink-2">
             <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden="true" />
-            <span className="font-display font-semibold text-ink">{countries}</span>
+            <span className="font-medium text-ink">{countries}</span>
             countries
           </span>
         </div>
@@ -255,7 +255,7 @@ function ScoreboardSection() {
         render as &quot;N days ago&quot; relative to the visitor&apos;s today.
       </p>
 
-      <p className="mt-5 font-display text-xs font-semibold uppercase tracking-wide text-ink-2">
+      <p className="mt-5 font-display text-sm text-ink">
         Headline stats
       </p>
       <div className="mt-2 grid gap-4 sm:grid-cols-3">
@@ -281,7 +281,7 @@ function ScoreboardSection() {
         ))}
       </div>
 
-      <p className="mt-6 font-display text-xs font-semibold uppercase tracking-wide text-ink-2">
+      <p className="mt-6 font-display text-sm text-ink">
         Highlighted trades
       </p>
       <div className="mt-2 grid gap-4 sm:grid-cols-2">
@@ -417,7 +417,7 @@ function LegalSection() {
         onChange={(e) => setText(e.target.value)}
         rows={14}
         placeholder="Leave empty to use the built-in disclaimer…"
-        className="mt-4 w-full rounded-xl border border-line bg-panel-2 p-4 text-sm leading-relaxed text-ink outline-none transition focus:border-accent/60 focus:ring-2 focus:ring-accent/20"
+        className="mt-4 w-full rounded-xl border border-line bg-panel p-4 text-sm leading-relaxed text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/15"
       />
       <SaveRow onSave={save} onReset={reset} saving={saving} saved={saved} error={error} />
     </div>

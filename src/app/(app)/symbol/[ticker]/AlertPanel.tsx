@@ -78,9 +78,9 @@ export default function AlertPanel({
   }
 
   return (
-    <section id="alerts" className="mt-10 scroll-mt-24 rounded-2xl border border-line bg-panel p-6">
+    <section id="alerts" className="mt-10 scroll-mt-24 rounded-xl border border-line bg-panel p-6">
       <div className="flex items-baseline justify-between">
-        <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-ink-2">
+        <h2 className="font-display text-[15px] text-ink">
           Price alerts — ${ticker}
         </h2>
         {currentPrice != null && (
@@ -98,8 +98,8 @@ export default function AlertPanel({
               key={c}
               type="button"
               onClick={() => setCondition(c)}
-              className={`px-3 py-1.5 font-display text-xs font-semibold transition ${
-                condition === c ? "bg-accent text-bg" : "text-ink-2 hover:bg-panel-2"
+              className={`px-3 py-1.5 text-xs font-medium capitalize transition ${
+                condition === c ? "bg-accent-soft text-accent-ink" : "text-ink-2 hover:bg-panel-2"
               }`}
             >
               {c}
@@ -112,12 +112,12 @@ export default function AlertPanel({
           inputMode="decimal"
           placeholder={currentPrice != null ? currentPrice.toFixed(2) : "Price"}
           aria-label="Alert price"
-          className="h-9 w-28 rounded-lg border border-line bg-panel-2 px-3 font-mono-nums text-sm text-ink placeholder:text-ink-3 outline-none transition focus:border-accent/60"
+          className="h-9 w-28 rounded-lg border border-line bg-panel px-3 font-mono-nums text-sm text-ink placeholder:text-ink-3 outline-none transition focus:border-accent"
         />
         <button
           type="submit"
           disabled={busy}
-          className="press rounded-lg bg-accent px-4 py-1.5 font-display text-sm font-semibold text-bg transition hover:bg-accent-2 disabled:opacity-60"
+          className="press rounded-lg bg-accent px-4 py-1.5 text-sm font-medium text-on-accent transition hover:bg-accent-2 disabled:opacity-60"
         >
           {busy ? "Saving…" : "Set alert"}
         </button>
@@ -131,7 +131,7 @@ export default function AlertPanel({
               <span className="text-ink-2">
                 {a.status === "fired" ? (
                   <>
-                    <span className="mr-2 rounded-full bg-accent px-2 py-0.5 font-display text-[10px] font-bold text-bg">
+                    <span className="mr-2 rounded-md bg-accent-soft px-1.5 py-0.5 text-xs font-medium text-accent-ink">
                       FIRED
                     </span>
                     crossed {a.condition} ${Number(a.threshold).toFixed(2)}

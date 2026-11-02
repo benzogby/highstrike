@@ -4,7 +4,8 @@
 // and fills in after hydration, so statically generated pages never ship a
 // frozen build-time date.
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import { nextBell } from "@/lib/marketCalendar";
 
 const ET = "America/New_York";
 
@@ -98,4 +99,28 @@ export function UpcomingFriday({ weeks = 0 }: { weeks?: number }) {
     });
   });
   return <span suppressHydrationWarning>{text}</span>;
+}
+
+const everyHalfMinute = (tick: () => void) => {
+  const t = setInterval(tick, 30_000);
+  return () => clearInterval(t);
+};
+
+/**
+ * The NYSE session as the top bar shows it: "Markets open" while the session runs (the next bell is its close), else
+ * "Markets closed", from the market calendar's holidays and early closes. Nothing on the server or before hydration.
+ */
+export function MarketStatus() {
+  const open = useSyncExternalStore(everyHalfMinute, () => nextBell(Date.now()).kind === "close", () => null);
+  if (open === null) return null;
+  return (
+    <span
+      className={`hidden items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-medium sm:inline-flex ${
+        open ? "bg-accent-soft text-accent-ink" : "bg-panel-2 text-ink-2"
+      }`}
+    >
+      <span className={`h-1.5 w-1.5 rounded-full ${open ? "bg-accent" : "bg-ink-3"}`} aria-hidden="true" />
+      {open ? "Markets open" : "Markets closed"}
+    </span>
+  );
 }

@@ -24,13 +24,13 @@ type Detail = {
 };
 
 const inputClass =
-  "w-full rounded-lg border border-line bg-panel-2 px-3 py-2 text-sm text-ink placeholder:text-ink-3 outline-none transition focus:border-accent/60";
+  "h-9 w-full rounded-lg border border-line bg-panel px-3 text-sm text-ink placeholder:text-ink-3 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/15";
 const smallButton =
-  "rounded-lg border border-line-strong px-3 py-1.5 font-display text-xs font-semibold text-ink-2 transition hover:border-accent/50 hover:text-accent disabled:opacity-50";
+  "rounded-lg border border-line bg-panel px-3 py-1.5 text-xs font-medium text-ink transition hover:bg-panel-2 disabled:opacity-50";
 const dangerButton =
-  "rounded-lg border border-line-strong px-3 py-1.5 font-display text-xs font-semibold text-ink-2 transition hover:border-down/50 hover:text-down disabled:opacity-50";
+  "rounded-lg border border-line-strong px-3 py-1.5 text-xs font-medium text-ink-2 transition hover:border-down/50 hover:text-down disabled:opacity-50";
 const primaryButton =
-  "rounded-lg bg-accent px-5 py-2 font-display text-sm font-semibold text-bg transition hover:bg-accent-2 disabled:opacity-60";
+  "rounded-lg bg-accent px-5 py-2 text-sm font-medium text-on-accent transition hover:bg-accent-2 disabled:opacity-60";
 
 async function call(url: string, method: string, body?: object) {
   const res = await fetch(url, { method, headers: { "content-type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
@@ -138,7 +138,7 @@ export default function EducationManager({ modules: initialModules, lessons: ini
     <div className="grid gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
       <aside className="lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto">
         <div className="flex items-baseline justify-between">
-          <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-ink-2">Library</h2>
+          <h2 className="font-display text-[15px] text-ink">Library</h2>
           <span className="text-xs text-ink-3">
             {modules.length} modules · {lessons.length} lessons
           </span>
@@ -167,10 +167,10 @@ export default function EducationManager({ modules: initialModules, lessons: ini
                       aria-expanded={isOpen}
                       className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2.5 text-left"
                     >
-                      <span className={`text-[10px] text-ink-3 transition ${isOpen ? "rotate-90" : ""}`}>▶</span>
+                      <span className={`text-xs text-ink-3 transition ${isOpen ? "rotate-90" : ""}`}>▶</span>
                       <span className="min-w-0 flex-1">
-                        <span className="block text-[10px] uppercase tracking-wider text-ink-3">{label.eyebrow}</span>
-                        <span className="block truncate font-display text-sm font-semibold text-ink">{label.name}</span>
+                        <span className="block text-xs text-ink-3 font-medium">{label.eyebrow}</span>
+                        <span className="block truncate text-sm font-medium text-ink">{label.name}</span>
                       </span>
                       <span className="shrink-0 text-[11px] text-ink-3">{all.length}</span>
                     </button>
@@ -245,7 +245,7 @@ export default function EducationManager({ modules: initialModules, lessons: ini
             onError={setError}
           />
         ) : (
-          <div className="rounded-2xl border border-dashed border-line px-6 py-16 text-center text-sm text-ink-3">
+          <div className="rounded-xl border border-dashed border-line px-6 py-16 text-center text-sm text-ink-3">
             Pick a lesson on the left to edit its title, notes, video and files.
           </div>
         )}
@@ -452,14 +452,14 @@ function LessonEditor({
       </div>
 
       {/* Title, module, notes */}
-      <div className="space-y-4 rounded-2xl border border-line bg-panel p-5">
+      <div className="space-y-4 rounded-xl border border-line bg-panel p-5">
         <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_16rem]">
           <label className="block">
-            <span className="text-xs uppercase tracking-wider text-ink-3">Title</span>
+            <span className="text-xs text-ink-3 font-medium">Title</span>
             <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} className={`${inputClass} mt-1`} />
           </label>
           <label className="block">
-            <span className="text-xs uppercase tracking-wider text-ink-3">Module</span>
+            <span className="text-xs text-ink-3 font-medium">Module</span>
             <select value={moduleId} onChange={(e) => setModuleId(e.target.value)} className={`${inputClass} mt-1`}>
               {modules.map((m) => (
                 <option key={m.id} value={m.id}>
@@ -470,7 +470,7 @@ function LessonEditor({
           </label>
         </div>
         <div>
-          <span className="text-xs uppercase tracking-wider text-ink-3">Notes</span>
+          <span className="text-xs text-ink-3 font-medium">Notes</span>
           <div className="mt-1">{detail ? <NotesEditor initial={detail.body} onChange={setBody} /> : <div className="h-64 animate-pulse rounded-xl bg-panel-2" />}</div>
         </div>
         <div className="flex items-center gap-3">
@@ -483,8 +483,8 @@ function LessonEditor({
       </div>
 
       {/* Video */}
-      <div className="rounded-2xl border border-line bg-panel p-5">
-        <h3 className="font-display text-sm font-semibold uppercase tracking-wide text-ink-2">Video</h3>
+      <div className="rounded-xl border border-line bg-panel p-5">
+        <h3 className="font-display text-[15px] text-ink">Video</h3>
         <input
           ref={videoInput}
           type="file"
@@ -539,7 +539,7 @@ function LessonEditor({
         )}
 
         <div className="mt-5 border-t border-line pt-4">
-          <label className="block text-xs uppercase tracking-wider text-ink-3" htmlFor="yt">YouTube video {detail?.video ? "(used only without our video)" : ""}</label>
+          <label className="block text-xs text-ink-3 font-medium" htmlFor="yt">YouTube video {detail?.video ? "(used only without our video)" : ""}</label>
           <div className="mt-1 flex gap-2">
             <input id="yt" value={youtube} onChange={(e) => setYoutube(e.target.value)} placeholder="YouTube link or video id" className={inputClass} />
             <button type="button" disabled={!detail || busy !== null || youtube.trim() === (detail.lesson.youtubeId ?? "")} onClick={saveYoutube} className={smallButton}>
@@ -550,9 +550,9 @@ function LessonEditor({
       </div>
 
       {/* Files */}
-      <div className="rounded-2xl border border-line bg-panel p-5">
+      <div className="rounded-xl border border-line bg-panel p-5">
         <div className="flex items-center justify-between">
-          <h3 className="font-display text-sm font-semibold uppercase tracking-wide text-ink-2">Files</h3>
+          <h3 className="font-display text-[15px] text-ink">Files</h3>
           <button type="button" disabled={!detail || busy !== null} onClick={() => fileInput.current?.click()} className={smallButton}>
             {busy === "file" ? "Working…" : "+ Add file"}
           </button>

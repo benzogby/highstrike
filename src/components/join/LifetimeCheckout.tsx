@@ -5,7 +5,6 @@ import { loadStripe, type Appearance, type Stripe as StripeJs } from "@stripe/st
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { LIFETIME, dollars, lifetimeIncludes, type Library } from "@/lib/offer";
 import AgreeTerms from "@/components/AgreeTerms";
-import { authInputClass, authLabelClass } from "@/components/AuthShell";
 import { STRIPE_FONTS, appearanceFrom } from "./stripeLook";
 
 /** What POST /api/billing/lifetime answers (src/lib/lifetime.ts → Start), or why it couldn't. */
@@ -77,6 +76,11 @@ function Lock() {
     </svg>
   );
 }
+
+/** The email field's label and box (the popup's own, so the sign-in pages' styles can change without it). */
+const EMAIL_LABEL = "mb-1.5 block text-xs uppercase tracking-wider text-ink-3";
+const EMAIL_INPUT =
+  "h-12 w-full rounded-lg border border-line bg-panel-2 px-4 text-sm text-ink placeholder:text-ink-3 outline-none transition focus:border-accent/60 focus:ring-2 focus:ring-accent/20";
 
 export const PAY_BUTTON =
   "flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-accent px-4 font-display text-[15px] font-semibold text-bg transition hover:bg-accent-2 disabled:cursor-not-allowed disabled:opacity-60";
@@ -157,7 +161,7 @@ export default function LifetimeCheckout({
           </p>
         ) : (
           <div>
-            <label htmlFor="hs-pay-email" className={authLabelClass}>
+            <label htmlFor="hs-pay-email" className={EMAIL_LABEL}>
               Email
             </label>
             <input
@@ -172,7 +176,7 @@ export default function LifetimeCheckout({
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
-              className={authInputClass}
+              className={EMAIL_INPUT}
             />
             <p className="mt-1.5 text-xs leading-relaxed text-ink-3">Your account opens under this email the moment you pay. Already have one? It&apos;s upgraded.</p>
           </div>

@@ -7,6 +7,7 @@ import { fetchQuotes } from "@/lib/quotes";
 import { fetchCompanyNews, newsTime } from "@/lib/news";
 import PriceChart from "./PriceChart";
 import AlertPanel from "./AlertPanel";
+import { PageHeader } from "@/components/ui";
 
 export async function generateMetadata({
   params,
@@ -75,30 +76,27 @@ export default async function SymbolPage({
       avatarUrl={profile?.avatar_url}
     >
       {/* Header */}
-      <div className="anim-rise flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-        <div>
-          <p className="text-xs uppercase tracking-wider text-ink-3">
-            {symbol.exchange ?? "US"} · {symbol.sector ?? "Equity"}
-          </p>
-          <h1 className="mt-1 font-display text-2xl font-bold sm:text-3xl">
-            ${symbol.ticker}{" "}
-            <span className="text-lg font-medium text-ink-2">{symbol.name}</span>
-          </h1>
-        </div>
-        {quote && (
-          <div className="text-right">
-            <p className="font-mono-nums text-2xl text-ink">{quote.price.toFixed(2)}</p>
-            <p className={`font-mono-nums text-sm ${up ? "text-up" : "text-down"}`}>
-              {up ? "▲" : "▼"} {Math.abs(quote.changePct).toFixed(2)}% today
-              {!quote.live && (
-                <span className="ml-2 text-[10px] uppercase tracking-wider text-ink-3">
-                  sample
-                </span>
-              )}
-            </p>
-          </div>
-        )}
-      </div>
+      <PageHeader
+        className="anim-rise"
+        title={
+          <>
+            {symbol.ticker} <span className="font-body text-lg text-ink-3">{symbol.name}</span>
+          </>
+        }
+        subtitle={`${symbol.exchange ?? "US"} · ${symbol.sector ?? "Equity"}`}
+        actions={
+          quote && (
+            <div className="text-right">
+              <p className="font-display text-2xl leading-none text-ink">{quote.price.toFixed(2)}</p>
+              <p className={`mt-1 text-sm font-medium tabular-nums ${up ? "text-up" : "text-down"}`}>
+                {up ? "+" : "−"}
+                {Math.abs(quote.changePct).toFixed(2)}% today
+                {!quote.live && <span className="ml-2 text-xs font-normal text-ink-3">sample</span>}
+              </p>
+            </div>
+          )
+        }
+      />
 
       {/* Chart */}
       <div className="anim-rise mt-6" style={{ "--rise-delay": "90ms" } as React.CSSProperties}>
@@ -114,7 +112,7 @@ export default async function SymbolPage({
       {/* Setup history for this symbol */}
       <section className="mt-10">
         <div className="flex items-baseline justify-between">
-          <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-ink-2">
+          <h2 className="font-display text-[15px] text-ink">
             Setup history — ${ticker}
           </h2>
           <Link
@@ -125,14 +123,14 @@ export default async function SymbolPage({
           </Link>
         </div>
         {(history ?? []).length === 0 ? (
-          <p className="mt-3 rounded-2xl border border-line bg-panel px-5 py-8 text-center text-sm text-ink-3">
+          <p className="mt-3 rounded-xl border border-line bg-panel px-5 py-8 text-center text-sm text-ink-3">
             The engine hasn&apos;t published a setup on ${ticker} yet.
           </p>
         ) : (
-          <div className="mt-3 overflow-x-auto rounded-2xl border border-line bg-panel">
+          <div className="mt-3 overflow-x-auto rounded-xl border border-line bg-panel">
             <table className="w-full min-w-[480px] text-sm">
               <thead>
-                <tr className="border-b border-line text-left text-[10px] uppercase tracking-wider text-ink-3">
+                <tr className="border-b border-line text-left text-xs text-ink-3 font-medium">
                   <th className="px-5 py-2.5 font-medium">Date</th>
                   <th className="px-3 py-2.5 font-medium">Direction</th>
                   <th className="hidden px-3 py-2.5 font-medium md:table-cell">Target</th>
@@ -182,17 +180,17 @@ export default async function SymbolPage({
 
       {/* News */}
       <section className="mt-10">
-        <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-ink-2">
+        <h2 className="font-display text-[15px] text-ink">
           News — ${ticker}
         </h2>
         {news.items.length === 0 ? (
-          <p className="mt-3 rounded-2xl border border-line bg-panel px-5 py-6 text-center text-sm text-ink-3">
+          <p className="mt-3 rounded-xl border border-line bg-panel px-5 py-6 text-center text-sm text-ink-3">
             {news.live
               ? `No recent headlines for $${ticker}.`
               : "Headlines connect once live data is enabled."}
           </p>
         ) : (
-          <ul className="mt-3 divide-y divide-line overflow-hidden rounded-2xl border border-line bg-panel">
+          <ul className="mt-3 divide-y divide-line overflow-hidden rounded-xl border border-line bg-panel">
             {news.items.map((n) => (
               <li key={n.url}>
                 <a
@@ -215,7 +213,7 @@ export default async function SymbolPage({
       {/* Insider activity */}
       <section className="mt-10">
         <div className="flex items-baseline justify-between">
-          <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-ink-2">
+          <h2 className="font-display text-[15px] text-ink">
             Insider activity — ${ticker}
           </h2>
           <Link
@@ -226,11 +224,11 @@ export default async function SymbolPage({
           </Link>
         </div>
         {(insiders ?? []).length === 0 ? (
-          <p className="mt-3 rounded-2xl border border-line bg-panel px-5 py-6 text-center text-sm text-ink-3">
+          <p className="mt-3 rounded-xl border border-line bg-panel px-5 py-6 text-center text-sm text-ink-3">
             No recent Form 4 open-market trades on file for ${ticker}.
           </p>
         ) : (
-          <ul className="mt-3 divide-y divide-line overflow-hidden rounded-2xl border border-line bg-panel">
+          <ul className="mt-3 divide-y divide-line overflow-hidden rounded-xl border border-line bg-panel">
             {(insiders ?? []).map((t) => (
               <li
                 key={`${t.accession}-${t.transaction_code}`}
@@ -238,11 +236,9 @@ export default async function SymbolPage({
               >
                 <span className="min-w-0">
                   <span
-                    className={`mr-2 rounded-full px-2 py-0.5 font-display text-[10px] font-bold ${
-                      t.transaction_code === "P" ? "bg-accent text-bg" : "bg-down/90 text-bg"
-                    }`}
+                    className={`mr-2 rounded-md px-1.5 py-0.5 text-xs font-medium ${t.transaction_code === "P" ? "bg-up-soft text-up" : "bg-down-soft text-down"}`}
                   >
-                    {t.transaction_code === "P" ? "BUY" : "SELL"}
+                    {t.transaction_code === "P" ? "Buy" : "Sell"}
                   </span>
                   <span className="text-ink">{t.owner_name}</span>
                   {t.owner_title && (

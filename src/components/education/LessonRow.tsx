@@ -13,7 +13,7 @@ function statusWords(state: LessonState): string {
 function Status({ state }: { state: LessonState }) {
   if (state.done) {
     return (
-      <span className="grid h-4 w-4 shrink-0 place-items-center rounded-full bg-accent text-bg">
+      <span className="grid h-4 w-4 shrink-0 place-items-center rounded-full bg-accent text-on-accent">
         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M5 12.5l4.5 4.5L19 7.5" />
         </svg>

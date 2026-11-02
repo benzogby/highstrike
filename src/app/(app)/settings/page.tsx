@@ -3,6 +3,7 @@ import AppShell from "@/components/AppShell";
 import { requireMember } from "@/lib/membership";
 import SettingsForm from "./SettingsForm";
 import AlertsManager from "./AlertsManager";
+import { PageHeader } from "@/components/ui";
 
 export const metadata: Metadata = {
   title: "Settings — HighStrike",
@@ -25,10 +26,7 @@ export default async function SettingsPage() {
       displayName={profile?.name}
       avatarUrl={profile?.avatar_url}
     >
-      <div>
-        <p className="text-xs uppercase tracking-wider text-ink-3">Account</p>
-        <h1 className="mt-1 font-display text-2xl font-bold sm:text-3xl">Settings</h1>
-      </div>
+      <PageHeader title="Settings" subtitle="Your profile, sign-in, price alerts and membership." />
       <div className="mt-8 max-w-3xl space-y-10">
         <AlertsManager />
         <SettingsForm

@@ -43,9 +43,9 @@ export default function AlertsManager() {
   }
 
   return (
-    <section className="rounded-2xl border border-line bg-panel p-6">
+    <section className="rounded-xl border border-line bg-panel p-6">
       <div className="flex items-baseline justify-between">
-        <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-ink-2">
+        <h2 className="font-display text-[15px] text-ink">
           Price alerts
         </h2>
         <span className="text-xs text-ink-3">
@@ -67,13 +67,13 @@ export default function AlertsManager() {
               <span className="flex min-w-0 items-center gap-2.5">
                 <Link
                   href={`/symbol/${a.ticker}#alerts`}
-                  className="font-display font-semibold transition hover:text-accent"
+                  className="font-mono-nums font-medium text-ink transition hover:text-accent"
                 >
                   ${a.ticker}
                 </Link>
                 {a.status === "fired" ? (
                   <span className="text-ink-2">
-                    <span className="mr-1.5 rounded-full bg-accent px-2 py-0.5 font-display text-[10px] font-bold text-bg">
+                    <span className="mr-1.5 rounded-md bg-accent-soft px-1.5 py-0.5 text-xs font-medium text-accent-ink">
                       FIRED
                     </span>
                     crossed {a.condition} ${Number(a.threshold).toFixed(2)}

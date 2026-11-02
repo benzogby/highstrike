@@ -1,18 +1,29 @@
 @import "tailwindcss";
 
+/* The app's design system (Ben, 2026-11-02: "the whole app (besides the index page) Design system redone... incredibly
+   clean, professional and high value"; he picked Cal.com's dashboard in HighStrike green). Light: a white page, a
+   near-white sidebar, soft grey fills, hairline borders, HighStrike green for actions with a pale tint for the active
+   item and positive badges. Dark (below, the default before a choice): the same roles on graphite, with the homepage's
+   brighter green. Cal Sans for titles and big figures, Inter for everything else, Plex Mono for tickers and times. */
 @theme {
-  --color-bg: #0a0b0d;
-  --color-panel: #111318;
-  --color-panel-2: #171a20;
-  --color-line: rgba(255, 255, 255, 0.08);
-  --color-line-strong: rgba(255, 255, 255, 0.14);
-  --color-ink: #f4f5f7;
-  --color-ink-2: #a3abb8;
-  --color-ink-3: #6b7280;
-  --color-accent: #009f6f;
-  --color-accent-2: #00b57f;
-  --color-up: #009f6f;
-  --color-down: #f87171;
+  --color-bg: #0f1011;
+  --color-sidebar: #0b0c0d;
+  --color-panel: #141517;
+  --color-panel-2: #1c1e20;
+  --color-line: #24272a;
+  --color-line-strong: #33373b;
+  --color-ink: #f4f5f4;
+  --color-ink-2: #b4bab6;
+  --color-ink-3: #828985;
+  --color-accent: #1fbf86;
+  --color-accent-2: #3ad69f;
+  --color-accent-soft: #11251d;
+  --color-accent-ink: #6ee7b7;
+  --color-on-accent: #04110b;
+  --color-up: #4ade9f;
+  --color-up-soft: #10241c;
+  --color-down: #ff7a70;
+  --color-down-soft: #2a1715;
 
   --font-display: var(--font-cal-sans), var(--font-space-grotesk), system-ui, sans-serif;
   --font-body: var(--font-inter), system-ui, sans-serif;
@@ -21,28 +32,34 @@
 
 :root {
   color-scheme: dark;
-  --grid-line: rgba(255, 255, 255, 0.035);
-  --glow-strength: 14%;
-  --card-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  --grid-line: rgba(255, 255, 255, 0.03);
+  --glow-strength: 8%;
+  --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
 :root[data-theme="light"] {
   color-scheme: light;
-  --color-bg: #f7f8f6;
+  --color-bg: #ffffff;
+  --color-sidebar: #fbfbfa;
   --color-panel: #ffffff;
-  --color-panel-2: #eef0ec;
-  --color-line: rgba(10, 11, 13, 0.08);
-  --color-line-strong: rgba(10, 11, 13, 0.18);
-  --color-ink: #14161a;
-  --color-ink-2: #4a5160;
-  --color-ink-3: #757c88;
+  --color-panel-2: #f3f4f2;
+  --color-line: #e6e8e5;
+  --color-line-strong: #d6d9d5;
+  --color-ink: #0a0d0b;
+  --color-ink-2: #4f5652;
+  --color-ink-3: #7a817d;
   --color-accent: #009f6f;
   --color-accent-2: #008a60;
-  --color-up: #009f6f;
-  --color-down: #dc2626;
-  --grid-line: rgba(10, 11, 13, 0.05);
-  --glow-strength: 10%;
-  --card-shadow: 0 25px 50px -12px rgba(10, 11, 13, 0.18);
+  --color-accent-soft: #e7f5ef;
+  --color-accent-ink: #065f46;
+  --color-on-accent: #ffffff;
+  --color-up: #03704c;
+  --color-up-soft: #e7f5ef;
+  --color-down: #b42318;
+  --color-down-soft: #fbe9e7;
+  --grid-line: rgba(10, 11, 13, 0.04);
+  --glow-strength: 6%;
+  --card-shadow: 0 1px 2px rgba(10, 13, 11, 0.05);
 }
 
 html {

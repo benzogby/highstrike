@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requireMember } from "@/lib/membership";
 import AppShell from "@/components/AppShell";
+import { PageHeader } from "@/components/ui";
 
 export const metadata: Metadata = {
   title: "Insider Feed — HighStrike",
@@ -52,17 +53,11 @@ export default async function InsidersPage() {
       displayName={profile?.name}
       avatarUrl={profile?.avatar_url}
     >
-      <div className="anim-rise flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-        <div>
-          <p className="text-xs uppercase tracking-wider text-ink-3">Insider Feed</p>
-          <h1 className="mt-1 font-display text-2xl font-bold sm:text-3xl">
-            Who&apos;s buying their own stock
-          </h1>
-        </div>
-        <p className="text-xs text-ink-3">
-          Form 4 open-market trades, ingested nightly from SEC EDGAR.
-        </p>
-      </div>
+      <PageHeader
+        className="anim-rise"
+        title="Insider feed"
+        subtitle="Who's buying their own stock: Form 4 open-market trades, pulled nightly from SEC EDGAR."
+      />
 
       {clusters.length > 0 && (
         <div className="mt-6 flex flex-wrap gap-3">
@@ -70,24 +65,24 @@ export default async function InsidersPage() {
             <Link
               key={ticker}
               href={`/symbol/${ticker}`}
-              className="rounded-2xl border border-accent/40 bg-panel px-4 py-3 transition hover:border-accent"
+              className="flex items-center gap-2 rounded-xl border border-line bg-panel px-4 py-3 transition hover:border-line-strong hover:bg-panel-2"
             >
-              <span className="font-display text-base font-bold">${ticker}</span>
-              <span className="ml-2 text-sm text-ink-2">
+              <span className="font-mono-nums text-sm font-medium text-ink">${ticker}</span>
+              <span className="text-sm text-ink-2">
                 {owners.size} buyers · 14 days
               </span>
-              <span className="ml-2 rounded-full bg-accent px-2 py-0.5 font-display text-[10px] font-bold text-bg">
-                CLUSTER
+              <span className="rounded-md bg-accent-soft px-1.5 py-0.5 text-xs font-medium text-accent-ink">
+                Cluster
               </span>
             </Link>
           ))}
         </div>
       )}
 
-      <div className="anim-rise mt-6 overflow-x-auto rounded-2xl border border-line bg-panel" style={{ "--rise-delay": "90ms" } as React.CSSProperties}>
+      <div className="anim-rise mt-6 overflow-x-auto rounded-xl border border-line bg-panel" style={{ "--rise-delay": "90ms" } as React.CSSProperties}>
         <table className="w-full min-w-[640px] text-sm">
           <thead>
-            <tr className="border-b border-line text-left text-[10px] uppercase tracking-wider text-ink-3">
+            <tr className="border-b border-line text-left text-xs text-ink-3 font-medium">
               <th className="px-4 py-2.5 font-medium">Filed</th>
               <th className="px-4 py-2.5 font-medium">Ticker</th>
               <th className="px-4 py-2.5 font-medium">Insider</th>
@@ -105,7 +100,7 @@ export default async function InsidersPage() {
                 <td className="px-4 py-2.5">
                   <Link
                     href={`/symbol/${t.ticker}`}
-                    className="font-display font-semibold transition hover:text-accent"
+                    className="font-mono-nums font-medium text-ink transition hover:text-accent"
                   >
                     {t.ticker}
                   </Link>
@@ -118,11 +113,9 @@ export default async function InsidersPage() {
                 </td>
                 <td className="px-4 py-2.5">
                   <span
-                    className={`rounded-full px-2 py-0.5 font-display text-[10px] font-bold ${
-                      t.transaction_code === "P" ? "bg-accent text-bg" : "bg-down/90 text-bg"
-                    }`}
+                    className={`rounded-md px-1.5 py-0.5 text-xs font-medium ${t.transaction_code === "P" ? "bg-up-soft text-up" : "bg-down-soft text-down"}`}
                   >
-                    {t.transaction_code === "P" ? "BUY" : "SELL"}
+                    {t.transaction_code === "P" ? "Buy" : "Sell"}
                   </span>
                 </td>
                 <td className="px-4 py-2.5 text-right font-mono-nums text-ink-2">

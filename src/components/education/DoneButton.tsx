@@ -38,8 +38,8 @@ export default function DoneButton({ lessonId, done }: { lessonId: string; done:
         type="button"
         onClick={toggle}
         aria-label={shown ? "Done. Mark as not done" : undefined}
-        className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 font-display text-sm font-semibold transition ${
-          shown ? "border border-line-strong bg-panel-2 text-ink hover:border-accent/50" : "bg-accent text-bg hover:bg-accent-2"
+        className={`inline-flex h-9 items-center gap-1.5 rounded-lg px-3.5 text-sm font-medium transition ${
+          shown ? "bg-accent-soft text-accent-ink hover:bg-panel-2" : "bg-accent text-on-accent hover:bg-accent-2"
         }`}
       >
         {shown ? (

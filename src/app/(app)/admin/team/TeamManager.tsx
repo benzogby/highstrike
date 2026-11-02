@@ -17,7 +17,7 @@ type Member = {
 };
 
 const inputClass =
-  "h-10 w-full rounded-lg border border-line bg-panel-2 px-3 text-sm text-ink placeholder:text-ink-3 outline-none transition focus:border-accent/60";
+  "h-9 w-full rounded-lg border border-line bg-panel px-3 text-sm text-ink placeholder:text-ink-3 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/15";
 
 function Photo({ url, name, size = 56 }: { url: string | null; name: string; size?: number }) {
   return url ? (
@@ -31,7 +31,7 @@ function Photo({ url, name, size = 56 }: { url: string | null; name: string; siz
   ) : (
     <span
       style={{ width: size, height: size }}
-      className="flex flex-none items-center justify-center rounded-full bg-accent font-display text-lg font-bold uppercase text-bg"
+      className="flex flex-none items-center justify-center rounded-full bg-accent-soft text-base font-medium uppercase text-accent-ink"
     >
       {name.trim().slice(0, 2) || "?"}
     </span>
@@ -156,7 +156,7 @@ export default function TeamManager() {
   return (
     <div className="max-w-3xl">
       <div className="flex items-baseline justify-between">
-        <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-ink-2">
+        <h2 className="font-display text-[15px] text-ink">
           Team
         </h2>
         <span className="text-xs text-ink-3">Shown publicly on /company</span>
@@ -170,7 +170,7 @@ export default function TeamManager() {
       {/* Add member */}
       <form
         onSubmit={addMember}
-        className="mt-4 grid gap-3 rounded-2xl border border-line bg-panel p-5 sm:grid-cols-2"
+        className="mt-4 grid gap-3 rounded-xl border border-line bg-panel p-5 sm:grid-cols-2"
       >
         <input
           value={draft.name}
@@ -195,13 +195,13 @@ export default function TeamManager() {
           aria-label="Description"
           rows={2}
           maxLength={400}
-          className="w-full rounded-lg border border-line bg-panel-2 p-3 text-sm text-ink placeholder:text-ink-3 outline-none transition focus:border-accent/60 sm:col-span-2"
+          className="w-full rounded-lg border border-line bg-panel p-3 text-sm text-ink placeholder:text-ink-3 outline-none transition focus:border-accent sm:col-span-2"
         />
         <div className="sm:col-span-2">
           <button
             type="submit"
             disabled={busy === "add" || !draft.name.trim()}
-            className="rounded-lg bg-accent px-5 py-2 font-display text-sm font-semibold text-bg transition hover:bg-accent-2 disabled:opacity-60"
+            className="rounded-lg bg-accent px-5 py-2 text-sm font-medium text-on-accent transition hover:bg-accent-2 disabled:opacity-60"
           >
             {busy === "add" ? "Adding…" : "Add team member"}
           </button>
@@ -222,7 +222,7 @@ export default function TeamManager() {
       />
       <ul className="mt-6 space-y-4">
         {(members ?? []).map((m, i) => (
-          <li key={m.id} className="rounded-2xl border border-line bg-panel p-5">
+          <li key={m.id} className="rounded-xl border border-line bg-panel p-5">
             {editing?.id === m.id ? (
               <div className="grid gap-3 sm:grid-cols-2">
                 <input
@@ -245,21 +245,21 @@ export default function TeamManager() {
                   aria-label="Description"
                   rows={3}
                   maxLength={400}
-                  className="w-full rounded-lg border border-line bg-panel-2 p-3 text-sm text-ink outline-none transition focus:border-accent/60 sm:col-span-2"
+                  className="w-full rounded-lg border border-line bg-panel p-3 text-sm text-ink outline-none transition focus:border-accent sm:col-span-2"
                 />
                 <div className="flex gap-2 sm:col-span-2">
                   <button
                     type="button"
                     onClick={saveEdit}
                     disabled={busy === m.id}
-                    className="rounded-lg bg-accent px-4 py-2 font-display text-sm font-semibold text-bg transition hover:bg-accent-2 disabled:opacity-60"
+                    className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-on-accent transition hover:bg-accent-2 disabled:opacity-60"
                   >
                     Save
                   </button>
                   <button
                     type="button"
                     onClick={() => setEditing(null)}
-                    className="rounded-lg border border-line-strong px-4 py-2 font-display text-sm font-semibold text-ink-2 transition hover:text-ink"
+                    className="rounded-lg border border-line-strong px-4 py-2 text-sm font-medium text-ink-2 transition hover:text-ink"
                   >
                     Cancel
                   </button>
@@ -301,14 +301,14 @@ export default function TeamManager() {
                       fileRef.current?.click();
                     }}
                     disabled={busy === m.id}
-                    className="rounded-lg border border-line-strong px-3 py-1 font-display text-xs font-semibold text-ink-2 transition hover:border-accent/50 hover:text-accent"
+                    className="rounded-lg border border-line bg-panel px-3 py-1 text-xs font-medium text-ink transition hover:bg-panel-2"
                   >
                     {m.photo_url ? "Replace photo" : "Upload photo"}
                   </button>
                   <button
                     type="button"
                     onClick={() => setEditing(m)}
-                    className="rounded-lg border border-line-strong px-3 py-1 font-display text-xs font-semibold text-ink-2 transition hover:border-accent/50 hover:text-accent"
+                    className="rounded-lg border border-line bg-panel px-3 py-1 text-xs font-medium text-ink transition hover:bg-panel-2"
                   >
                     Edit
                   </button>
@@ -316,7 +316,7 @@ export default function TeamManager() {
                     type="button"
                     onClick={() => remove(m)}
                     disabled={busy === m.id}
-                    className="rounded-lg border border-line-strong px-3 py-1 font-display text-xs font-semibold text-ink-2 transition hover:border-down/50 hover:text-down"
+                    className="rounded-lg border border-line-strong px-3 py-1 text-xs font-medium text-ink-2 transition hover:border-down/50 hover:text-down"
                   >
                     Remove
                   </button>
@@ -326,7 +326,7 @@ export default function TeamManager() {
           </li>
         ))}
         {members != null && members.length === 0 && (
-          <li className="rounded-2xl border border-line bg-panel px-5 py-8 text-center text-sm text-ink-3">
+          <li className="rounded-xl border border-line bg-panel px-5 py-8 text-center text-sm text-ink-3">
             No team members yet — add the first one above.
           </li>
         )}

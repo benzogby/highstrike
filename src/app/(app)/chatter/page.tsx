@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requireMember } from "@/lib/membership";
 import AppShell from "@/components/AppShell";
+import { PageHeader } from "@/components/ui";
 
 export const metadata: Metadata = {
   title: "Chatter — HighStrike",
@@ -41,24 +42,16 @@ export default async function ChatterPage() {
       displayName={profile?.name}
       avatarUrl={profile?.avatar_url}
     >
-      <div className="anim-rise flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-        <div>
-          <p className="text-xs uppercase tracking-wider text-ink-3">
-            Chatter Engine{dayLabel ? ` — ${dayLabel}` : ""}
-          </p>
-          <h1 className="mt-1 font-display text-2xl font-bold sm:text-3xl">
-            Where the crowd is loudest
-          </h1>
-        </div>
-        <p className="text-xs text-ink-3">
-          Crowd metrics from public StockTwits streams, refreshed nightly.
-        </p>
-      </div>
+      <PageHeader
+        className="anim-rise"
+        title="Chatter"
+        subtitle={`Where the crowd is loudest${dayLabel ? `, ${dayLabel}` : ""}: crowd metrics from public StockTwits streams, refreshed nightly.`}
+      />
 
-      <div className="anim-rise mt-6 overflow-x-auto rounded-2xl border border-line bg-panel" style={{ "--rise-delay": "90ms" } as React.CSSProperties}>
+      <div className="anim-rise mt-6 overflow-x-auto rounded-xl border border-line bg-panel" style={{ "--rise-delay": "90ms" } as React.CSSProperties}>
         <table className="w-full min-w-[640px] text-sm">
           <thead>
-            <tr className="border-b border-line text-left text-[10px] uppercase tracking-wider text-ink-3">
+            <tr className="border-b border-line text-left text-xs text-ink-3 font-medium">
               <th className="px-4 py-2.5 font-medium">Ticker</th>
               <th className="px-4 py-2.5 text-right font-medium">Msgs / hour</th>
               <th className="px-4 py-2.5 font-medium">Crowd lean</th>
@@ -75,7 +68,7 @@ export default async function ChatterPage() {
                   <td className="px-4 py-2.5">
                     <Link
                       href={`/symbol/${r.ticker}`}
-                      className="font-display font-semibold transition hover:text-accent"
+                      className="font-mono-nums font-medium text-ink transition hover:text-accent"
                     >
                       {r.ticker}
                     </Link>

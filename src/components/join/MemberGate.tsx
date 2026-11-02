@@ -35,13 +35,13 @@ export default function MemberGate({
     <div role="dialog" aria-modal="true" aria-labelledby="hs-gate-title" className="fixed inset-0 z-50 overflow-y-auto bg-bg/80 backdrop-blur-md">
       <div className="flex min-h-full items-center justify-center px-4 py-10">
         <div className="w-full max-w-[28rem]">
-          <h2 id="hs-gate-title" className="text-balance text-center font-display text-3xl font-bold tracking-tight">
+          <h2 id="hs-gate-title" className="text-balance text-center font-display text-[28px] leading-tight text-ink">
             Unlock HighStrike
           </h2>
           <p className="mx-auto mt-2 max-w-sm text-pretty text-center text-[15px] leading-relaxed text-ink-2">
             Your account is ready. One payment of {LIFETIME_PRICE} opens the daily trades, the tools and HighStrike Trading School, for life.
           </p>
-          <div className="mt-6 rounded-2xl border border-line-strong bg-panel p-5 shadow-2xl">
+          <div className="mt-6 rounded-xl border border-line bg-panel p-5 shadow-lg">
             <LifetimeCheckout library={library} back="/dashboard" buyer={{ email, termsOnRecord }} publishableKey={publishableKey} onPaying={setPaying} />
           </div>
           <form action="/auth/signout" method="post" className="mt-5 text-center text-sm text-ink-3">

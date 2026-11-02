@@ -13,7 +13,7 @@ export const metadata: Metadata = { title: "Welcome — HighStrike" };
 
 type Props = { searchParams: Promise<{ payment_intent?: string }> };
 
-const BUTTON = "inline-flex h-11 items-center justify-center rounded-lg px-5 font-display text-sm font-semibold transition";
+const BUTTON = "inline-flex h-10 items-center justify-center rounded-lg px-4 text-sm font-medium transition";
 
 /**
  * After paying (via /api/billing/lifetime/complete, which settles the payment and signs a brand-new account in). Signed
@@ -58,7 +58,7 @@ export default async function WelcomePage({ searchParams }: Props) {
             : "That email already had a HighStrike account, so the payment upgraded it. Sign in with it to open the daily trades, the tools and HighStrike Trading School."}
           {emailed ? " We emailed you a sign-in link too." : purchase.created_account ? " Can't get in? Write to support@highstrike.com and we'll sort it." : ""}
         </p>
-        <Link href="/signin?next=/dashboard" className={`mt-6 w-full ${BUTTON} bg-accent text-bg hover:bg-accent-2`}>
+        <Link href="/signin?next=/dashboard" className={`mt-6 w-full ${BUTTON} bg-accent text-on-accent hover:bg-accent-2`}>
           Sign in
         </Link>
       </AuthShell>
@@ -74,12 +74,12 @@ export default async function WelcomePage({ searchParams }: Props) {
   return (
     <AppShell email={user.email ?? ""} isAdmin={Boolean(profile?.is_admin)} active="none" displayName={profile?.name} avatarUrl={profile?.avatar_url}>
       <div className="anim-rise mx-auto flex max-w-xl flex-col items-center py-10 text-center sm:py-16">
-        <span className="grid size-16 place-items-center rounded-full bg-accent text-bg">
-          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-8">
+        <span className="grid size-14 place-items-center rounded-full bg-accent-soft text-accent">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-7">
             <path d="m5 12.5 4.5 4.5L19 7.5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </span>
-        <h1 className="mt-6 font-display text-3xl font-bold tracking-tight sm:text-4xl">You&apos;re in</h1>
+        <h1 className="mt-5 font-display text-[28px] leading-tight text-ink sm:text-[32px]">You&apos;re in</h1>
         <p className="mt-3 text-pretty text-[15px] leading-relaxed text-ink-2">
           Lifetime access is on. Today&apos;s trades, every tool and all of HighStrike Trading School are open to you now, with nothing more to pay.
         </p>
@@ -90,15 +90,15 @@ export default async function WelcomePage({ searchParams }: Props) {
           </p>
         )}
         <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <Link href="/dashboard" className={`${BUTTON} bg-accent text-bg hover:bg-accent-2`}>
+          <Link href="/dashboard" className={`${BUTTON} bg-accent text-on-accent hover:bg-accent-2`}>
             Open today&apos;s trades
           </Link>
           {mine?.created_account ? (
-            <Link href="/settings" className={`${BUTTON} border border-line-strong text-ink hover:border-accent/50 hover:text-accent`}>
+            <Link href="/settings" className={`${BUTTON} border border-line bg-panel text-ink hover:bg-panel-2`}>
               Set a password
             </Link>
           ) : (
-            <Link href="/education" className={`${BUTTON} border border-line-strong text-ink hover:border-accent/50 hover:text-accent`}>
+            <Link href="/education" className={`${BUTTON} border border-line bg-panel text-ink hover:bg-panel-2`}>
               Open Trading School
             </Link>
           )}

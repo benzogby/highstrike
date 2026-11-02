@@ -95,10 +95,10 @@ export default function TrafficTab() {
             key={d}
             type="button"
             onClick={() => setDays(d)}
-            className={`rounded-full border px-4 py-1.5 font-display text-xs font-semibold transition ${
+            className={`rounded-md border px-3 py-1 text-[13px] font-medium transition ${
               days === d
-                ? "border-accent bg-accent text-bg"
-                : "border-line-strong text-ink-2 hover:border-accent/50 hover:text-accent"
+                ? "border-line-strong bg-panel-2 text-ink"
+                : "border-transparent text-ink-2 hover:bg-panel-2 hover:text-ink"
             }`}
           >
             Last {d} days
@@ -114,7 +114,7 @@ export default function TrafficTab() {
 
       {data && !loading && !err && (
         <div>
-          <div className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-4">
             {[
               { label: "Pageviews", value: data.totals.views },
               { label: "Unique visitors", value: data.totals.visitors },
@@ -122,8 +122,8 @@ export default function TrafficTab() {
               { label: "Blog reads", value: data.totals.postViews },
             ].map((s) => (
               <div key={s.label} className="bg-panel px-5 py-6">
-                <p className="text-[10px] uppercase tracking-wider text-ink-3">{s.label}</p>
-                <p className="mt-1 font-display text-3xl font-bold text-accent">
+                <p className="text-[13px] text-ink-3">{s.label}</p>
+                <p className="mt-1.5 font-display text-[28px] leading-none text-ink">
                   {s.value.toLocaleString()}
                 </p>
               </div>
@@ -202,14 +202,14 @@ function SessionLog({ sessions }: { sessions: NonNullable<Traffic["sessions"]> }
     return `${d.flag} ${parts ? `${parts} · ` : ""}${d.name}`;
   };
   return (
-    <div className="mt-6 overflow-hidden rounded-2xl border border-line bg-panel">
-      <div className="px-5 pb-1 pt-4 font-display text-sm font-semibold">
+    <div className="mt-6 overflow-hidden rounded-xl border border-line bg-panel">
+      <div className="px-5 pb-1 pt-4 font-display text-[15px] text-ink">
         Sessions <span className="font-body font-normal text-ink-3">· {sessions.length} most recent</span>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-line text-left text-[10px] uppercase tracking-wider text-ink-3">
+            <tr className="border-b border-line text-left text-xs text-ink-3 font-medium">
               {["Started", "Location", "Visitor", "Entry page", "Pages", "Duration", "Device"].map((h) => (
                 <th key={h} className="whitespace-nowrap px-4 py-2.5 font-medium">
                   {h}
@@ -276,9 +276,9 @@ function DailyChart({ daily }: { daily: { date: string; views: number; visitors:
     });
 
   return (
-    <div className="rounded-2xl border border-line bg-panel p-5">
+    <div className="rounded-xl border border-line bg-panel p-5">
       <div className="mb-2.5 flex items-baseline justify-between">
-        <p className="font-display text-sm font-semibold">Daily pageviews</p>
+        <p className="font-display text-[15px] text-ink">Daily pageviews</p>
         <p className="font-mono-nums text-xs text-ink-3">peak {max.toLocaleString()}/day</p>
       </div>
       <div className="relative">
@@ -287,10 +287,10 @@ function DailyChart({ daily }: { daily: { date: string; views: number; visitors:
             className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-lg bg-ink px-3 py-2 text-xs leading-relaxed text-bg shadow-lg"
             style={{ left: `${(px(hover!) / W) * 100}%`, top: -6 }}
           >
-            <div className="font-bold">{fmtDay(d.date)}</div>
+            <div className="font-semibold">{fmtDay(d.date)}</div>
             <div>
-              <span className="font-mono-nums font-bold">{d.views.toLocaleString()}</span> views ·{" "}
-              <span className="font-mono-nums font-bold">{d.visitors.toLocaleString()}</span> visitors
+              <span className="font-mono-nums font-semibold">{d.views.toLocaleString()}</span> views ·{" "}
+              <span className="font-mono-nums font-semibold">{d.visitors.toLocaleString()}</span> visitors
             </div>
           </div>
         )}
@@ -409,8 +409,8 @@ function UserActivity({ users }: { users: NonNullable<Traffic["users"]> }) {
   };
 
   return (
-    <div className="mt-6 rounded-2xl border border-line bg-panel p-5">
-      <p className="font-display text-sm font-semibold">User activity</p>
+    <div className="mt-6 rounded-xl border border-line bg-panel p-5">
+      <p className="font-display text-[15px] text-ink">User activity</p>
       <p className="mb-3 mt-0.5 text-xs text-ink-3">
         Signed-in members and the pages they viewed within the selected range. Click a row for
         their pages.
@@ -423,7 +423,7 @@ function UserActivity({ users }: { users: NonNullable<Traffic["users"]> }) {
       ) : (
         <div className="overflow-x-auto">
           <div className="min-w-[560px]">
-            <div className="grid grid-cols-[minmax(160px,2fr)_1fr_1fr_70px_16px] gap-2.5 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-ink-3">
+            <div className="grid grid-cols-[minmax(160px,2fr)_1fr_1fr_70px_16px] gap-2.5 px-2 py-1.5 text-xs font-medium text-ink-3">
               <span>Member</span>
               <span>Member since</span>
               <span>Last seen</span>
@@ -498,8 +498,8 @@ function RankCard({
 }) {
   const max = Math.max(1, ...rows.map((r) => r.views));
   return (
-    <div className="rounded-2xl border border-line bg-panel p-5">
-      <p className="mb-3 font-display text-sm font-semibold">{title}</p>
+    <div className="rounded-xl border border-line bg-panel p-5">
+      <p className="mb-3 font-display text-[15px] text-ink">{title}</p>
       {rows.length === 0 && <p className="text-sm text-ink-3">{empty}</p>}
       {rows.map((r, i) => (
         <div key={`${r.label}-${i}`} className="mb-2.5">

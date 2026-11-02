@@ -124,19 +124,19 @@ export default function CommandBar({ isAdmin }: { isAdmin: boolean }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="hidden h-10 w-full max-w-md items-center gap-2.5 rounded-lg border border-line bg-panel px-3.5 text-sm text-ink-3 transition hover:border-accent/50 lg:flex"
+        className="hidden h-8 w-full max-w-sm items-center gap-2 rounded-lg border border-line bg-panel px-3 text-[13px] text-ink-3 transition hover:border-line-strong lg:flex"
       >
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
           <path d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z" />
         </svg>
         Search tickers, pages…
-        <kbd className="ml-auto rounded border border-line px-1.5 font-mono-nums text-[10px]">/</kbd>
+        <kbd className="ml-auto rounded border border-line bg-panel-2 px-1.5 font-mono-nums text-[11px] leading-4">/</kbd>
       </button>
       <button
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Search"
-        className="flex h-10 w-10 items-center justify-center rounded-lg border border-line text-ink-2 transition hover:text-ink lg:hidden"
+        className="flex h-9 w-9 items-center justify-center rounded-lg border border-line text-ink-2 transition hover:bg-panel-2 hover:text-ink lg:hidden"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
           <path d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -153,7 +153,7 @@ export default function CommandBar({ isAdmin }: { isAdmin: boolean }) {
               onClick={() => setOpen(false)}
               className="anim-fade absolute inset-0 bg-bg/60 backdrop-blur-sm"
             />
-            <div className="anim-pop absolute left-1/2 top-24 w-[92vw] max-w-xl -translate-x-1/2 overflow-hidden rounded-2xl border border-line bg-panel shadow-2xl">
+            <div className="anim-pop absolute left-1/2 top-24 w-[92vw] max-w-xl -translate-x-1/2 overflow-hidden rounded-xl border border-line bg-panel shadow-xl">
               <input
                 ref={inputRef}
                 value={query}
@@ -194,7 +194,7 @@ export default function CommandBar({ isAdmin }: { isAdmin: boolean }) {
                   </li>
                 )}
               </ul>
-              <p className="border-t border-line px-5 py-2 text-[10px] uppercase tracking-wider text-ink-3">
+              <p className="border-t border-line px-5 py-2 text-xs text-ink-3 font-medium">
                 ↑↓ navigate · Enter go · Esc close
               </p>
             </div>

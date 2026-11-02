@@ -22,7 +22,7 @@ export default function TestSaleAlertButton({ to }: { to: string }) {
         type="button"
         onClick={run}
         disabled={busy}
-        className="rounded-lg border border-line-strong px-4 py-2 font-display text-sm font-semibold text-ink transition hover:border-accent/50 hover:text-accent disabled:opacity-60"
+        className="rounded-lg border border-line bg-panel px-4 py-2 text-sm font-medium text-ink transition hover:bg-panel-2 disabled:opacity-60"
       >
         {busy ? "Sending…" : "Send a test sale alert"}
       </button>

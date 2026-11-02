@@ -49,10 +49,10 @@ export default function Gauge({ label, value }: { label: string; value: number }
   const angleDeg = (value / 100) * 180;
 
   return (
-    <div className="flex flex-col items-center gap-1 rounded-xl border border-line bg-panel-2 px-4 pb-4 pt-3">
+    <div className="flex flex-col items-center gap-2 rounded-xl border border-line bg-panel px-4 pb-4 pt-3.5">
       <div className="flex w-full items-center justify-between gap-4">
-        <span className="text-[10px] uppercase tracking-wider text-ink-3">{label}</span>
-        <span className="font-mono-nums text-sm text-accent">{display}</span>
+        <span className="text-[13px] text-ink-3">{label}</span>
+        <span className="font-mono-nums text-sm font-medium text-ink">{display}</span>
       </div>
       <svg width="112" height="64" viewBox="0 0 112 64" aria-hidden="true">
         <path
