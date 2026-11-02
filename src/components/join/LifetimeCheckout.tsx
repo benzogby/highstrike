@@ -12,6 +12,20 @@ type Start =
   | { member: false; mode: "embedded"; clientSecret: string; paymentIntent: string; publishableKey: string; cents: number }
   | { member: false; mode: "hosted"; url: string; cents: number };
 
+type Asked = { start: Start } | { error: string };
+
+/** Asks the server for the checkout: the card form's payment, or Stripe's own page (`hosted`). */
+async function ask(back: string, hosted: boolean): Promise<Asked> {
+  try {
+    const r = await fetch("/api/billing/lifetime", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ back, hosted }) });
+    const j = (await r.json().catch(() => ({}))) as Partial<Start> & { error?: string };
+    if (!r.ok || !("member" in j)) return { error: j.error ?? "Checkout couldn't start. Nothing was charged." };
+    return { start: j as Start };
+  } catch {
+    return { error: "Checkout couldn't start. Check your connection and try again." };
+  }
+}
+
 const stripes = new Map<string, Promise<StripeJs | null>>();
 /** Stripe.js for a key, loaded once per page. */
 function stripeFor(key: string) {
@@ -92,42 +106,28 @@ export default function LifetimeCheckout({ library, back, onPaying }: { library:
   const [start, setStart] = useState<{ ready: Start; appearance: Appearance } | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
 
-  /** Asks the server for the checkout: the card form's payment, or Stripe's own page (`hosted`). */
-  const begin = useCallback(
-    async (hosted: boolean, alive: () => boolean = () => true) => {
-      try {
-        const r = await fetch("/api/billing/lifetime", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ back, hosted }) });
-        const j = (await r.json().catch(() => ({}))) as Partial<Start> & { error?: string };
-        if (!alive()) return;
-        if (!r.ok || !("member" in j)) {
-          setFailed(j.error ?? "Checkout couldn't start. Nothing was charged.");
-          return;
-        }
-        if (j.member) {
-          window.location.assign(new URL("/dashboard", window.location.origin).href);
-          return;
-        }
-        setStart({ ready: j as Start, appearance: appearanceFrom(box.current) });
-      } catch {
-        if (alive()) setFailed("Checkout couldn't start. Check your connection and try again.");
-      }
-    },
-    [back]
-  );
+  const apply = useCallback((asked: Asked) => {
+    if ("error" in asked) return setFailed(asked.error);
+    if (asked.start.member) return window.location.assign(new URL("/dashboard", window.location.origin).href);
+    setStart({ ready: asked.start, appearance: appearanceFrom(box.current) });
+  }, []);
 
   useEffect(() => {
     let alive = true;
-    void begin(false, () => alive);
+    (async () => {
+      const asked = await ask(back, false);
+      if (alive) apply(asked);
+    })();
     return () => {
       alive = false;
     };
-  }, [begin]);
+  }, [back, apply]);
 
   /** The card form couldn't load: Stripe's own page instead. */
   const unavailable = useCallback(() => {
     setStart(null);
-    void begin(true);
-  }, [begin]);
+    void ask(back, true).then(apply);
+  }, [back, apply]);
 
   const ready = start?.ready;
   return (

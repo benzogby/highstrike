@@ -104,10 +104,10 @@ export type Start =
 /**
  * Starts the checkout for a signed-in account: nothing to pay for a member (or for an account whose earlier payment went
  * through, which this turns on); otherwise the payment for the popup's card form, reusing one that's still waiting, or
- * Stripe's own checkout page when there's no publishable key. Cards only, so access never waits on a bank. `back` is
- * where Stripe's page returns to if they leave it.
+ * Stripe's own checkout page when there's no publishable key, or when the popup asks for it (`hosted`: its card form
+ * couldn't load). Cards only, so access never waits on a bank. `back` is where Stripe's page returns to if they leave it.
  */
-export async function startLifetime(buyer: Buyer, origin: string, back: string): Promise<Start> {
+export async function startLifetime(buyer: Buyer, origin: string, back: string, { hosted = false } = {}): Promise<Start> {
   const stripe = getStripe();
   const profile = await profileOf(buyer.id);
   if (profile?.plan === LIFETIME.plan || profile?.is_admin) return { member: true };
@@ -118,7 +118,7 @@ export async function startLifetime(buyer: Buyer, origin: string, back: string):
     return { member: true };
   }
   const metadata = { user_id: buyer.id, product: LIFETIME.plan };
-  const key = publishableKey();
+  const key = hosted ? null : publishableKey();
   if (key) {
     const pi =
       open ??

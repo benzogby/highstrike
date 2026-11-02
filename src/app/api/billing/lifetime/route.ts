@@ -40,8 +40,8 @@ export async function GET() {
 }
 
 /**
- * POST { back }: the $397 checkout for the signed-in account (src/lib/lifetime.ts → startLifetime): the payment for the
- * popup's card form, Stripe's checkout page, or `member: true` when there's nothing to pay.
+ * POST { back, hosted }: the $397 checkout for the signed-in account (src/lib/lifetime.ts → startLifetime): the payment
+ * for the popup's card form, Stripe's checkout page (always, with `hosted`), or `member: true` when there's nothing to pay.
  */
 export async function POST(request: Request) {
   if (!sameOrigin(request)) return NextResponse.json({ error: "Open checkout from highstrike.com." }, { status: 403 });
@@ -51,9 +51,11 @@ export async function POST(request: Request) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Sign in first, then check out." }, { status: 401 });
-  const body = (await request.json().catch(() => ({}))) as { back?: unknown };
+  const body = (await request.json().catch(() => ({}))) as { back?: unknown; hosted?: unknown };
   try {
-    const start = await startLifetime({ id: user.id, email: user.email ?? null }, new URL(request.url).origin, backPath(body.back));
+    const start = await startLifetime({ id: user.id, email: user.email ?? null }, new URL(request.url).origin, backPath(body.back), {
+      hosted: body.hosted === true,
+    });
     return NextResponse.json(start, { headers: PRIVATE });
   } catch (e) {
     console.error("lifetime checkout:", e instanceof Error ? e.message : e);
