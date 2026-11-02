@@ -24,9 +24,9 @@ type Detail = {
 };
 
 const inputClass =
-  "h-9 w-full rounded-lg border border-line bg-panel px-3 text-sm text-ink placeholder:text-ink-3 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/15";
+  "h-9 w-full rounded-lg border border-line-strong bg-bg px-3 text-sm text-ink placeholder:text-ink-3 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20";
 const smallButton =
-  "rounded-lg border border-line bg-panel px-3 py-1.5 text-xs font-medium text-ink transition hover:bg-panel-2 disabled:opacity-50";
+  "rounded-lg border border-line-strong bg-panel-2 px-3 py-1.5 text-xs font-medium text-ink transition hover:bg-panel-3 disabled:opacity-50";
 const dangerButton =
   "rounded-lg border border-line-strong px-3 py-1.5 text-xs font-medium text-ink-2 transition hover:border-down/50 hover:text-down disabled:opacity-50";
 const primaryButton =

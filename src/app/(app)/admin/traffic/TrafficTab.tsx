@@ -284,7 +284,7 @@ function DailyChart({ daily }: { daily: { date: string; views: number; visitors:
       <div className="relative">
         {d && (
           <div
-            className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-lg bg-ink px-3 py-2 text-xs leading-relaxed text-bg shadow-lg"
+            className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-lg border border-line-strong bg-panel-3 px-3 py-2 text-xs leading-relaxed text-ink shadow-lg shadow-black/50"
             style={{ left: `${(px(hover!) / W) * 100}%`, top: -6 }}
           >
             <div className="font-semibold">{fmtDay(d.date)}</div>

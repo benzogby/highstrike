@@ -71,7 +71,7 @@ export default async function InsidersPage() {
               <span className="text-sm text-ink-2">
                 {owners.size} buyers · 14 days
               </span>
-              <span className="rounded-md bg-accent-soft px-1.5 py-0.5 text-xs font-medium text-accent-ink">
+              <span className="rounded-md bg-accent-soft px-1.5 py-0.5 text-xs font-medium text-accent-ink ring-1 ring-inset ring-accent/25">
                 Cluster
               </span>
             </Link>

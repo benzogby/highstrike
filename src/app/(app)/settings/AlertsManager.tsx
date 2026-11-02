@@ -73,7 +73,7 @@ export default function AlertsManager() {
                 </Link>
                 {a.status === "fired" ? (
                   <span className="text-ink-2">
-                    <span className="mr-1.5 rounded-md bg-accent-soft px-1.5 py-0.5 text-xs font-medium text-accent-ink">
+                    <span className="mr-1.5 rounded-md bg-accent-soft px-1.5 py-0.5 text-xs font-medium text-accent-ink ring-1 ring-inset ring-accent/25">
                       FIRED
                     </span>
                     crossed {a.condition} ${Number(a.threshold).toFixed(2)}

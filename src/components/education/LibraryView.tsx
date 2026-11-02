@@ -40,7 +40,7 @@ function ModuleCard({ module: m, lessons, states, index }: { module: Module; les
             href={lessonHref(next.id)}
             aria-label={`${going ? "Continue" : "Start"} ${eyebrow}: ${name}`}
             className={`mt-4 flex h-9 w-full items-center justify-center gap-1.5 rounded-lg text-sm font-medium transition ${
-              going ? "bg-accent text-on-accent hover:bg-accent-2" : "border border-line bg-panel text-ink hover:bg-panel-2"
+              going ? "bg-accent text-on-accent hover:bg-accent-2" : "border border-line-strong bg-panel-2 text-ink hover:bg-panel-3"
             }`}
           >
             {going ? "Continue" : "Start"}

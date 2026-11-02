@@ -2,15 +2,15 @@ import Link from "next/link";
 import BrandMark from "@/components/BrandMark";
 import CommandBar from "@/components/CommandBar";
 import MobileNav from "@/components/MobileNav";
-import ThemeToggle from "@/components/ThemeToggle";
 import Toaster from "@/components/Toaster";
-import { MarketStatus, NowTimeET } from "@/components/Now";
+import { MarketClock } from "@/components/Now";
 import { BUTTON_PRIMARY_SM } from "@/components/ui";
 
-// The app's frame in its design system (Ben, 2026-11-02: Cal.com's dashboard in HighStrike green): a near-white sidebar
-// with a hairline edge, small rows with the current page in a pale green pill, Admin and Settings at its foot, then the
-// account with the theme toggle; above each page a slim bar with search, the time in New York, the market's state and
-// one green action. Colours are globals.css's tokens, so dark mode follows on its own.
+// The app's frame (Ben, 2026-11-02: "more premium, try going toward a replit theme but with our colors... only dark
+// mode"): one dark ground for the sidebar, the top bar and the page, split by hairlines, with cards raised a step above
+// it. The sidebar names the product, lists the pages with the current one lifted onto the next step and its icon in
+// green, keeps Admin and Settings at its foot, then the account. The top bar holds search, whether the market is open
+// with the time in New York, and one green action. Colours are globals.css's tokens.
 
 const nav = [
   {
@@ -75,43 +75,45 @@ export default function AppShell({
   const firstName = displayName || email.split("@")[0];
 
   return (
-    <div data-app-shell="" className="flex min-h-screen bg-bg">
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-56 flex-col border-r border-line bg-sidebar lg:flex">
-        <Link href="/dashboard" className="flex h-14 items-center px-4" aria-label="HighStrike, home">
-          <BrandMark size={22} />
-        </Link>
-        <nav aria-label="Main" className="flex-1 space-y-0.5 overflow-y-auto px-2.5 pt-1">
+    <div data-app-shell="" className="min-h-screen bg-bg">
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-60 flex-col border-r border-line bg-sidebar lg:flex">
+        <div className="flex h-14 flex-none items-center border-b border-line px-4">
+          <Link href="/dashboard" className="flex items-center gap-2.5" aria-label="HighStrike, home">
+            <BrandMark size={22} withName />
+          </Link>
+        </div>
+        <nav aria-label="Main" className="flex-1 space-y-0.5 overflow-y-auto px-3 py-3">
           {nav.map((n) => (
             <NavItem key={n.label} label={n.label} href={"href" in n ? n.href : undefined} icon={n.icon} active={"key" in n && active === n.key} />
           ))}
         </nav>
-        <div className="space-y-0.5 px-2.5 pb-2.5">
+        <div className="space-y-0.5 px-3 pb-3">
           {isAdmin && <NavItem label="Admin" href="/admin" icon={ADMIN_ICON} active={active === "admin"} />}
           <NavItem label="Settings" href="/settings" icon={SETTINGS_ICON} active={active === "settings"} />
         </div>
-        <div className="border-t border-line p-2.5">
-          <div className="flex items-center gap-2.5 px-1.5 py-1">
+        <div className="border-t border-line p-3">
+          <div className="flex items-center gap-2.5 px-1">
             <Avatar name={firstName} url={avatarUrl} />
             <div className="min-w-0 flex-1">
               <p className="truncate text-[13px] font-medium text-ink">{firstName}</p>
               <p className="truncate text-xs text-ink-3">{email}</p>
             </div>
-            <ThemeToggle />
+            <form action="/auth/signout" method="post">
+              <button
+                type="submit"
+                aria-label="Sign out"
+                title="Sign out"
+                className="grid h-8 w-8 place-items-center rounded-md text-ink-3 transition hover:bg-panel-2 hover:text-ink"
+              >
+                <NavIcon d={SIGN_OUT_ICON} />
+              </button>
+            </form>
           </div>
-          <form action="/auth/signout" method="post" className="mt-1">
-            <button
-              type="submit"
-              className="flex h-8 w-full items-center gap-2.5 rounded-md px-2.5 text-[13px] text-ink-2 transition hover:bg-panel-2 hover:text-ink"
-            >
-              <NavIcon d={SIGN_OUT_ICON} />
-              Sign out
-            </button>
-          </form>
         </div>
       </aside>
 
-      <div className="min-w-0 flex-1 lg:pl-56">
-        <header className="sticky top-0 z-30 border-b border-line bg-bg/85 backdrop-blur">
+      <div className="lg:pl-60">
+        <header className="sticky top-0 z-30 border-b border-line bg-bg/90 backdrop-blur">
           <div className="flex h-14 items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
             <div className="flex items-center gap-2.5 lg:hidden">
               <MobileNav
@@ -134,12 +136,9 @@ export default function AppShell({
               <CommandBar isAdmin={isAdmin} />
             </div>
             <div className="flex items-center gap-2.5">
-              <span className="hidden font-mono-nums text-xs text-ink-3 sm:block">
-                <NowTimeET />
-              </span>
-              <MarketStatus />
+              <MarketClock />
               {active === "admin" ? (
-                <span className="rounded-md bg-panel-2 px-2 py-0.5 text-xs font-medium text-ink-2">Admin</span>
+                <span className="rounded-md bg-panel-2 px-2 py-1 text-xs font-medium text-ink-2 ring-1 ring-inset ring-line-strong">Admin</span>
               ) : (
                 <Link href="/dashboard#watchlist" className={`hidden sm:inline-flex ${BUTTON_PRIMARY_SM}`}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
@@ -152,20 +151,21 @@ export default function AppShell({
           </div>
         </header>
 
-        <main className="px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
+        <main className="mx-auto w-full max-w-[1280px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
       </div>
       <Toaster />
     </div>
   );
 }
 
-/** One sidebar row: the current page in a pale green pill, others quiet until hovered, and "Soon" for what isn't built. */
+/** One sidebar row: the current page lifted onto the next step with its icon in green, others quiet until hovered, and
+ * "Soon" for what isn't built. */
 function NavItem({ label, href, icon, active }: { label: string; href?: string; icon: string; active: boolean }) {
-  const row = "flex h-8 items-center gap-2.5 rounded-md px-2.5 text-[13px] transition";
+  const row = "group flex h-8 items-center gap-2.5 rounded-md px-2.5 text-[13px] transition";
   if (active) {
     return (
-      <span aria-current="page" className={`${row} bg-accent-soft font-medium text-accent-ink`}>
-        <NavIcon d={icon} active />
+      <span aria-current="page" className={`${row} bg-panel-2 font-medium text-ink`}>
+        <NavIcon d={icon} className="text-accent" />
         {label}
       </span>
     );
@@ -177,19 +177,19 @@ function NavItem({ label, href, icon, active }: { label: string; href?: string; 
           <NavIcon d={icon} />
           {label}
         </span>
-        <span className="rounded bg-panel-2 px-1.5 text-[11px] font-medium leading-5 text-ink-3">Soon</span>
+        <span className="rounded px-1.5 text-[11px] font-medium leading-5 text-ink-3 ring-1 ring-inset ring-line-strong">Soon</span>
       </span>
     );
   }
   return (
-    <Link href={href} className={`${row} text-ink-2 hover:bg-panel-2 hover:text-ink`}>
-      <NavIcon d={icon} />
+    <Link href={href} className={`${row} text-ink-2 hover:bg-panel hover:text-ink`}>
+      <NavIcon d={icon} className="text-ink-3 transition group-hover:text-ink-2" />
       {label}
     </Link>
   );
 }
 
-/** The account's picture, or its initials on the pale green. */
+/** The account's picture, or its initials on the green tint. */
 export function Avatar({ name, url, size = 28 }: { name: string; url?: string | null; size?: number }) {
   return url ? (
     // eslint-disable-next-line @next/next/no-img-element
@@ -197,7 +197,7 @@ export function Avatar({ name, url, size = 28 }: { name: string; url?: string | 
   ) : (
     <span
       style={{ width: size, height: size }}
-      className="flex flex-none items-center justify-center rounded-full bg-accent-soft text-xs font-medium uppercase text-accent-ink"
+      className="flex flex-none items-center justify-center rounded-full bg-accent-soft text-xs font-medium uppercase text-accent-ink ring-1 ring-inset ring-accent/25"
     >
       {name.slice(0, 2)}
     </span>
@@ -210,19 +210,19 @@ const ADMIN_ICON =
   "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z";
 const SIGN_OUT_ICON = "M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1";
 
-function NavIcon({ d, active = false }: { d: string; active?: boolean }) {
+function NavIcon({ d, className = "" }: { d: string; className?: string }) {
   return (
     <svg
       width="16"
       height="16"
       viewBox="0 0 24 24"
       fill="none"
-      stroke={active ? "var(--color-accent)" : "currentColor"}
+      stroke="currentColor"
       strokeWidth="1.75"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
-      className="flex-none"
+      className={`flex-none ${className}`}
     >
       <path d={d} />
     </svg>

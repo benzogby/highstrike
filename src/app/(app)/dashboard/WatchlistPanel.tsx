@@ -305,7 +305,7 @@ export default function WatchlistPanel({ userId }: { userId: string }) {
           }}
           placeholder="Add symbol — type a ticker or company name…"
           aria-label="Add symbol to watchlist"
-          className="h-10 w-full rounded-lg border border-line bg-panel px-3.5 text-sm text-ink placeholder:text-ink-3 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/15"
+          className="h-10 w-full rounded-lg border border-line-strong bg-bg px-3.5 text-sm text-ink placeholder:text-ink-3 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20"
         />
         {hits.length > 0 && (
           <ul className="absolute z-20 mt-1 w-full overflow-hidden rounded-lg border border-line bg-panel shadow-xl">

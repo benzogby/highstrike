@@ -32,7 +32,7 @@ export default function AuthShell({
 }
 
 export const authInputClass =
-  "h-10 w-full rounded-lg border border-line bg-panel px-3 text-sm text-ink placeholder:text-ink-3 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/15";
+  "h-10 w-full rounded-lg border border-line-strong bg-bg px-3 text-sm text-ink placeholder:text-ink-3 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20";
 
 export const authButtonClass =
   "h-10 w-full rounded-lg bg-accent text-sm font-medium text-on-accent transition hover:bg-accent-2 disabled:opacity-60";

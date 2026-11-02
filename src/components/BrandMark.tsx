@@ -37,7 +37,12 @@ export function invalidateBrandCache() {
   inflight = null;
 }
 
-export default function BrandMark({ size = 28 }: { size?: number }) {
+/**
+ * The logo, and with `withName` the name "HighStrike" beside it. The site is dark only, so an uploaded logo shows its
+ * dark version (or the one logo there is). Until the upload is known it keeps the logo's space empty instead of flashing
+ * the built-in mark.
+ */
+export default function BrandMark({ size = 28, withName = false }: { size?: number; withName?: boolean }) {
   const [logos, setLogos] = useState<Logos | null>(cached);
 
   useEffect(() => {
@@ -50,24 +55,22 @@ export default function BrandMark({ size = 28 }: { size?: number }) {
     };
   }, []);
 
-  if (logos?.logo) {
-    const dark = logos.logo_dark ?? logos.logo;
+  const name = withName ? <span className="font-display text-[15px] leading-none text-ink">HighStrike</span> : null;
+  if (!logos) {
+    return (
+      <>
+        <span aria-hidden="true" style={{ width: size, height: size }} className="inline-block flex-none" />
+        {name}
+      </>
+    );
+  }
+  const src = logos.logo_dark ?? logos.logo;
+  if (src) {
     return (
       <>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={logos.logo}
-          alt="HighStrike"
-          style={{ height: size + 4 }}
-          className="w-auto max-w-[160px] object-contain brand-logo-light"
-        />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={dark}
-          alt="HighStrike"
-          style={{ height: size + 4 }}
-          className="w-auto max-w-[160px] object-contain brand-logo-dark"
-        />
+        <img src={src} alt="HighStrike" style={{ height: size + 4 }} className="w-auto max-w-[160px] flex-none object-contain" />
+        {name}
       </>
     );
   }
@@ -75,12 +78,11 @@ export default function BrandMark({ size = 28 }: { size?: number }) {
   return (
     <>
       <Logo size={size} />
-      <span
-        className="font-display font-bold tracking-tight"
-        style={{ fontSize: size >= 28 ? "1.125rem" : "1rem" }}
-      >
-        highstrike
-      </span>
+      {name ?? (
+        <span className="font-display tracking-tight" style={{ fontSize: size >= 28 ? "1.125rem" : "1rem" }}>
+          highstrike
+        </span>
+      )}
     </>
   );
 }

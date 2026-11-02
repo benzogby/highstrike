@@ -1,29 +1,33 @@
 @import "tailwindcss";
 
-/* The app's design system (Ben, 2026-11-02: "the whole app (besides the index page) Design system redone... incredibly
-   clean, professional and high value"; he picked Cal.com's dashboard in HighStrike green). Light: a white page, a
-   near-white sidebar, soft grey fills, hairline borders, HighStrike green for actions with a pale tint for the active
-   item and positive badges. Dark (below, the default before a choice): the same roles on graphite, with the homepage's
-   brighter green. Cal Sans for titles and big figures, Inter for everything else, Plex Mono for tickers and times. */
+/* The app's design system. Ben, 2026-11-02: first "the whole app (besides the index page) Design system redone...
+   incredibly clean, professional and high value"; then "make it look more premium, try going toward a replit theme but
+   with our colors. And only dark mode, no light mode". So: one dark ground for the sidebar, the top bar and the page, in
+   the homepage's green-black, with Replit's ladder of raised surfaces on it (ground, card, higher, highest), each edged by
+   a hairline a step lighter than itself; HighStrike green for actions, gains and the current item. Cal Sans for titles
+   and big figures, Inter for everything else, Plex Mono for tickers and times. There is no light theme. */
 @theme {
-  --color-bg: #0f1011;
-  --color-sidebar: #0b0c0d;
-  --color-panel: #141517;
-  --color-panel-2: #1c1e20;
-  --color-line: #24272a;
-  --color-line-strong: #33373b;
-  --color-ink: #f4f5f4;
-  --color-ink-2: #b4bab6;
-  --color-ink-3: #828985;
+  --color-bg: #0a0f12; /* the ground: sidebar, top bar, page */
+  --color-sidebar: #0a0f12;
+  --color-panel: #111a1f; /* a card */
+  --color-panel-2: #18242a; /* higher: hovers, table heads, secondary buttons, the current page */
+  --color-panel-3: #213039; /* highest: pressed */
+  --color-line: #1d2a31; /* a card's edge */
+  --color-line-strong: #293942; /* a field's edge, a stronger rule */
+  --color-ink: #eef3f1;
+  --color-ink-2: #aebbb5;
+  --color-ink-3: #85938d;
   --color-accent: #1fbf86;
-  --color-accent-2: #3ad69f;
-  --color-accent-soft: #11251d;
-  --color-accent-ink: #6ee7b7;
-  --color-on-accent: #04110b;
-  --color-up: #4ade9f;
-  --color-up-soft: #10241c;
-  --color-down: #ff7a70;
-  --color-down-soft: #2a1715;
+  --color-accent-2: #3dd49c;
+  --color-accent-soft: rgb(31 191 134 / 0.13);
+  --color-accent-ink: #55dfaa;
+  --color-on-accent: #03140d;
+  --color-up: #2fd08f;
+  --color-up-soft: rgb(47 208 143 / 0.12);
+  --color-down: #ff6b61;
+  --color-down-soft: rgb(255 107 97 / 0.12);
+  --color-warn: #f2b84b;
+  --color-warn-soft: rgb(242 184 75 / 0.12);
 
   --font-display: var(--font-cal-sans), var(--font-space-grotesk), system-ui, sans-serif;
   --font-body: var(--font-inter), system-ui, sans-serif;
@@ -34,32 +38,9 @@
   color-scheme: dark;
   --grid-line: rgba(255, 255, 255, 0.03);
   --glow-strength: 8%;
-  --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
-}
-
-:root[data-theme="light"] {
-  color-scheme: light;
-  --color-bg: #ffffff;
-  --color-sidebar: #fbfbfa;
-  --color-panel: #ffffff;
-  --color-panel-2: #f3f4f2;
-  --color-line: #e6e8e5;
-  --color-line-strong: #d6d9d5;
-  --color-ink: #0a0d0b;
-  --color-ink-2: #4f5652;
-  --color-ink-3: #7a817d;
-  --color-accent: #009f6f;
-  --color-accent-2: #008a60;
-  --color-accent-soft: #e7f5ef;
-  --color-accent-ink: #065f46;
-  --color-on-accent: #ffffff;
-  --color-up: #03704c;
-  --color-up-soft: #e7f5ef;
-  --color-down: #b42318;
-  --color-down-soft: #fbe9e7;
-  --grid-line: rgba(10, 11, 13, 0.04);
-  --glow-strength: 6%;
-  --card-shadow: 0 1px 2px rgba(10, 13, 11, 0.05);
+  /* A card catches a faint light on its top edge and sits a hair off the ground. */
+  --card-shadow: inset 0 1px 0 rgb(255 255 255 / 0.035), 0 1px 2px rgb(0 0 0 / 0.45);
+  scrollbar-color: var(--color-line-strong) transparent;
 }
 
 html {
@@ -92,6 +73,20 @@ body {
 
 .card-shadow {
   box-shadow: var(--card-shadow);
+}
+
+@layer components {
+  .rounded-xl.border.bg-panel {
+    box-shadow: var(--card-shadow);
+  }
+}
+
+/* Keyboard focus in green (base layer, so a field's own ring and outline-none still win). */
+@layer base {
+  :focus-visible {
+    outline: 2px solid color-mix(in oklab, var(--color-accent) 70%, transparent);
+    outline-offset: 2px;
+  }
 }
 
 /* Subtle grid backdrop for the hero */
@@ -535,16 +530,3 @@ body {
   .sys-stage.on .sys-bar { width: var(--bar-w); }
 }
 
-/* Uploaded brand logos: show the right variant per theme */
-.brand-logo-dark {
-  display: none;
-}
-:root[data-theme="light"] .brand-logo-light {
-  display: block;
-}
-:root:not([data-theme="light"]) .brand-logo-light {
-  display: none;
-}
-:root:not([data-theme="light"]) .brand-logo-dark {
-  display: block;
-}

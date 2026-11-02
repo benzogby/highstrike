@@ -233,7 +233,7 @@ export default function LessonPlayer({ lessonId, src, poster, startAt, durationS
                 setProblem(null);
                 setAttempt((n) => n + 1);
               }}
-              className="inline-flex items-center gap-2 rounded-lg border border-line bg-panel px-3 py-1.5 text-sm font-medium text-ink transition hover:bg-panel-2"
+              className="inline-flex items-center gap-2 rounded-lg border border-line-strong bg-panel-2 px-3 py-1.5 text-sm font-medium text-ink transition hover:bg-panel-3"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M21 12a9 9 0 1 1-3-6.7L21 8" />

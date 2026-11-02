@@ -112,7 +112,7 @@ export default function AlertPanel({
           inputMode="decimal"
           placeholder={currentPrice != null ? currentPrice.toFixed(2) : "Price"}
           aria-label="Alert price"
-          className="h-9 w-28 rounded-lg border border-line bg-panel px-3 font-mono-nums text-sm text-ink placeholder:text-ink-3 outline-none transition focus:border-accent"
+          className="h-9 w-28 rounded-lg border border-line-strong bg-bg px-3 font-mono-nums text-sm text-ink placeholder:text-ink-3 outline-none transition focus:border-accent"
         />
         <button
           type="submit"
@@ -131,7 +131,7 @@ export default function AlertPanel({
               <span className="text-ink-2">
                 {a.status === "fired" ? (
                   <>
-                    <span className="mr-2 rounded-md bg-accent-soft px-1.5 py-0.5 text-xs font-medium text-accent-ink">
+                    <span className="mr-2 rounded-md bg-accent-soft px-1.5 py-0.5 text-xs font-medium text-accent-ink ring-1 ring-inset ring-accent/25">
                       FIRED
                     </span>
                     crossed {a.condition} ${Number(a.threshold).toFixed(2)}

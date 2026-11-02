@@ -34,7 +34,7 @@ function VideoOnItsWay() {
 }
 
 function PrevNext({ prev, next }: { prev: Lesson | null; next: Lesson | null }) {
-  const cls = "inline-flex items-center gap-1.5 rounded-lg border border-line bg-panel px-3 py-1.5 text-sm font-medium text-ink transition hover:bg-panel-2";
+  const cls = "inline-flex items-center gap-1.5 rounded-lg border border-line-strong bg-panel-2 px-3 py-1.5 text-sm font-medium text-ink transition hover:bg-panel-3";
   return (
     <nav aria-label="Previous and next lessons" className="flex shrink-0 items-center gap-2">
       {prev && (

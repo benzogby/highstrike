@@ -106,7 +106,7 @@ function SaveRow({
 }
 
 const inputClass =
-  "h-9 w-full rounded-lg border border-line bg-panel px-3 text-sm text-ink placeholder:text-ink-3 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/15";
+  "h-9 w-full rounded-lg border border-line-strong bg-bg px-3 text-sm text-ink placeholder:text-ink-3 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20";
 const labelClass = "mb-1.5 block text-[13px] font-medium text-ink";
 
 function HeroSection() {
@@ -417,7 +417,7 @@ function LegalSection() {
         onChange={(e) => setText(e.target.value)}
         rows={14}
         placeholder="Leave empty to use the built-in disclaimer…"
-        className="mt-4 w-full rounded-xl border border-line bg-panel p-4 text-sm leading-relaxed text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/15"
+        className="mt-4 w-full rounded-xl border border-line-strong bg-bg p-4 text-sm leading-relaxed text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20"
       />
       <SaveRow onSave={save} onReset={reset} saving={saving} saved={saved} error={error} />
     </div>

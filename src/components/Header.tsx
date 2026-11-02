@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import BrandMark from "@/components/BrandMark";
-import ThemeToggle from "@/components/ThemeToggle";
 import { JOIN_LINK } from "@/components/join/events";
 
 const nav = [
@@ -47,7 +46,6 @@ export default function Header() {
           ))}
         </nav>
         <div className="flex items-center gap-3">
-          <ThemeToggle />
           {signedIn ? (
             <Link
               href="/dashboard"

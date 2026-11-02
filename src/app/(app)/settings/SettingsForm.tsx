@@ -7,7 +7,7 @@ import { SUPABASE_URL } from "@/lib/supabaseConfig";
 import { toastSuccess } from "@/lib/toastBus";
 
 const inputClass =
-  "h-9 w-full rounded-lg border border-line bg-panel px-3 text-sm text-ink placeholder:text-ink-3 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/15";
+  "h-9 w-full rounded-lg border border-line-strong bg-bg px-3 text-sm text-ink placeholder:text-ink-3 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20";
 const labelClass = "mb-1.5 block text-[13px] font-medium text-ink";
 
 
@@ -162,7 +162,7 @@ export default function SettingsForm({
                 type="button"
                 disabled={profileBusy}
                 onClick={() => avatarInputRef.current?.click()}
-                className="rounded-lg border border-line bg-panel px-3 py-1.5 text-xs font-medium text-ink transition hover:bg-panel-2"
+                className="rounded-lg border border-line-strong bg-panel-2 px-3 py-1.5 text-xs font-medium text-ink transition hover:bg-panel-3"
               >
                 {avatarUrl ? "Replace" : "Upload"}
               </button>
@@ -221,7 +221,7 @@ export default function SettingsForm({
                 maxLength={300}
                 rows={3}
                 placeholder="A line or two about how you trade"
-                className="w-full rounded-lg border border-line bg-panel p-3.5 text-sm leading-relaxed text-ink placeholder:text-ink-3 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/15"
+                className="w-full rounded-lg border border-line-strong bg-bg p-3.5 text-sm leading-relaxed text-ink placeholder:text-ink-3 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20"
               />
               <p className="mt-1 text-right text-xs text-ink-3">{bio.length}/300</p>
             </div>
@@ -316,7 +316,7 @@ export default function SettingsForm({
                 : "Paid once. The daily trades, the tools and HighStrike Trading School are yours, with nothing to renew."}
             </p>
           </div>
-          <span className="rounded-md bg-accent-soft px-1.5 py-0.5 text-xs font-medium text-accent-ink">
+          <span className="rounded-md bg-accent-soft px-1.5 py-0.5 text-xs font-medium text-accent-ink ring-1 ring-inset ring-accent/25">
             Active
           </span>
         </div>

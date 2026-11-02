@@ -124,7 +124,7 @@ export default function FirstRunTour({ userId, show }: { userId: string; show: b
               <button
                 type="button"
                 onClick={() => setIdx(idx - 1)}
-                className="press rounded-lg border border-line bg-panel px-4 py-2 text-sm font-medium text-ink transition hover:bg-panel-2"
+                className="press rounded-lg border border-line-strong bg-panel-2 px-4 py-2 text-sm font-medium text-ink transition hover:bg-panel-3"
               >
                 Back
               </button>

@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import ThemeToggle from "@/components/ThemeToggle";
 
 type Item = { label: string; href?: string; key?: string; soon?: boolean };
 
@@ -45,7 +44,7 @@ export default function MobileNav({
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Open navigation"
-        className="flex h-9 w-9 items-center justify-center rounded-lg border border-line text-ink-2 transition hover:bg-panel-2 hover:text-ink"
+        className="flex h-9 w-9 items-center justify-center rounded-lg border border-line-strong bg-panel-2 text-ink-2 transition hover:bg-panel-3 hover:text-ink"
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
           <path d="M4 6h16M4 12h16M4 18h16" />
@@ -62,16 +61,16 @@ export default function MobileNav({
             type="button"
             aria-label="Close navigation"
             onClick={() => setOpen(false)}
-            className="anim-fade absolute inset-0 bg-bg/60 backdrop-blur-sm"
+            className="anim-fade absolute inset-0 bg-black/60 backdrop-blur-sm"
           />
-          <div className="anim-slide-in absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col border-r border-line bg-sidebar shadow-xl">
+          <div className="anim-slide-in absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col border-r border-line bg-sidebar shadow-2xl shadow-black/60">
             <div className="flex h-14 items-center justify-between border-b border-line px-4">
-              <span className="font-display text-base">Menu</span>
+              <span className="font-display text-base text-ink">Menu</span>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
                 aria-label="Close"
-                className="flex h-9 w-9 items-center justify-center rounded-lg text-ink-3 transition hover:text-ink"
+                className="flex h-9 w-9 items-center justify-center rounded-lg text-ink-3 transition hover:bg-panel-2 hover:text-ink"
               >
                 ✕
               </button>
@@ -86,8 +85,8 @@ export default function MobileNav({
                     onClick={() => setOpen(false)}
                     className={`flex h-10 items-center rounded-md px-3 text-sm transition ${
                       n.key === active
-                        ? "bg-accent-soft font-medium text-accent-ink"
-                        : "text-ink-2 hover:bg-panel-2 hover:text-ink"
+                        ? "bg-panel-2 font-medium text-ink"
+                        : "text-ink-2 hover:bg-panel hover:text-ink"
                     }`}
                   >
                     {n.label}
@@ -98,7 +97,7 @@ export default function MobileNav({
                     className="flex h-10 items-center justify-between rounded-md px-3 text-sm text-ink-3"
                   >
                     {n.label}
-                    <span className="rounded bg-panel-2 px-1.5 text-[11px] font-medium leading-5 text-ink-3">
+                    <span className="rounded px-1.5 text-[11px] font-medium leading-5 text-ink-3 ring-1 ring-inset ring-line-strong">
                       Soon
                     </span>
                   </span>
@@ -109,8 +108,8 @@ export default function MobileNav({
                 onClick={() => setOpen(false)}
                 className={`flex h-10 items-center rounded-md px-3 text-sm transition ${
                   active === "settings"
-                    ? "bg-accent-soft font-medium text-accent-ink"
-                    : "text-ink-2 hover:bg-panel-2 hover:text-ink"
+                    ? "bg-panel-2 font-medium text-ink"
+                    : "text-ink-2 hover:bg-panel hover:text-ink"
                 }`}
               >
                 Settings
@@ -120,7 +119,7 @@ export default function MobileNav({
                   href="/admin"
                   onClick={() => setOpen(false)}
                   className={`flex h-10 items-center rounded-md px-3 text-sm transition ${
-                    active === "admin" ? "bg-accent-soft font-medium text-accent-ink" : "text-ink-2 hover:bg-panel-2 hover:text-ink"
+                    active === "admin" ? "bg-panel-2 font-medium text-ink" : "text-ink-2 hover:bg-panel hover:text-ink"
                   }`}
                 >
                   Admin
@@ -139,7 +138,7 @@ export default function MobileNav({
                       className="h-8 w-8 flex-none rounded-full border border-line object-cover"
                     />
                   ) : (
-                    <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-accent-soft text-xs font-medium uppercase text-accent-ink">
+                    <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-accent-soft text-xs font-medium uppercase text-accent-ink ring-1 ring-inset ring-accent/25">
                       {firstName.slice(0, 2)}
                     </span>
                   )}
@@ -148,12 +147,11 @@ export default function MobileNav({
                     <p className="truncate text-xs text-ink-3">{email}</p>
                   </div>
                 </div>
-                <ThemeToggle />
               </div>
               <form action="/auth/signout" method="post" className="mt-3">
                 <button
                   type="submit"
-                  className="h-9 w-full rounded-lg border border-line text-[13px] font-medium text-ink-2 transition hover:bg-panel-2 hover:text-ink"
+                  className="h-9 w-full rounded-lg border border-line-strong bg-panel-2 text-[13px] font-medium text-ink transition hover:bg-panel-3"
                 >
                   Sign out
                 </button>

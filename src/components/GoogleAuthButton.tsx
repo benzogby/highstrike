@@ -49,7 +49,7 @@ export default function GoogleAuthButton({
         type="button"
         onClick={signIn}
         disabled={loading || disabled}
-        className="flex h-10 w-full items-center justify-center gap-2.5 rounded-lg border border-line bg-panel text-sm font-medium text-ink transition hover:bg-panel-2 disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex h-10 w-full items-center justify-center gap-2.5 rounded-lg border border-line-strong bg-panel-2 text-sm font-medium text-ink transition hover:bg-panel-3 disabled:cursor-not-allowed disabled:opacity-50"
       >
         <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
           <path

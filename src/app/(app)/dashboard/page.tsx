@@ -295,7 +295,7 @@ export default async function DashboardPage() {
                   </Link>
                   <Link
                     href="/results"
-                    className="rounded-lg border border-line bg-panel px-4 py-2 text-xs font-medium text-ink transition hover:bg-panel-2"
+                    className="rounded-lg border border-line-strong bg-panel-2 px-4 py-2 text-xs font-medium text-ink transition hover:bg-panel-3"
                   >
                     Scoreboard
                   </Link>

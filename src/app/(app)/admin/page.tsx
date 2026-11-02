@@ -93,7 +93,7 @@ export default async function AdminOverviewPage() {
                     <td className="px-5 py-2.5 text-ink">{m.email}</td>
                     <td className="px-3 py-2.5">
                       {m.is_admin ? (
-                        <span className="rounded-md bg-accent-soft px-1.5 py-0.5 text-xs font-medium text-accent-ink">
+                        <span className="rounded-md bg-accent-soft px-1.5 py-0.5 text-xs font-medium text-accent-ink ring-1 ring-inset ring-accent/25">
                           ADMIN
                         </span>
                       ) : (

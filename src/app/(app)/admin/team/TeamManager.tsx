@@ -17,7 +17,7 @@ type Member = {
 };
 
 const inputClass =
-  "h-9 w-full rounded-lg border border-line bg-panel px-3 text-sm text-ink placeholder:text-ink-3 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/15";
+  "h-9 w-full rounded-lg border border-line-strong bg-bg px-3 text-sm text-ink placeholder:text-ink-3 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20";
 
 function Photo({ url, name, size = 56 }: { url: string | null; name: string; size?: number }) {
   return url ? (
@@ -195,7 +195,7 @@ export default function TeamManager() {
           aria-label="Description"
           rows={2}
           maxLength={400}
-          className="w-full rounded-lg border border-line bg-panel p-3 text-sm text-ink placeholder:text-ink-3 outline-none transition focus:border-accent sm:col-span-2"
+          className="w-full rounded-lg border border-line-strong bg-bg p-3 text-sm text-ink placeholder:text-ink-3 outline-none transition focus:border-accent sm:col-span-2"
         />
         <div className="sm:col-span-2">
           <button
@@ -245,7 +245,7 @@ export default function TeamManager() {
                   aria-label="Description"
                   rows={3}
                   maxLength={400}
-                  className="w-full rounded-lg border border-line bg-panel p-3 text-sm text-ink outline-none transition focus:border-accent sm:col-span-2"
+                  className="w-full rounded-lg border border-line-strong bg-bg p-3 text-sm text-ink outline-none transition focus:border-accent sm:col-span-2"
                 />
                 <div className="flex gap-2 sm:col-span-2">
                   <button
@@ -301,14 +301,14 @@ export default function TeamManager() {
                       fileRef.current?.click();
                     }}
                     disabled={busy === m.id}
-                    className="rounded-lg border border-line bg-panel px-3 py-1 text-xs font-medium text-ink transition hover:bg-panel-2"
+                    className="rounded-lg border border-line-strong bg-panel-2 px-3 py-1 text-xs font-medium text-ink transition hover:bg-panel-3"
                   >
                     {m.photo_url ? "Replace photo" : "Upload photo"}
                   </button>
                   <button
                     type="button"
                     onClick={() => setEditing(m)}
-                    className="rounded-lg border border-line bg-panel px-3 py-1 text-xs font-medium text-ink transition hover:bg-panel-2"
+                    className="rounded-lg border border-line-strong bg-panel-2 px-3 py-1 text-xs font-medium text-ink transition hover:bg-panel-3"
                   >
                     Edit
                   </button>

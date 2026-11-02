@@ -94,11 +94,11 @@ export default async function WelcomePage({ searchParams }: Props) {
             Open today&apos;s trades
           </Link>
           {mine?.created_account ? (
-            <Link href="/settings" className={`${BUTTON} border border-line bg-panel text-ink hover:bg-panel-2`}>
+            <Link href="/settings" className={`${BUTTON} border border-line-strong bg-panel-2 text-ink hover:bg-panel-3`}>
               Set a password
             </Link>
           ) : (
-            <Link href="/education" className={`${BUTTON} border border-line bg-panel text-ink hover:bg-panel-2`}>
+            <Link href="/education" className={`${BUTTON} border border-line-strong bg-panel-2 text-ink hover:bg-panel-3`}>
               Open Trading School
             </Link>
           )}

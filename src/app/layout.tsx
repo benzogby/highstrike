@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Space_Grotesk, IBM_Plex_Mono, Cal_Sans } from "next/font/google";
 import TrackPageview from "./TrackPageview";
 import CookieBanner from "./CookieBanner";
@@ -42,6 +42,12 @@ export const metadata: Metadata = {
   },
 };
 
+/** Dark only: the browser draws its own controls and scrollbars dark, and phones tint their chrome to the ground. */
+export const viewport: Viewport = {
+  colorScheme: "dark",
+  themeColor: "#0a0f12",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -57,9 +63,10 @@ export default function RootLayout({
     >
       <head>
         <script
-          // Applies the stored theme before first paint to avoid a flash.
+          // Marks script support before first paint. The site is dark only (Ben, 2026-11-02), so a theme stored by the
+          // old light/dark switch is cleared.
           dangerouslySetInnerHTML={{
-            __html: `document.documentElement.classList.add("js");try{var t=localStorage.getItem("hs-theme")||"light";if(t==="light"){document.documentElement.setAttribute("data-theme","light")}}catch(e){}`,
+            __html: `document.documentElement.classList.add("js");try{localStorage.removeItem("hs-theme")}catch(e){}`,
           }}
         />
       </head>

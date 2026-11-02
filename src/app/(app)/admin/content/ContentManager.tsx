@@ -280,7 +280,7 @@ export default function ContentManager() {
                   <button
                     type="button"
                     onClick={() => copyUrl(item.url)}
-                    className="flex-1 rounded-lg border border-line bg-panel py-1.5 text-xs font-medium text-ink transition hover:bg-panel-2"
+                    className="flex-1 rounded-lg border border-line-strong bg-panel-2 py-1.5 text-xs font-medium text-ink transition hover:bg-panel-3"
                   >
                     {copied === item.url ? "Copied ✓" : "Copy URL"}
                   </button>
