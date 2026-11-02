@@ -247,6 +247,17 @@ export default function JoinDialog({ library }: { library: Library | null }) {
             {busy && <Spinner />}
             {busy ? "Creating your account…" : "Continue to checkout"}
           </button>
+          <p className="mt-3 text-center text-xs leading-relaxed text-ink-3">
+            By continuing you agree to our{" "}
+            <a href="/terms-of-service" target="_blank" rel="noopener" className="underline hover:text-ink">
+              Terms of Service
+            </a>{" "}
+            and{" "}
+            <a href="/privacy-policy" target="_blank" rel="noopener" className="underline hover:text-ink">
+              Privacy Policy
+            </a>
+            .
+          </p>
           <p className="mt-4 text-center text-xs text-ink-3">
             Have an account?{" "}
             <button type="button" onClick={() => goTo({ at: "login" })} className="font-semibold text-ink underline-offset-2 hover:underline">

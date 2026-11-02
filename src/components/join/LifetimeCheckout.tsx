@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { loadStripe, type Appearance, type Stripe as StripeJs } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { LIFETIME, dollars, lifetimeIncludes, type Library } from "@/lib/offer";
@@ -83,20 +83,22 @@ export function OfferCard({ library }: { library: Library | null }) {
  * getripping.com's one-time checkout draws it: the membership's card, then Stripe's Payment Element in the page's colours,
  * Due today and Pay. Paid, the browser goes to /welcome with the payment's id, which turns access on before the page
  * draws. Without Stripe's publishable key on the server the card form can't be embedded, so Pay opens Stripe's own
- * checkout page, which comes back to /welcome the same way. `back` is where that page returns if they leave it.
+ * checkout page, which comes back to /welcome the same way; so it does if the card form fails to load (a key from
+ * another Stripe account, Stripe unreachable), so nobody is ever left without a way to pay. `back` is where that page
+ * returns if they leave it.
  */
 export default function LifetimeCheckout({ library, back, onPaying }: { library: Library | null; back: string; onPaying?: (on: boolean) => void }) {
   const box = useRef<HTMLDivElement>(null);
   const [start, setStart] = useState<{ ready: Start; appearance: Appearance } | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
 
-  useEffect(() => {
-    let alive = true;
-    (async () => {
+  /** Asks the server for the checkout: the card form's payment, or Stripe's own page (`hosted`). */
+  const begin = useCallback(
+    async (hosted: boolean, alive: () => boolean = () => true) => {
       try {
-        const r = await fetch("/api/billing/lifetime", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ back }) });
+        const r = await fetch("/api/billing/lifetime", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ back, hosted }) });
         const j = (await r.json().catch(() => ({}))) as Partial<Start> & { error?: string };
-        if (!alive) return;
+        if (!alive()) return;
         if (!r.ok || !("member" in j)) {
           setFailed(j.error ?? "Checkout couldn't start. Nothing was charged.");
           return;
@@ -107,13 +109,25 @@ export default function LifetimeCheckout({ library, back, onPaying }: { library:
         }
         setStart({ ready: j as Start, appearance: appearanceFrom(box.current) });
       } catch {
-        if (alive) setFailed("Checkout couldn't start. Check your connection and try again.");
+        if (alive()) setFailed("Checkout couldn't start. Check your connection and try again.");
       }
-    })();
+    },
+    [back]
+  );
+
+  useEffect(() => {
+    let alive = true;
+    void begin(false, () => alive);
     return () => {
       alive = false;
     };
-  }, [back]);
+  }, [begin]);
+
+  /** The card form couldn't load: Stripe's own page instead. */
+  const unavailable = useCallback(() => {
+    setStart(null);
+    void begin(true);
+  }, [begin]);
 
   const ready = start?.ready;
   return (
@@ -135,7 +149,7 @@ export default function LifetimeCheckout({ library, back, onPaying }: { library:
             stripe={stripeFor(ready.publishableKey)}
             options={{ clientSecret: ready.clientSecret, appearance: start.appearance, fonts: STRIPE_FONTS }}
           >
-            <PayForm paymentIntent={ready.paymentIntent} cents={ready.cents} onPaying={(on) => onPaying?.(on)} />
+            <PayForm paymentIntent={ready.paymentIntent} cents={ready.cents} onPaying={(on) => onPaying?.(on)} onUnavailable={unavailable} />
           </Elements>
         ) : (
           <HostedPay url={ready.url} cents={ready.cents} />
@@ -164,7 +178,20 @@ function DueToday({ cents }: { cents: number }) {
 const FINE = "mt-3 text-center text-xs leading-relaxed text-ink-3";
 const LIFE = "Lifetime means for as long as HighStrike runs.";
 
-function PayForm({ paymentIntent, cents, onPaying }: { paymentIntent: string; cents: number; onPaying: (on: boolean) => void }) {
+/** The checkout's pointer to the Terms, which it agrees to; a new tab, so the popup stays where it is. */
+function TermsLine() {
+  return (
+    <>
+      {" "}All sales are final under our{" "}
+      <a href="/terms-of-service" target="_blank" rel="noopener" className="underline transition hover:text-ink">
+        Terms of Service
+      </a>
+      .
+    </>
+  );
+}
+
+function PayForm({ paymentIntent, cents, onPaying, onUnavailable }: { paymentIntent: string; cents: number; onPaying: (on: boolean) => void; onUnavailable: () => void }) {
   const stripe = useStripe();
   const elements = useElements();
   const [shown, setShown] = useState(false);
@@ -198,7 +225,14 @@ function PayForm({ paymentIntent, cents, onPaying }: { paymentIntent: string; ce
 
   return (
     <form onSubmit={(e) => void pay(e)}>
-      <PaymentElement onReady={() => setShown(true)} options={{ layout: "tabs" }} />
+      <PaymentElement
+        onReady={() => setShown(true)}
+        onLoadError={(e) => {
+          console.error("card form didn't load:", e.error.message);
+          onUnavailable();
+        }}
+        options={{ layout: "tabs" }}
+      />
       {!shown && (
         <p className="flex items-center justify-center gap-2 py-8 text-sm text-ink-2">
           <Spinner />
@@ -217,7 +251,10 @@ function PayForm({ paymentIntent, cents, onPaying }: { paymentIntent: string; ce
         {busy && <Spinner />}
         {busy ? "Paying…" : `Pay ${dollars(cents)}`}
       </button>
-      <p className={FINE}>{LIFE}</p>
+      <p className={FINE}>
+        {LIFE}
+        <TermsLine />
+      </p>
     </form>
   );
 }
@@ -236,7 +273,10 @@ function HostedPay({ url, cents }: { url: string; cents: number }) {
         {going && <Spinner />}
         {going ? "Opening Stripe…" : `Pay ${dollars(cents)}`}
       </a>
-      <p className={FINE}>You&apos;ll pay on Stripe&apos;s secure page and come straight back with access. {LIFE}</p>
+      <p className={FINE}>
+        You&apos;ll pay on Stripe&apos;s secure page and come straight back with access. {LIFE}
+        <TermsLine />
+      </p>
     </div>
   );
 }
