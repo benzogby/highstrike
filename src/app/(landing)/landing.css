@@ -2552,6 +2552,13 @@
   color: var(--ink);
 }
 
+.hs-dock__text s {
+  margin-right: 4px;
+  color: var(--ink-3);
+  text-decoration-color: var(--red);
+  text-decoration-thickness: 2px;
+}
+
 @media (max-width: 640px) {
   .hs-dock {
     left: 0;

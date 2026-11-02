@@ -6,7 +6,7 @@ import { Bull } from "@/components/landing/Pieces";
 
 /**
  * The homepage's floating bar at the foot (Ben, 2026-11-02: "Give page a floating footer like getripping.com/staging
- * when the page is scrolled beyond the hero"): the price and the button, from when the hero's button (#hero-cta) has
+ * when the page is scrolled beyond the hero"): "Get HighStrike", $1,997 struck through over the price, and Get Instant Access (Ben's words, 2026-11-02), from when the hero's button (#hero-cta) has
  * scrolled away until the close (#closing) comes into sight, so the button is always at hand but never doubled.
  */
 export default function LandingDock({ price }: { price: string }) {
@@ -31,10 +31,10 @@ export default function LandingDock({ price }: { price: string }) {
     <div className="hs-dock" data-on={on} aria-hidden={!on} inert={!on}>
       <Bull />
       <p className="hs-dock__text">
-        <b>Lifetime access</b>
-        {price} once. No subscription.
+        <b>Get HighStrike</b>
+        <s>$1,997</s> {price}
       </p>
-      <JoinButton className="hs-btn hs-btn--sm">Get lifetime access</JoinButton>
+      <JoinButton className="hs-btn hs-btn--sm">Get Instant Access</JoinButton>
     </div>
   );
 }
