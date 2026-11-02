@@ -1,31 +1,18 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import BellClock from "@/components/landing/BellClock";
+import DeskSearch from "@/components/landing/DeskSearch";
 import FaqIndex from "@/components/landing/FaqIndex";
-import HowItWorks from "@/components/landing/HowItWorks";
-import TickerLookup from "@/components/landing/TickerLookup";
-import {
-  AlertFeed,
-  AlertToast,
-  Briefing,
-  GradedStamp,
-  InsiderChatter,
-  ScannerSlice,
-  SchoolModules,
-  SetupCard,
-  WeatherRow,
-  price,
-  shortDate,
-  sideLabel,
-  signedPct,
-  statusLabel,
-} from "@/components/landing/Fragments";
-import { LOOKUP_START, getLandingData, getTickerRead, type ClosedSetup, type TickerRead } from "./data";
+import Field from "@/components/landing/Field";
+import { Bull, Pill, Tag, Toast, Tri, compact, price, shortDate, sideLabel, signedPct, statusLabel, triggerOf, weekdayDate } from "@/components/landing/Pieces";
+import SetupChart, { entryIndexOf, hitIndex } from "@/components/landing/SetupChart";
+import { LOOKUP_START, getLandingData, type HeroSetup } from "./data";
 
-// The homepage, built with Taste Skill's "The product performs" direction in
-// the site's own light system: HighStrike's real morning output, as working
-// fragments of the terminal, is the picture on every screen. Styles in
-// landing.css. Refresh the live report, setups and record every 30 minutes.
+// The homepage in the HighStrike reels system (design/keyframes-2026-11-02,
+// approved by Ben on 2026-11-02): the dark room with one light punch, Cal Sans
+// and Inter, HighStrike green for the accent and for gains, red only for
+// losses, smoked glass, the price tag as the key word, and live charts drawn
+// from HighStrike's real graded setups. Styles in landing.css. Refresh the
+// report, setups and record every 30 minutes.
 export const revalidate = 1800;
 
 export const metadata: Metadata = {
@@ -69,7 +56,7 @@ const faqs = [
   },
 ];
 
-const steps = [
+const moments = [
   {
     lead: "Overnight",
     text: "The scanner ranks 5,400+ stocks by options flow, relative volume and momentum, and keeps the names whose flow has broken from their own baseline.",
@@ -84,385 +71,663 @@ const steps = [
   },
   {
     lead: "After it closes",
-    text: "Every setup is graded against real prices, hit or miss, and the result joins the public record below.",
+    text: "Every setup is graded against real prices, hit or miss, and the result joins the public record.",
   },
 ];
 
-// The record table reads newest day first; the date prints once per day.
-function byDay(closed: ClosedSetup[]) {
-  return [...closed].sort((a, b) => (a.reportDate < b.reportDate ? 1 : a.reportDate > b.reportDate ? -1 : a.ticker.localeCompare(b.ticker)));
+const tools = [
+  { name: "Market weather", text: "Volatility, opportunity and direction, scored 0 to 100 before every open, with a written note on the tape." },
+  { name: "Flow scanner", text: "5,400+ stocks ranked by options flow against their own baseline, not the market's." },
+  { name: "Trade setups", text: "Entry rules, a target, a time window and suggested contracts on every idea." },
+  { name: "Alerts", text: "A message the moment a setup's entry rules trigger." },
+  { name: "Insiders and chatter", text: "Form 4 sells and buys from the last 30 days, and the crowd's mood." },
+  { name: "Trading School", text: "The full curriculum, from options mechanics to grading your own trades." },
+];
+
+// The first session from the setup's morning whose close met its price rule
+// ("fails below $96.00" for a short, "holds above" for a long), up to the hit.
+function priceRuleMet(h: HeroSetup) {
+  const trigger = triggerOf(h.setup.criteria);
+  if (trigger == null) return null;
+  const short = h.setup.direction.toLowerCase() === "short";
+  const from = entryIndexOf(h.closes, h.setup) + 1;
+  const hit = hitIndex(h.closes, h.setup, from - 1);
+  const to = hit >= 0 ? hit : h.closes.length - 1;
+  for (let i = from; i <= to; i++) {
+    const c = h.closes[i].close;
+    if (short ? c < trigger : c > trigger) return { date: h.closes[i].date, close: c, trigger, short };
+  }
+  return null;
 }
 
-function mondayOf(d: Date) {
-  const day = (d.getUTCDay() + 6) % 7;
-  const m = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - day));
-  return m.toISOString().slice(0, 10);
+function Gauge({ label, value }: { label: string; value: number }) {
+  const a0 = Math.PI * 0.8, a1 = Math.PI * 2.2, R = 46, cx = 60, cy = 58;
+  const at = (t: number) => [cx + R * Math.cos(a0 + (a1 - a0) * t), cy + R * Math.sin(a0 + (a1 - a0) * t)];
+  const [x0, y0] = at(0), [x1, y1] = at(1), [xv, yv] = at(Math.max(0.001, value / 100));
+  const big = (a1 - a0) * (value / 100) > Math.PI ? 1 : 0;
+  return (
+    <div className="hs-gauge">
+      <svg viewBox="0 0 120 104" aria-hidden="true">
+        <path d={`M${x0} ${y0} A${R} ${R} 0 1 1 ${x1} ${y1}`} className="hs-gauge__track" />
+        <path d={`M${x0} ${y0} A${R} ${R} 0 ${big} 1 ${xv.toFixed(1)} ${yv.toFixed(1)}`} className="hs-gauge__value" pathLength={1} />
+      </svg>
+      <b>{value}</b>
+      <span>{label}</span>
+    </div>
+  );
+}
+
+function shade(v: number) {
+  const a = Math.min(1, Math.abs(v) / 9);
+  return v >= 0
+    ? `rgb(${Math.round(12 + 8 * a)},${Math.round(62 + 98 * a)},${Math.round(46 + 70 * a)})`
+    : `rgb(${Math.round(84 + 124 * a)},${Math.round(32 + 32 * a)},${Math.round(34 + 22 * a)})`;
 }
 
 export default async function Home() {
-  const { report, today, closed, spy, stats, weeks, movers, lookup, badges } = await getLandingData();
+  const { report, today, closed, spy, qqq, stats, weeks, movers, hero, reads, lookup, badges, slateToday } = await getLandingData();
 
-  const example = closed.find((c) => c.status === "target_hit" && c.criteria.length > 0) ?? closed.find((c) => c.criteria.length > 0) ?? null;
-  const reads = (await Promise.all(today.slice(0, 3).map((t) => getTickerRead(t.ticker)))).filter((r): r is TickerRead => r != null);
-  // The day after a holiday repeats the last close, so every move reads zero:
-  // the band only shows when the last session really moved.
-  const band = movers.some((m) => m.changePct !== 0) ? movers.slice(0, 14) : [];
   const session = spy[spy.length - 1]?.date;
-  const alerts = closed.filter((c) => c.status === "target_hit" && c.criteria.length > 0).slice(0, 3);
-
-  // The bar the page is about: the last full week of grading.
-  const thisWeek = mondayOf(new Date());
-  const accentWeek = [...weeks].reverse().find((w) => w.week < thisWeek)?.week;
+  // The day after a holiday repeats the last close, so every move reads zero:
+  // the tape only runs when the last session really moved.
+  const tape = movers.some((m) => m.changePct !== 0) ? movers.slice(0, 24) : [];
+  const heroHit = hero ? hitIndex(hero.closes, hero.setup, entryIndexOf(hero.closes, hero.setup)) : -1;
+  const rule = hero ? priceRuleMet(hero) : null;
+  const record = [...closed]
+    .sort((a, b) => (a.reportDate < b.reportDate ? 1 : a.reportDate > b.reportDate ? -1 : a.ticker.localeCompare(b.ticker)))
+    .slice(0, 7);
   const maxClosed = Math.max(1, ...weeks.map((w) => w.closed));
-
-  const rows = byDay(closed);
+  const slate = today.map((t) => {
+    const cl = reads[t.ticker]?.closes ?? [];
+    return { ...t, last: cl[cl.length - 1]?.close ?? null };
+  });
+  const insiders = Object.values(reads)
+    .filter((r) => r.insiders && r.insiders.sold > 0)
+    .sort((a, b) => (b.insiders?.sold ?? 0) - (a.insiders?.sold ?? 0))
+    .slice(0, 5);
+  const maxSold = insiders[0]?.insiders?.sold ?? 1;
+  const crowd = Object.values(reads)
+    .filter((r) => r.chatter && r.chatter.bullish + r.chatter.bearish > 0)
+    .sort((a, b) => (b.chatter?.watchers ?? 0) - (a.chatter?.watchers ?? 0))
+    .slice(0, 5);
+  const map = [...movers].sort((a, b) => Math.abs(b.changePct) - Math.abs(a.changePct));
 
   return (
-    <main>
-      {/* Hero: the promise upper left, this morning's briefing filling the rest */}
-      <section className="hs-wrap hs-hero" aria-labelledby="hs-title">
-        <div className="hs-hero__text">
-          <h1 id="hs-title" className="hs-display hs-lines">
-            <span className="hs-line">
-              <span data-line="" style={{ "--i": 0 } as React.CSSProperties}>
+    <main className="hs-page">
+      {/* The first screen: the promise, and a real graded setup drawing to its target */}
+      <section className="hs-room hs-hero" aria-labelledby="hs-title">
+        <Field spy={spy} qqq={qqq} seed={11} />
+        <div className="hs-wrap hs-hero__grid">
+          <div className="hs-hero__copy">
+            <h1 id="hs-title" className="hs-display hs-h1">
+              <span className="hs-line" data-reveal="">
                 Finished trades
               </span>
-            </span>
-            <span className="hs-line">
-              <span data-line="" style={{ "--i": 1 } as React.CSSProperties}>
-                before the bell
+              <span className="hs-line" data-reveal="" style={{ "--i": 1 } as React.CSSProperties}>
+                <Tag className="hs-tag--land">before the bell</Tag>
               </span>
-            </span>
-          </h1>
-          <p className="hs-hero__lead hs-body" data-load="" style={{ "--d": "420ms" } as React.CSSProperties}>
-            Every morning HighStrike&apos;s AI scans 5,400+ stocks and publishes the day&apos;s options setups: the entry,
-            the target and the reasoning.
-          </p>
-          <div data-load="" style={{ "--d": "500ms" } as React.CSSProperties}>
-            <div className="hs-hero__actions">
-              <Link href={TRIAL} className="hs-button">
+            </h1>
+            <p className="hs-lead" data-reveal="" style={{ "--i": 2 } as React.CSSProperties}>
+              Every morning HighStrike&apos;s AI scans 5,400+ stocks and publishes the day&apos;s options setups: the entry, the target and the reasoning.
+            </p>
+            <div className="hs-hero__actions" data-reveal="" style={{ "--i": 3 } as React.CSSProperties}>
+              <Link href={TRIAL} className="hs-btn">
                 Start free trial
               </Link>
               <a href="#lookup" className="hs-link">
                 Look up a ticker
               </a>
             </div>
-            <p className="hs-hero__price hs-small hs-muted">$99 a month after a 7-day free trial. Cancel anytime.</p>
-          </div>
-          <BellClock className="hs-hero__bell" />
-        </div>
-        <figure className="hs-hero__figure" data-open="">
-          <Briefing report={report} today={today} spy={spy} />
-          <figcaption className="sr-only-hs">This morning&apos;s HighStrike briefing, live.</figcaption>
-        </figure>
-      </section>
-
-      {/* The last session's biggest moves among the names the desk follows */}
-      {band.length > 0 && (
-        <section className="hs-marquee" aria-labelledby="hs-marquee-note">
-          <input type="checkbox" id="hs-marquee-pause" className="hs-marquee__toggle sr-only-hs" />
-          <div className="hs-marquee__track">
-            {[...band, ...band].map((m, i) => (
-              <span key={`${m.ticker}-${i}`} className="hs-marquee__item" aria-hidden={i >= band.length ? true : undefined}>
-                <span>{m.ticker}</span>
-                <span className={m.changePct >= 0 ? "hs-up" : "hs-down"}>{signedPct(m.changePct)}</span>
-              </span>
-            ))}
-          </div>
-          <div className="hs-wrap hs-marquee__foot">
-            <p id="hs-marquee-note" className="hs-small hs-muted">
-              The biggest moves among the stocks HighStrike follows, {session ? `${shortDate(session)} close` : "last session"}.
+            <p className="hs-hero__price" data-reveal="" style={{ "--i": 3 } as React.CSSProperties}>
+              $99 a month after a 7-day free trial. Cancel anytime.
             </p>
-            <label htmlFor="hs-marquee-pause" className="hs-marquee__pause">
-              <span className="sr-only-hs">Pause the moving list</span>
-              <svg className="when-on" width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
-                <rect x="2.5" y="1.5" width="3" height="11" rx="1" fill="currentColor" />
-                <rect x="8.5" y="1.5" width="3" height="11" rx="1" fill="currentColor" />
-              </svg>
-              <svg className="when-off" width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
-                <path d="M3.5 1.8v10.4a.8.8 0 0 0 1.2.7l8.3-5.2a.8.8 0 0 0 0-1.4L4.7 1.1a.8.8 0 0 0-1.2.7Z" fill="currentColor" />
-              </svg>
-            </label>
+            {report && (
+              <p className="hs-hero__bell" data-reveal="" style={{ "--i": 4 } as React.CSSProperties}>
+                <span className="hs-live" aria-hidden="true" />
+                <span>
+                  <b>{slateToday ? "Today's slate is out" : "The latest slate"}</b> · {weekdayDate(report.date)} · {today.length} setup{today.length === 1 ? "" : "s"}
+                </span>
+              </p>
+            )}
           </div>
-        </section>
-      )}
 
-      {/* The live thing: type a ticker, read what the desk has on it */}
-      <section id="lookup" className="hs-wrap hs-lookup" aria-labelledby="hs-lookup-title">
-        <h2 id="hs-lookup-title" className="sr-only-hs">
-          Look up a ticker
-        </h2>
-        <div className="hs-lookup__grid">
-          <TickerLookup start={LOOKUP_START} initial={lookup} examples={["CVX", "TSLA", "SPY", "HD"]} tracked={movers.length || 48} />
-          <figure className="hs-lookup__photo" data-reveal="" style={{ "--i": 1 } as React.CSSProperties}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/landing/lower-manhattan-sunrise.jpg"
-              alt="The Lower Manhattan skyline at sunrise, seen across the harbor, One World Trade Center at the left"
-              width={1600}
-              height={900}
-              loading="lazy"
-              decoding="async"
-            />
-            <figcaption>Lower Manhattan, 7:20 a.m.</figcaption>
+          <figure className="hs-stack" data-land="">
+            {report && (
+              <div className="hs-glass hs-stack__report" data-ui="">
+                <div className="hs-ui-head">
+                  <span className="hs-ui-head__tk hs-ui-head__tk--sm">Pre-market report</span>
+                  <span className="hs-dot" />
+                  <span className="hs-ui-head__nm">{weekdayDate(report.date)}</span>
+                </div>
+                <div className="hs-minis">
+                  {[
+                    ["Volatility", report.volatility],
+                    ["Opportunity", report.opportunity],
+                    ["Direction", report.direction],
+                  ].map(([label, v]) => (
+                    <div key={label} className="hs-mini">
+                      <b>{v}</b>
+                      <span>{label}</span>
+                      <i>
+                        <em style={{ width: `${v}%` }} />
+                      </i>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {hero && (
+              <>
+                <div className="hs-glass hs-stack__setup" data-ui="">
+                  <div className="hs-ui-head">
+                    <span className="hs-ui-head__tk">{hero.setup.ticker}</span>
+                    <span className="hs-dot" />
+                    <span className="hs-ui-head__nm">{sideLabel(hero.setup.direction)}</span>
+                    <span className="hs-ui-head__sp">
+                      <Pill>Target hit</Pill>
+                    </span>
+                  </div>
+                  <p className="hs-fine hs-stack__src">
+                    Daily closes to the {heroHit >= 0 ? shortDate(hero.closes[heroHit].date) : "last"} close · published {shortDate(hero.setup.reportDate)} before the open
+                  </p>
+                  <SetupChart
+                    id="hero"
+                    closes={hero.closes}
+                    setup={hero.setup}
+                    history={12}
+                    headTag
+                    result
+                    label={`${hero.setup.ticker} ${sideLabel(hero.setup.direction).toLowerCase()} from ${price(hero.setup.entry)} to ${price(hero.setup.target)}, published ${shortDate(hero.setup.reportDate)}${hero.setup.resultPct != null ? `, graded ${signedPct(hero.setup.resultPct)}` : ""}`}
+                  />
+                </div>
+                <Toast
+                  className="hs-stack__alert"
+                  icon="check"
+                  title={`Target hit · ${hero.setup.ticker} ${sideLabel(hero.setup.direction).toLowerCase()}`}
+                  sub={`$${price(hero.setup.entry)} to $${price(hero.setup.target)}, published ${shortDate(hero.setup.reportDate)}`}
+                  side={<span className="hs-up">{hero.setup.resultPct != null ? signedPct(hero.setup.resultPct) : ""}</span>}
+                  sideNote={heroHit >= 0 ? `${shortDate(hero.closes[heroHit].date)} close` : "graded"}
+                />
+              </>
+            )}
+            <figcaption className="hs-sr">This morning&apos;s HighStrike report and a recent setup graded against real prices.</figcaption>
           </figure>
         </div>
       </section>
 
-      {/* How a setup happens: the fragment pinned while four statements change it */}
-      <section id="how" className="hs-wrap hs-story">
-        <HowItWorks
-          title="How a setup happens"
-          steps={steps}
-          stages={[
-            <ScannerSlice key="scan" today={today} movers={movers} />,
-            example ? <SetupCard key="setup" setup={example} /> : null,
-            example ? (
-              <div key="alert" style={{ position: "relative", paddingTop: 36 }}>
-                <SetupCard setup={example} />
-                <AlertToast
-                  setup={example}
-                  style={{ position: "absolute", top: 0, left: 28, right: 28, boxShadow: "0 18px 40px -18px rgba(10,11,13,0.35)" }}
-                />
-              </div>
-            ) : null,
-            example ? <GradedStamp key="graded" setup={example} /> : null,
-          ]}
-        />
-      </section>
+      {tape.length > 0 && (
+        <section className="hs-tape" aria-label={`The biggest moves among the stocks HighStrike follows, ${session ? `${shortDate(session)} close` : "last session"}`}>
+          <span className="hs-tape__label">
+            <i aria-hidden="true" />
+            Movers · {session ? `${shortDate(session)} close` : "last session"}
+          </span>
+          <div className="hs-tape__win">
+            <div className="hs-tape__run">
+              {[...tape, ...tape].map((m, i) => (
+                <span key={`${m.ticker}-${i}`} className="hs-tape__it" aria-hidden={i >= tape.length ? true : undefined}>
+                  <b>{m.ticker}</b>
+                  <span className="hs-tape__p">{price(m.close)}</span>
+                  <span className={`hs-tape__c ${m.changePct >= 0 ? "hs-up" : "hs-dn"}`}>
+                    <Tri up={m.changePct >= 0} />
+                    {Math.abs(m.changePct).toFixed(2)}%
+                  </span>
+                </span>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
-      {/* Everything on the desk: six cells, fragments docked in a checkerboard */}
-      <section className="hs-wrap hs-desk" aria-labelledby="hs-desk-title">
-        <h2 id="hs-desk-title" className="hs-heading" data-reveal="">
-          Everything on the desk
-        </h2>
-        <div className="hs-cells">
-          {[
-            {
-              title: "Market weather",
-              text: "Volatility, opportunity and direction, scored 0 to 100 before every open, with a written note on the tape.",
-              frag: report ? <WeatherRow report={report} /> : null,
-            },
-            {
-              title: "Flow scanner",
-              text: "5,400+ stocks ranked by options flow against their own baseline, not the market's.",
-              frag: <ScannerSlice today={today} movers={movers} className="hs-cell__frag" />,
-            },
-            {
-              title: "Trade setups",
-              text: "Entry rules, a target, a time window and suggested contracts on every idea, with the reasoning.",
-              frag: example ? <SetupCard setup={example} className="hs-cell__frag" /> : null,
-            },
-            {
-              title: "Alerts",
-              text: "A message the moment a setup's entry rules trigger, so you are not watching the tape all day.",
-              frag: alerts.length ? <AlertFeed setups={alerts} className="hs-cell__frag" /> : null,
-            },
-            {
-              title: "Insiders and chatter",
-              text: "Form 4 buys and sells from the last 30 days and the crowd's mood, on every name on the slate.",
-              frag: reads.length ? <InsiderChatter reads={reads} className="hs-cell__frag" /> : null,
-            },
-            {
-              title: "Trading School",
-              text: "The full HighStrike curriculum, from options mechanics to grading your own trades, included.",
-              frag: <SchoolModules className="hs-cell__frag" />,
-            },
-          ].map((c, i) => (
-            <article
-              key={c.title}
-              className={`hs-cell${[1, 3, 5].includes(i) ? " hs-cell--flip" : ""}`}
-              data-reveal=""
-              style={{ "--i": i % 3 } as React.CSSProperties}
-            >
-              <div className="hs-cell__text">
-                <h3>{c.title}</h3>
-                <p>{c.text}</p>
+      {/* How a setup happens: the same real setup, the morning its price rule held */}
+      {hero && (
+        <section id="how" className="hs-room hs-section hs-how" aria-labelledby="hs-how-title">
+          <Field spy={spy} qqq={qqq} seed={18} />
+          <div className="hs-wrap">
+            <div className="hs-section-head">
+              <h2 id="hs-how-title" className="hs-display hs-h2" data-reveal="">
+                How a setup happens
+              </h2>
+              <p className="hs-lead" data-reveal="" style={{ "--i": 1 } as React.CSSProperties}>
+                Nothing is published after the fact. A setup is written before the open, waits for its price, and is graded when it closes.
+              </p>
+            </div>
+            <div className="hs-how__grid">
+              <ol className="hs-moments">
+                {moments.map((m, i) => (
+                  <li key={m.lead} className={i === 2 ? "is-on" : i < 2 ? "is-done" : undefined} data-reveal="" style={{ "--i": i } as React.CSSProperties}>
+                    <h3 className="hs-h3">{m.lead}</h3>
+                    <p>{m.text}</p>
+                  </li>
+                ))}
+              </ol>
+              <div className="hs-stage" data-land="">
+                <div className="hs-glass hs-ticket" data-ui="">
+                  <div className="hs-ui-head">
+                    <span className="hs-ui-head__tk">{hero.setup.ticker}</span>
+                    <span className="hs-dot" />
+                    <span className="hs-ui-head__nm">{sideLabel(hero.setup.direction)}</span>
+                    {rule && (
+                      <span className="hs-ui-head__sp">
+                        <Pill>Price rule met</Pill>
+                      </span>
+                    )}
+                  </div>
+                  <p className="hs-fine hs-ticket__when">Published {weekdayDate(hero.setup.reportDate)}, before the open</p>
+                  <div className="hs-plan">
+                    <div>
+                      <span className="hs-lbl">Entry</span>
+                      <b>{price(hero.setup.entry)}</b>
+                    </div>
+                    <div>
+                      <span className="hs-lbl">Target</span>
+                      <b className="hs-up">{price(hero.setup.target)}</b>
+                    </div>
+                    <div>
+                      <span className="hs-lbl">Window</span>
+                      <b>{(hero.setup.timeFrame ?? "3-5 days").replace("-", "–")}</b>
+                    </div>
+                  </div>
+                  <SetupChart
+                    id="how"
+                    closes={hero.closes}
+                    setup={hero.setup}
+                    history={14}
+                    until={rule?.date ?? undefined}
+                    trade={false}
+                    crosshair={rule?.date ?? null}
+                    label={`${hero.setup.ticker} into the morning of ${shortDate(hero.setup.reportDate)}${rule ? `, closing at ${price(rule.close)} on ${shortDate(rule.date)}` : ""}`}
+                  />
+                  <ul className="hs-rules">
+                    {hero.setup.criteria.map((c) => (
+                      <li key={c}>
+                        <i aria-hidden="true" />
+                        {c}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                {rule && (
+                  <Toast
+                    className="hs-stage__alert"
+                    icon="bell"
+                    title={`Price rule met · ${hero.setup.ticker}`}
+                    sub={`${shortDate(rule.date)} close $${price(rule.close)}, ${rule.short ? "below" : "above"} $${price(rule.trigger)}`}
+                    side="Alert"
+                    sideNote={shortDate(rule.date)}
+                  />
+                )}
               </div>
-              {c.frag}
-            </article>
-          ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* The light punch: the record, wins and losses */}
+      {stats && record.length > 0 && (
+        <section id="record" className="hs-punch hs-section hs-graded" aria-labelledby="hs-graded-title">
+          <div className="hs-wrap">
+            <div className="hs-graded__head">
+              <div>
+                <h2 id="hs-graded-title" className="hs-display hs-h2" data-reveal="">
+                  Graded in public
+                </h2>
+                <p className="hs-lead" data-reveal="" style={{ "--i": 1 } as React.CSSProperties}>
+                  Every setup is recorded with its entry and target, then graded against real prices. Wins and losses stay on the page.
+                </p>
+              </div>
+              <div className="hs-card hs-stats" data-ui="" data-reveal="">
+                {stats.winRate != null && (
+                  <p className="hs-stat">
+                    <span className="hs-stat__v">
+                      <svg className="hs-ring" viewBox="0 0 54 54" aria-hidden="true">
+                        <circle cx="27" cy="27" r="22" className="hs-ring__track" />
+                        <circle cx="27" cy="27" r="22" className="hs-ring__value" pathLength={100} style={{ strokeDasharray: `${stats.winRate} 100` }} transform="rotate(-90 27 27)" />
+                      </svg>
+                      {stats.winRate.toFixed(1)}%
+                    </span>
+                    <span className="hs-stat__k">hit their target</span>
+                  </p>
+                )}
+                {stats.avgGain != null && (
+                  <p className="hs-stat">
+                    <span className="hs-stat__v">
+                      <Tag tone="gain">{signedPct(stats.avgGain, 1)}</Tag>
+                    </span>
+                    <span className="hs-stat__k">average gain</span>
+                  </p>
+                )}
+                {stats.avgLoss != null && (
+                  <p className="hs-stat">
+                    <span className="hs-stat__v">
+                      <Tag tone="loss">{signedPct(stats.avgLoss, 1)}</Tag>
+                    </span>
+                    <span className="hs-stat__k">average loss</span>
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="hs-graded__body">
+              <div>
+                <p className="hs-figure" data-reveal="">
+                  <span className="hs-figure__big">{stats.closedCount}</span>
+                  <span className="hs-figure__cap">setups graded since August, every one on the record</span>
+                </p>
+                {weeks.length > 0 && (
+                  <div className="hs-card hs-weeks" data-ui="" data-reveal="">
+                    <div className="hs-weeks__head">
+                      <h3 className="hs-h3">Closed each week</h3>
+                      <span className="hs-weeks__key">
+                        <i aria-hidden="true" />
+                        Hit the target
+                      </span>
+                    </div>
+                    <div className="hs-weeks__bars" role="list" aria-label="Setups closed each week">
+                      {weeks.map((w, i) => (
+                        <div
+                          key={w.week}
+                          role="listitem"
+                          aria-label={`Week of ${shortDate(w.week)}: ${w.closed} closed, ${w.hits} hit the target`}
+                          className="hs-weeks__bar"
+                          style={{ height: `${((w.closed / maxClosed) * 100).toFixed(1)}%`, "--i": i } as React.CSSProperties}
+                        >
+                          <i style={{ height: `${w.closed ? ((w.hits / w.closed) * 100).toFixed(1) : 0}%` }} />
+                        </div>
+                      ))}
+                    </div>
+                    <div className="hs-weeks__x" aria-hidden="true">
+                      {weeks.map((w) => (
+                        <span key={w.week}>{shortDate(w.week)}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div>
+                <div className="hs-card hs-record" data-ui="" data-reveal="" style={{ "--i": 1 } as React.CSSProperties}>
+                  <table>
+                    <caption className="hs-sr">The most recently graded setups</caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Published</th>
+                        <th scope="col">Setup</th>
+                        <th scope="col" className="hs-record__plan">
+                          Entry to target
+                        </th>
+                        <th scope="col" className="hs-record__res">
+                          Result
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {record.map((c, i) => {
+                        const r = c.resultPct ?? 0;
+                        return (
+                          <tr key={`${c.ticker}-${c.reportDate}`}>
+                            <td className="hs-record__date">{i === 0 || record[i - 1].reportDate !== c.reportDate ? shortDate(c.reportDate) : ""}</td>
+                            <td>
+                              <span className="hs-record__tk">{c.ticker}</span>
+                              <span className={c.direction.toLowerCase() === "short" ? "hs-dn" : "hs-up"}>{sideLabel(c.direction)}</span>
+                            </td>
+                            <td className="hs-record__plan">
+                              ${price(c.entry)} → ${price(c.target)}
+                            </td>
+                            <td className="hs-record__res">
+                              <span className="hs-record__st">{statusLabel(c.status)}</span>
+                              <span className={`hs-chip ${r > 0 ? "hs-chip--g" : r < 0 ? "hs-chip--r" : "hs-chip--n"}`}>
+                                <Tri up={r >= 0} />
+                                {Math.abs(r).toFixed(2)}%
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="hs-graded__note">
+                  Each setup is graded at the close against its own window. The newest seven, {shortDate(record[record.length - 1].reportDate)} to {shortDate(record[0].reportDate)}.{" "}
+                  <Link href="/results" className="hs-link">
+                    The full record
+                  </Link>
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* The desk: one terminal, every tool, this morning's real numbers */}
+      <section id="desk" className="hs-room hs-section hs-desk" aria-labelledby="hs-desk-title">
+        <Field spy={spy} qqq={qqq} seed={25} />
+        <div className="hs-wrap">
+          <div className="hs-section-head">
+            <h2 id="hs-desk-title" className="hs-display hs-h2" data-reveal="">
+              Everything on the desk
+            </h2>
+            <p className="hs-lead" data-reveal="" style={{ "--i": 1 } as React.CSSProperties}>
+              One terminal for the whole morning: the market&apos;s weather, the scanner, the setups, the alerts, insider filings and the crowd, with Trading School beside them.
+            </p>
+          </div>
+          <div className="hs-desk__grid">
+            <ul className="hs-tools">
+              {tools.map((t, i) => (
+                <li key={t.name} className={i === 0 ? "is-on" : undefined} data-reveal="" style={{ "--i": i } as React.CSSProperties}>
+                  <h3 className="hs-tools__name">{t.name}</h3>
+                  <p>{t.text}</p>
+                </li>
+              ))}
+            </ul>
+            <div className="hs-glass hs-term" data-ui="" data-land="">
+              <div className="hs-term__bar">
+                <span className="hs-term__lights" aria-hidden="true">
+                  <i />
+                  <i />
+                  <i />
+                </span>
+                <DeskSearch start={LOOKUP_START} initial={lookup} examples={["CVX", "TSLA", "SPY", "HD"]} tracked={movers.length || 48} />
+                <span className="hs-term__tabs" aria-hidden="true">
+                  <span className="is-on">Briefing</span>
+                  <span>Scanner</span>
+                  <span>Setups</span>
+                  <span>Alerts</span>
+                  <span>School</span>
+                </span>
+              </div>
+              <div className="hs-term__body">
+                <div className="hs-pane">
+                  {report && (
+                    <>
+                      <h4>
+                        Market weather <span>{weekdayDate(report.date)}</span>
+                      </h4>
+                      <div className="hs-gauges">
+                        <Gauge label="Volatility" value={report.volatility} />
+                        <Gauge label="Opportunity" value={report.opportunity} />
+                        <Gauge label="Direction" value={report.direction} />
+                      </div>
+                      <p className="hs-pane__note">{report.summary}</p>
+                    </>
+                  )}
+                  {slate.length > 0 && (
+                    <>
+                      <h4 className="hs-pane__sub">
+                        {slateToday ? "Today's slate" : "The latest slate"} <span>flow · side · last close</span>
+                      </h4>
+                      <div className="hs-rows">
+                        {slate.map((t) => (
+                          <div key={t.ticker} className="hs-row">
+                            <span className="hs-row__tk">{t.ticker}</span>
+                            <span className="hs-row__flow" aria-label={`Flow score ${t.flowScore ?? 0}`}>
+                              <i style={{ width: `${t.flowScore ?? 0}%` }} />
+                            </span>
+                            <span className={`hs-row__side hs-row__side--${t.direction.toLowerCase() === "short" ? "short" : "long"}`}>{sideLabel(t.direction)}</span>
+                            <span className="hs-row__v">{t.last != null ? price(t.last) : "–"}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+                <div className="hs-term__col">
+                  {insiders.length > 0 && (
+                    <div className="hs-pane">
+                      <h4>
+                        Insider selling <span>30 days</span>
+                      </h4>
+                      <div className="hs-bars">
+                        {insiders.map((r) => (
+                          <div key={r.ticker} className="hs-barrow">
+                            <span className="hs-barrow__tk">{r.ticker}</span>
+                            <span className="hs-barrow__meter">
+                              <i className="hs-barrow__sell" style={{ width: `${Math.max(4, ((r.insiders?.sold ?? 0) / maxSold) * 100).toFixed(1)}%` }} />
+                            </span>
+                            <span className="hs-barrow__v">
+                              {r.insiders?.sells} sell{r.insiders?.sells === 1 ? "" : "s"} · ${compact(r.insiders?.sold ?? 0)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {crowd.length > 0 && (
+                    <div className="hs-pane">
+                      <h4>
+                        The crowd <span>bulls vs bears</span>
+                      </h4>
+                      <div className="hs-bars">
+                        {crowd.map((r) => {
+                          const c = r.chatter!;
+                          return (
+                            <div key={r.ticker} className="hs-barrow">
+                              <span className="hs-barrow__tk">{r.ticker}</span>
+                              <span className="hs-barrow__meter hs-barrow__meter--bear" aria-label={`${Math.round((c.bullish / (c.bullish + c.bearish)) * 100)}% bullish`}>
+                                <i className="hs-barrow__bull" style={{ width: `${((c.bullish / (c.bullish + c.bearish)) * 100).toFixed(1)}%` }} />
+                              </span>
+                              <span className="hs-barrow__v">{c.watchers.toLocaleString("en-US")} watching</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* The record, as a table: the latest closed setups, wins and losses */}
-      {rows.length > 0 && (
-        <section id="record" className="hs-wrap hs-record" aria-labelledby="hs-record-title">
-          <h2 id="hs-record-title" className="hs-display hs-record__title hs-lines hs-mask">
-            <span className="hs-line">
-              <span data-line="">Graded</span>
-            </span>
-            <span className="hs-line">
-              <span data-line="" style={{ "--i": 1 } as React.CSSProperties}>
-                in public
+      {/* One plan, sold as an order ticket */}
+      <section id="pricing" className="hs-room hs-section hs-pricing" aria-labelledby="hs-pricing-title">
+        <Field spy={spy} qqq={qqq} seed={32} />
+        <div className="hs-wrap hs-pricing__grid">
+          <div>
+            <h2 id="hs-pricing-title" className="hs-display hs-h2">
+              <span className="hs-line" data-reveal="">
+                Everything for
               </span>
-            </span>
-          </h2>
-          <p className="hs-record__lead hs-body hs-muted" data-reveal="" style={{ "--i": 1 } as React.CSSProperties}>
-            Every setup is recorded with its entry and target, then graded automatically against real prices. Wins and
-            losses stay on the page.
-          </p>
-          <table data-reveal="" style={{ "--i": 2 } as React.CSSProperties}>
-            <caption className="sr-only-hs">The most recently closed setups</caption>
-            <thead>
-              <tr>
-                <th scope="col">
-                  <span className="sr-only-hs">Published</span>
-                </th>
-                <th scope="col">
-                  <span className="sr-only-hs">Setup</span>
-                </th>
-                <th scope="col">
-                  <span className="sr-only-hs">Plan</span>
-                </th>
-                <th scope="col">
-                  <span className="sr-only-hs">Result</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((c, i) => (
-                <tr key={`${c.ticker}-${c.reportDate}`}>
-                  <td className="date">{i === 0 || rows[i - 1].reportDate !== c.reportDate ? shortDate(c.reportDate) : ""}</td>
-                  <td>
-                    <span className="ticker">{c.ticker}</span>
-                    <span className={c.direction.toLowerCase() === "short" ? "hs-down" : "hs-up"}>{sideLabel(c.direction)}</span>
-                  </td>
-                  <td className="plan hs-num">
-                    ${price(c.entry)} to ${price(c.target)}
-                    {c.timeFrame ? `, ${c.timeFrame}` : ""}
-                  </td>
-                  <td className="right hs-num">
-                    <span className="hs-muted">{statusLabel(c.status)}</span>{" "}
-                    {c.resultPct != null && <span className={c.resultPct >= 0 ? "hs-up" : "hs-down"}>{signedPct(c.resultPct)}</span>}
-                  </td>
-                </tr>
+              <span className="hs-line" data-reveal="" style={{ "--i": 1 } as React.CSSProperties}>
+                <Tag className="hs-tag--land">$99</Tag> a month
+              </span>
+            </h2>
+            <p className="hs-lead" data-reveal="" style={{ "--i": 2 } as React.CSSProperties}>
+              The terminal, the daily setups, the alerts and the full Trading School, for one price. No upsells, no tiers.
+            </p>
+            <ul className="hs-included">
+              {["The AI terminal and the flow scanner", "Daily setups with the entry, the target and the reasoning", "Alerts the moment a setup triggers", "Trading School, the full curriculum"].map((t, i) => (
+                <li key={t} data-reveal="" style={{ "--i": i + 2 } as React.CSSProperties}>
+                  {t}
+                </li>
               ))}
-            </tbody>
-          </table>
-          <p className="hs-small" style={{ marginTop: 28 }}>
-            <Link href="/results" className="hs-link">
-              The full record and methodology
-            </Link>
-          </p>
-        </section>
-      )}
-
-      {/* The record as a series: setups closed per week, standing on the edge */}
-      {stats && weeks.length > 0 && (
-        <section className="hs-bars" aria-labelledby="hs-bars-title">
-          <div className="hs-wrap">
-            <p className="hs-display hs-bars__figure hs-lines hs-mask" aria-hidden="true">
-              <span className="hs-line">
-                <span data-line="">{stats.closedCount}</span>
+            </ul>
+            <p className="hs-proof" data-reveal="">
+              <b>{badges.traders} traders</b> in <b>{badges.countries} countries</b> have learned with HighStrike since 2018.
+            </p>
+          </div>
+          <div className="hs-glass hs-order" data-ui="" data-land="">
+            <div className="hs-ui-head">
+              <Bull className="hs-bull--sm" />
+              <span className="hs-ui-head__tk">HighStrike</span>
+              <span className="hs-ui-head__nm">Everything</span>
+              <span className="hs-ui-head__sp">
+                <Pill>7-day trial</Pill>
               </span>
+            </div>
+            <dl>
+              <div>
+                <dt>Plan</dt>
+                <dd>One plan, everything in it</dd>
+              </div>
+              <div>
+                <dt>Price</dt>
+                <dd>$99.00 a month</dd>
+              </div>
+              <div>
+                <dt>Free trial</dt>
+                <dd>7 days</dd>
+              </div>
+              <div>
+                <dt>Cancel</dt>
+                <dd>Anytime, from your account</dd>
+              </div>
+            </dl>
+            <p className="hs-order__due">
+              <span>Due today</span>
+              <b>$0.00</b>
             </p>
-            <h2 id="hs-bars-title" className="hs-heading hs-bars__claim">
-              <span className="sr-only-hs">{stats.closedCount} </span>
-              Setups graded since August
-            </h2>
-            <p className="hs-body hs-muted" style={{ marginTop: 12, maxWidth: "48ch" }}>
-              {stats.winRate != null ? `${stats.winRate}% hit their target. ` : ""}
-              {stats.avgGain != null ? `Average gain ${signedPct(stats.avgGain, 1)}, ` : ""}
-              {stats.avgLoss != null ? `average loss ${signedPct(stats.avgLoss, 1)}.` : ""}
-            </p>
-          </div>
-          <div className="hs-bars__grid" data-ui="" role="list" aria-label="Setups closed per week">
-            {weeks.map((w, i) => {
-              const label = `Week of ${shortDate(w.week)}: ${w.closed} closed, ${w.hits} hit target`;
-              return (
-                <div
-                  key={w.week}
-                  role="listitem"
-                  tabIndex={0}
-                  aria-label={label}
-                  className={`hs-bar${w.week === accentWeek ? " hs-bar--accent" : ""}`}
-                  style={{ "--i": i, "--pct": Math.round((w.closed / maxClosed) * 100) } as React.CSSProperties}
-                >
-                  <span className="hs-bar__tip" aria-hidden="true">
-                    {label}
-                  </span>
-                  <span className="hs-bar__value" aria-hidden="true">
-                    {w.closed}
-                  </span>
-                  <span className="hs-bar__fill" aria-hidden="true" />
-                  <span className="hs-bar__week" aria-hidden="true">
-                    {shortDate(w.week)}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      {/* One plan, the price very large */}
-      <section id="pricing" className="hs-wrap hs-price" aria-labelledby="hs-price-title">
-        {/* Four parts: on wide screens the intro and the list share the left
-            column and the price and the action the right; on narrow ones they
-            stack as a price card would: intro, price, list, action. */}
-        <div className="hs-price__grid">
-          <div className="hs-price__intro" data-reveal="">
-            <h2 id="hs-price-title" className="hs-heading">
-              One plan, everything in it
-            </h2>
-            <p className="hs-body hs-muted">
-              The terminal, the daily setups and the full Trading School, for one price. {badges.traders} traders in{" "}
-              {badges.countries} countries have learned with HighStrike since 2018.
-            </p>
-          </div>
-          <div className="hs-display hs-price__figure" data-reveal="" style={{ "--i": 1 } as React.CSSProperties}>
-            <span className="hs-price__cur">$</span>
-            <span data-roll="">99</span>
-            <span className="hs-price__per">per month</span>
-          </div>
-          <ul className="hs-price__list" data-reveal="">
-            <li>The AI terminal and flow scanner</li>
-            <li>Daily setups with entry, target and reasoning</li>
-            <li>Trading School, the full curriculum</li>
-            <li>Alerts when a setup triggers</li>
-          </ul>
-          <div className="hs-price__cta" data-reveal="" style={{ "--i": 1 } as React.CSSProperties}>
-            <Link href={TRIAL} className="hs-button">
+            <Link href={TRIAL} className="hs-btn hs-btn--wide">
               Start free trial
             </Link>
-            <span className="hs-small hs-muted">7 days free, then $99 a month. Cancel anytime.</span>
+            <p className="hs-order__after">Then $99 a month from day 8. Cancel before then and you pay nothing.</p>
           </div>
         </div>
       </section>
 
       {/* Questions: an index and one answer */}
-      <section className="hs-wrap hs-faq" aria-label="Questions">
-        <FaqIndex title="Questions" faqs={faqs} />
+      <section className="hs-room hs-section hs-faq" aria-label="Questions">
+        <Field spy={spy} qqq={qqq} seed={39} />
+        <div className="hs-wrap">
+          <FaqIndex title="Questions" faqs={faqs} />
+        </div>
       </section>
 
-      {/* The close: one row of tiles, cropped by both edges */}
-      <section className="hs-wrap hs-close" aria-labelledby="hs-close-title">
-        <div className="hs-tiles">
-          <div className="hs-tile hs-tile--main">
-            <h2 id="hs-close-title" className="hs-heading">
+      {/* The close: the last session on one map, and the full lockup */}
+      <section className="hs-room hs-close" aria-labelledby="hs-close-title">
+        <Field spy={spy} qqq={qqq} seed={46} />
+        <div className="hs-wrap">
+          {map.length > 0 && (
+            <div className="hs-glass hs-map" data-ui="" data-reveal="">
+              <div className="hs-map__head">
+                <span className="hs-map__tk">The desk&apos;s {map.length} names</span>
+                <span className="hs-map__nm">{session ? `${shortDate(session)} close` : "last session"}</span>
+                <span className="hs-map__sp">coloured by the move</span>
+              </div>
+              <div className="hs-map__tiles">
+                {map.map((m, i) => (
+                  <div key={m.ticker} className={`hs-mt${i < 2 ? " hs-mt--xl" : i < 8 ? " hs-mt--l" : ""}`} style={{ background: shade(m.changePct) }}>
+                    <b>{m.ticker}</b>
+                    <span>{signedPct(m.changePct)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="hs-end">
+            <span className="hs-end__pool" aria-hidden="true" />
+            <Bull className="hs-bull--xl" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className="hs-end__word" src="/brand/wordmark.png" alt="HighStrike" width={169} height={34} />
+            <h2 id="hs-close-title" className="hs-display hs-h2" data-reveal="">
               Start before tomorrow&apos;s open
             </h2>
-            <p>Seven days free, then $99 a month. Tomorrow&apos;s slate publishes before 9:30 ET.</p>
-            <div>
-              <Link href={TRIAL} className="hs-button hs-button--ink">
+            <p className="hs-lead" data-reveal="" style={{ "--i": 1 } as React.CSSProperties}>
+              Seven days free, then $99 a month. Tomorrow&apos;s slate is out before 9:30 ET.
+            </p>
+            <div data-reveal="" style={{ "--i": 2 } as React.CSSProperties}>
+              <Link href={TRIAL} className="hs-btn">
                 Start free trial
               </Link>
             </div>
-          </div>
-          <div className="hs-tiles__pair">
-            <div className="hs-tile hs-tile--photo">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/landing/nyse-trading-floor.jpg"
-                alt="A wall of trading screens on the floor of the New York Stock Exchange, two traders in silhouette"
-                width={1600}
-                height={1246}
-                loading="lazy"
-                decoding="async"
-              />
-            </div>
-            <div className="hs-tile hs-tile--ink" aria-hidden="true" />
           </div>
         </div>
       </section>

@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "@/lib/supabaseConfig";
-import { sessionBefore } from "@/lib/marketCalendar";
+import { newYorkDate, sessionBefore } from "@/lib/marketCalendar";
 
 // Everything the landing page shows, read with the publishable key. Setups and
 // prices are members-only tables, so they come through the public RPCs in
@@ -39,8 +39,6 @@ export type SetupStats = {
   avgLoss: number | null;
 };
 
-export type PastTrade = { ticker: string; status: string; result: string; daysAgo: number };
-
 export type Close = { date: string; close: number };
 
 export type Week = { week: string; closed: number; hits: number };
@@ -57,18 +55,25 @@ export type TickerRead = {
   chatter: { day: string; perHour: number; bullish: number; bearish: number; watchers: number } | null;
 };
 
+// The setup the hero and "How a setup happens" draw: the newest one that hit
+// its target and has enough sessions on file to show where it came from.
+export type HeroSetup = { setup: ClosedSetup; closes: Close[] };
+
 export type LandingData = {
   report: Report | null;
   today: TodaySetup[];
   closed: ClosedSetup[];
   spy: Close[];
+  qqq: Close[];
   stats: SetupStats | null;
   weeks: Week[];
   movers: Mover[];
+  hero: HeroSetup | null;
+  reads: Record<string, TickerRead>;
   lookup: TickerRead | null;
   badges: { traders: string; countries: string };
-  scoreboard: { stats: { value: string; label: string }[]; trades: PastTrade[] };
-  logo: string | null;
+  /** The newest report is this morning's (false before the morning run, on weekends and holidays). */
+  slateToday: boolean;
 };
 
 // The ticker the lookup opens on.
@@ -76,17 +81,9 @@ export const LOOKUP_START = "NVDA";
 
 // Same defaults as Admin ▸ Site (src/lib/siteContent.ts), read here on the server.
 const DEFAULT_BADGES = { traders: "10,000+", countries: "142" };
-const DEFAULT_SCOREBOARD = {
-  stats: [
-    { value: "39%", label: "Average gain" },
-    { value: "64%", label: "Win rate" },
-    { value: "-19%", label: "Average loss" },
-  ],
-  trades: [
-    { ticker: "DELL", status: "Target Hit", result: "+956%", daysAgo: 2 },
-    { ticker: "SMCI", status: "Closed", result: "+121%", daysAgo: 5 },
-  ],
-};
+
+// Sessions of history the hero needs before a setup's morning to draw it.
+const HERO_HISTORY = 10;
 
 function parseSetting<T>(raw: string | undefined, fallback: T): T {
   if (!raw) return fallback;
@@ -124,6 +121,20 @@ function bySession(rows: Close[]) {
   return out;
 }
 
+async function closesFor(sym: string, days: number): Promise<Close[]> {
+  try {
+    const { data, error } = await landingClient().rpc("get_landing_closes", { sym, days });
+    if (error || !data) return [];
+    return bySession(
+      ((data ?? []) as { price_date: string; close: number }[])
+        .map((p) => ({ date: p.price_date, close: Number(p.close) }))
+        .sort((a, b) => (a.date < b.date ? -1 : 1))
+    );
+  } catch {
+    return [];
+  }
+}
+
 export async function getTickerRead(sym: string): Promise<TickerRead | null> {
   try {
     const { data, error } = await landingClient().rpc("get_landing_ticker", { sym });
@@ -135,9 +146,20 @@ export async function getTickerRead(sym: string): Promise<TickerRead | null> {
   }
 }
 
+async function heroSetup(closed: ClosedSetup[]): Promise<HeroSetup | null> {
+  const hits = closed
+    .filter((c) => c.status === "target_hit")
+    .sort((a, b) => (a.reportDate < b.reportDate ? 1 : a.reportDate > b.reportDate ? -1 : 0));
+  for (const setup of hits) {
+    const closes = await closesFor(setup.ticker, 90);
+    if (closes.filter((p) => p.date < setup.reportDate).length >= HERO_HISTORY) return { setup, closes };
+  }
+  return null;
+}
+
 export async function getLandingData(): Promise<LandingData> {
   const supabase = landingClient();
-  const [reportRes, todayRes, closedRes, spyRes, statsRes, weeksRes, moversRes, settingsRes, lookup] = await Promise.all([
+  const [reportRes, todayRes, closedRes, spyRes, qqq, statsRes, weeksRes, moversRes, settingsRes] = await Promise.all([
     supabase
       .from("weather_reports")
       .select("report_date, volatility, opportunity, direction, summary")
@@ -145,16 +167,13 @@ export async function getLandingData(): Promise<LandingData> {
       .limit(1)
       .maybeSingle(),
     supabase.rpc("get_landing_setups_today"),
-    supabase.rpc("get_recent_closed_setups", { limit_n: 12 }),
-    supabase.rpc("get_landing_closes", { sym: "SPY", days: 60 }),
+    supabase.rpc("get_recent_closed_setups", { limit_n: 20 }),
+    supabase.rpc("get_landing_closes", { sym: "SPY", days: 90 }),
+    closesFor("QQQ", 90),
     supabase.rpc("get_setup_stats"),
     supabase.rpc("get_landing_weekly_record"),
     supabase.rpc("get_landing_movers"),
-    supabase
-      .from("site_settings")
-      .select("key, value")
-      .in("key", ["hero_badges", "scoreboard", "logo_dark", "logo"]),
-    getTickerRead(LOOKUP_START),
+    supabase.from("site_settings").select("key, value").in("key", ["hero_badges"]),
   ]);
 
   const r = reportRes.data;
@@ -164,6 +183,45 @@ export async function getLandingData(): Promise<LandingData> {
   const s = (statsRes.data as
     | { closed_count: number; open_count: number; win_rate: number | null; avg_gain: number | null; avg_loss: number | null }[]
     | null)?.[0];
+
+  const today = ((todayRes.data ?? []) as { ticker: string; direction: string; flow_score: number | null }[]).map((t) => ({
+    ticker: t.ticker,
+    direction: t.direction,
+    flowScore: t.flow_score,
+  }));
+  const closed = (
+    (closedRes.data ?? []) as {
+      ticker: string;
+      direction: string;
+      entry_price: number;
+      target_price: number;
+      time_frame: string | null;
+      entry_criteria: string[] | null;
+      status: string;
+      result_pct: number | null;
+      report_date: string;
+    }[]
+  ).map((c) => ({
+    ticker: c.ticker,
+    direction: c.direction,
+    entry: Number(c.entry_price),
+    target: Number(c.target_price),
+    timeFrame: c.time_frame,
+    criteria: c.entry_criteria ?? [],
+    status: c.status,
+    resultPct: c.result_pct == null ? null : Number(c.result_pct),
+    reportDate: c.report_date,
+  }));
+
+  // The desk reads every name on today's slate and in the recent record, plus
+  // the lookup's first ticker: insiders, the crowd and each last close.
+  const names = [...new Set([...today.map((t) => t.ticker), ...closed.map((c) => c.ticker), LOOKUP_START])];
+  const [hero, readList] = await Promise.all([heroSetup(closed), Promise.all(names.map((n) => getTickerRead(n)))]);
+  const reads: Record<string, TickerRead> = {};
+  names.forEach((n, i) => {
+    const read = readList[i];
+    if (read) reads[n] = read;
+  });
 
   return {
     report: r
@@ -176,40 +234,14 @@ export async function getLandingData(): Promise<LandingData> {
           summary: r.summary,
         }
       : null,
-    today: ((todayRes.data ?? []) as { ticker: string; direction: string; flow_score: number | null }[]).map((t) => ({
-      ticker: t.ticker,
-      direction: t.direction,
-      flowScore: t.flow_score,
-    })),
-    closed: (
-      (closedRes.data ?? []) as {
-        ticker: string;
-        direction: string;
-        entry_price: number;
-        target_price: number;
-        time_frame: string | null;
-        entry_criteria: string[] | null;
-        status: string;
-        result_pct: number | null;
-        report_date: string;
-      }[]
-    ).map((c) => ({
-      ticker: c.ticker,
-      direction: c.direction,
-      entry: Number(c.entry_price),
-      target: Number(c.target_price),
-      timeFrame: c.time_frame,
-      criteria: c.entry_criteria ?? [],
-      status: c.status,
-      resultPct: c.result_pct == null ? null : Number(c.result_pct),
-      reportDate: c.report_date,
-    })),
+    today,
+    closed,
     spy: bySession(
-      ((spyRes.data ?? []) as { price_date: string; close: number }[]).map((p) => ({
-        date: p.price_date,
-        close: Number(p.close),
-      }))
+      ((spyRes.data ?? []) as { price_date: string; close: number }[])
+        .map((p) => ({ date: p.price_date, close: Number(p.close) }))
+        .sort((a, b) => (a.date < b.date ? -1 : 1))
     ),
+    qqq,
     stats: s
       ? {
           closedCount: s.closed_count,
@@ -229,13 +261,10 @@ export async function getLandingData(): Promise<LandingData> {
       close: Number(m.close),
       changePct: Number(m.change_pct),
     })),
-    lookup,
+    hero,
+    reads,
+    lookup: reads[LOOKUP_START] ?? null,
     badges: parseSetting(settings.hero_badges, DEFAULT_BADGES),
-    scoreboard: parseSetting(settings.scoreboard, DEFAULT_SCOREBOARD),
-    logo: settings.logo_dark ?? settings.logo ?? null,
+    slateToday: r?.report_date === newYorkDate(Date.now()),
   };
-}
-
-export function formatDateShort(isoDate: string) {
-  return dateLabel(isoDate);
 }
