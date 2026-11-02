@@ -1,7 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
 import { isMember } from "@/lib/membership";
-import { billingReady, liveMode, publishableKey, startLifetime } from "@/lib/lifetime";
+import { getStripe } from "@/lib/stripe";
+import { billingReady, liveMode, publishableKey, startLifetime, walletDomain } from "@/lib/lifetime";
 import { LIFETIME } from "@/lib/offer";
 
 export const dynamic = "force-dynamic";
@@ -28,8 +29,10 @@ function sameOrigin(request: Request) {
  * GET: where this browser stands, for the homepage's popup (components/join/JoinDialog): signed in or not, a member or
  * not, and whether checkout can take the card in the popup (`embedded`) or goes to Stripe's page.
  */
-export async function GET() {
+export async function GET(request: Request) {
   const base = { ready: billingReady(), embedded: Boolean(publishableKey()), live: liveMode(), cents: LIFETIME.cents };
+  // Apple Pay's domain registration, after the answer so it never slows the popup (once per server).
+  if (base.ready && base.embedded) after(() => walletDomain(getStripe(), new URL(request.url).origin));
   const supabase = await supabaseServer();
   const {
     data: { user },

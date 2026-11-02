@@ -102,8 +102,9 @@ const walletHosts = new Set<string>();
  * Apple Pay (and Google Pay) in the popup's card form, which Stripe shows only on a domain registered with it
  * (Ben, 2026-11-02: "add apple pay as a payment option"). Registers and validates this host once per server; Stripe's
  * own checkout page needs none of it. Never in the way of a payment: a failure is logged and the card form opens as ever.
+ * The popup's first look (GET /api/billing/lifetime) starts it too, so it's done before anyone reaches Pay.
  */
-async function walletDomain(stripe: Stripe, origin: string) {
+export async function walletDomain(stripe: Stripe, origin: string) {
   let host: string;
   try {
     host = new URL(origin).hostname;
