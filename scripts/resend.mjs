@@ -3,9 +3,10 @@
  * highstrike.com as a sending domain on Resend (resend.com), through Resend's API.
  *
  *   node scripts/resend.mjs token     save a Resend API key (a small macOS dialog)
- *   node scripts/resend.mjs domain    add highstrike.com to Resend, put its DNS records on Cloudflare
- *                                     (scripts/cloudflare.mjs), and have Resend verify it
- *   node scripts/resend.mjs status    where highstrike.com stands on Resend
+ *   node scripts/resend.mjs domain [name]   add highstrike.com (or a subdomain of it, such as mail.highstrike.com) to
+ *                                           Resend, put its DNS records on Cloudflare (scripts/cloudflare.mjs), and
+ *                                           have Resend verify it
+ *   node scripts/resend.mjs status [name]   where that domain stands on Resend
  *
  * Why (2026-11-02): the server's Resend account (newhighstrike@gmail.com) had no verified domain, so Resend delivered
  * only to that address, and the sale alert to ben.zogby@gmail.com came back 403. With highstrike.com verified, the site
@@ -18,7 +19,24 @@ import { askSecret, fail, keychainSet, notify, ROOT, savedKey } from "./lib/mac.
 
 const API = "https://api.resend.com";
 const ACCOUNT = "RESEND_API_KEY";
-const DOMAIN = process.env.RESEND_DOMAIN || "highstrike.com";
+/** The Cloudflare zone every sending domain sits in. */
+const ZONE = "highstrike.com";
+const DOMAIN = (process.argv[3] || process.env.RESEND_DOMAIN || ZONE).toLowerCase();
+if (DOMAIN !== ZONE && !DOMAIN.endsWith(`.${ZONE}`)) fail(`${DOMAIN} isn't in the ${ZONE} zone this script can write.`);
+/** The subdomain's own label ("mail" for mail.highstrike.com), or "" for the zone itself. */
+const SUB = DOMAIN === ZONE ? "" : DOMAIN.slice(0, -(ZONE.length + 1));
+
+/**
+ * A record's full name. Resend names records relative to the zone ("resend._domainkey.mail") or, for some accounts,
+ * to the domain itself ("resend._domainkey"); either way the full name lands under the right domain, so a
+ * subdomain's records never replace the zone's own.
+ */
+function fullName(name) {
+  if (!name || name === "@") return DOMAIN;
+  if (name === ZONE || name.endsWith(`.${ZONE}`)) return name;
+  if (SUB && name !== SUB && !name.endsWith(`.${SUB}`)) return `${name}.${DOMAIN}`;
+  return `${name}.${ZONE}`;
+}
 /** A Resend key: re_ and letters, digits or underscores (anything else is a paste slip). */
 const KEY_RE = /^re_[A-Za-z0-9_]{16,}$/;
 
@@ -81,9 +99,10 @@ async function setupDomain() {
   // the zone's root are never touched.
   for (const r of domain.records ?? []) {
     const content = String(r.value).replace(/^"(.*)"$/, "$1");
-    if (r.type === "MX") cloudflare("set", "MX", r.name, content, "--priority", String(r.priority ?? 10));
-    else cloudflare("set", r.type, r.name, content);
-    console.log(`Cloudflare: ${r.type} ${r.name} set for Resend's ${r.record}.`);
+    const name = fullName(r.name);
+    if (r.type === "MX") cloudflare("set", "MX", name, content, "--priority", String(r.priority ?? 10));
+    else cloudflare("set", r.type, name, content);
+    console.log(`Cloudflare: ${r.type} ${name} set for Resend's ${r.record}.`);
   }
   await resend(key, `/domains/${domain.id}/verify`, { method: "POST" });
   // Cloudflare answers with new records within seconds; Resend checks them on its own schedule. Wait up to ~3 minutes.
