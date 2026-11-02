@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HighStrike — Finished trades before the bell</title>
+<meta name="description" content="Every morning HighStrike's AI scans 5,400+ stocks and publishes the day's options setups with the entry, the target and the reasoning. $99 a month, first 7 days free.">
+<link rel="stylesheet" href="hsweb.css">
+<link rel="stylesheet" href="hsweb-more.css">
+</head>
+<body>
+<header class="nav">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="HighStrike, home"><i class="bull"></i><img class="word" src="brand/wordmark.png" alt="" width="85" height="17"></a>
+    <nav class="links" aria-label="Main">
+      <a href="#how">How it works</a>
+      <a href="#graded">Record</a>
+      <a href="#desk">The desk</a>
+      <a href="#pricing">Pricing</a>
+    </nav>
+    <a class="signin" href="/signin">Sign in</a>
+    <a class="button small" href="/signup">Start free trial</a>
+    <button class="menu" type="button" aria-label="Open the menu"><i></i></button>
+  </div>
+</header>
+
+<main>
+  <!-- The first screen: the promise, and a real graded setup drawing to its target -->
+  <section class="room hero" id="top" aria-labelledby="hero-title">
+    <div class="light"></div><div class="field"></div>
+    <div class="wrap">
+      <div class="copy">
+        <h1 id="hero-title" class="display h1"><span class="line">Finished trades</span><span class="line"><span class="tag flash">before the bell</span></span></h1>
+        <p class="lead">Every morning HighStrike's AI scans 5,400+ stocks and publishes the day's options setups: the entry, the target and the reasoning.</p>
+        <div class="actions">
+          <a class="button" href="/signup">Start free trial</a>
+          <a class="link" href="#desk">Look up a ticker</a>
+        </div>
+        <p class="price">$99 a month after a 7-day free trial. Cancel anytime.</p>
+        <p class="bell"><span class="live"></span><span><b>Today's slate is out</b> · <span id="bell-date"></span> · <span id="bell-count"></span></span></p>
+      </div>
+      <figure class="stack">
+        <div class="glass report dim" data-ui="">
+          <div class="ui-head"><span class="tk" style="font-size:16px">Pre-market report</span><span class="dot"></span><span class="nm" id="report-date" style="font-size:14px"></span></div>
+          <div id="report-body"></div>
+        </div>
+        <div class="glass setup" data-ui="">
+          <div class="ui-head"><span class="tk">HOOD</span><span class="nm full">Robinhood Markets</span><span class="dot"></span><span class="nm">Short</span><span class="sp pill green"><i></i>Target hit</span></div>
+          <p class="fine src">Daily closes, Oct 6 – Oct 30, 2026<span class="full"> · graded at the Oct 30 close</span></p>
+          <div class="chart" id="hero-chart"></div>
+        </div>
+        <div class="toast alert" data-ui="">
+          <span class="ic"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4.5 10.5 L8.3 14.2 L15.6 5.8" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <div><div class="t">Target hit · HOOD short</div><div class="s">$91.43 to $86.86, published Oct 29</div></div>
+          <div class="r up">+7.04%<small>OCT 30 CLOSE</small></div>
+        </div>
+        <figcaption class="sr">A HighStrike setup from Oct 29: short Robinhood (HOOD) at $91.43 with a target of $86.86. It hit the target at the Oct 30 close, a gain of 7.04%.</figcaption>
+      </figure>
+    </div>
+  </section>
+  <div class="tape" id="tape" role="region" aria-label="The last session's biggest moves among the stocks HighStrike follows"></div>
+
+  <!-- How a setup happens: one real setup through its four moments -->
+  <section class="room section how" id="how" aria-labelledby="how-title">
+    <div class="light"></div><div class="field"></div>
+    <div class="wrap">
+      <div class="section-head">
+        <h2 id="how-title" class="display h2">How a setup happens</h2>
+        <p class="lead muted">Nothing is published after the fact. A setup is written before the open, waits for its price, and is graded when it closes.</p>
+      </div>
+      <div class="grid">
+        <ol class="moments">
+          <li class="done"><h3 class="h3">Overnight</h3><p>The scanner ranks 5,400+ stocks by options flow, relative volume and momentum, and keeps the names whose flow has broken from their own baseline.</p></li>
+          <li class="done"><h3 class="h3">Before the open</h3><p>The AI writes each finalist up as a setup: the price that has to hold, the target, the time window and the reasoning, in plain English.</p></li>
+          <li class="on"><h3 class="h3">When the price agrees</h3><p>The entry rules trigger and an alert goes out. Until then the setup waits, and nothing is published after the fact.</p></li>
+          <li><h3 class="h3">After it closes</h3><p>Every setup is graded against real prices, hit or miss, and the result joins the public record.</p></li>
+        </ol>
+        <div class="stage">
+          <div class="glass ticket" data-ui="">
+            <div class="ui-head"><span class="tk">HOOD</span><span class="nm full">Robinhood Markets</span><span class="dot"></span><span class="nm">Short</span><span class="sp pill green"><i></i>Rules met</span></div>
+            <p class="fine" style="padding:10px 24px 0">Published Thu, Oct 29, before the open</p>
+            <div class="plan"><div><span class="lbl">Entry</span><b>91.43</b></div><div><span class="lbl">Target</span><b class="up">86.86</b></div><div><span class="lbl">Window</span><b>3–5 days</b></div></div>
+            <div class="chart" id="how-chart"></div>
+            <ul class="rules" id="how-rules"></ul>
+          </div>
+          <div class="toast alert" data-ui="">
+            <span class="ic"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3.2 a4.6 4.6 0 0 1 4.6 4.6 v3.1 l1.5 2.4 H3.9 l1.5 -2.4 V7.8 A4.6 4.6 0 0 1 10 3.2 Z M8.1 15.4 a1.9 1.9 0 0 0 3.8 0" fill="none" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/></svg></span>
+            <div><div class="t">Entry rules met · HOOD</div><div class="s">Short below $96.00, all three rules true</div></div>
+            <div class="r">ALERT<small>OCT 29</small></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- The light punch: the record, wins and losses -->
+  <section class="punch section graded" id="graded" aria-labelledby="graded-title">
+    <div class="wrap">
+      <div class="g-head">
+        <div>
+          <h2 id="graded-title" class="display h2">Graded in public</h2>
+          <p class="lead">Every setup is recorded with its entry and target, then graded against real prices. Wins and losses stay on the page.</p>
+        </div>
+        <div class="tiles">
+          <div class="wcard tile"><span class="k"><svg class="ring" id="g-ring" viewBox="0 0 54 54" aria-hidden="true"></svg>Hit their target</span><span class="v" id="g-rate"></span></div>
+          <div class="wcard tile"><span class="k">Average gain</span><span class="v" id="g-gain"></span></div>
+          <div class="wcard tile"><span class="k">Average loss</span><span class="v" id="g-loss"></span></div>
+        </div>
+      </div>
+      <div class="g-body">
+        <div>
+          <div class="figure"><span class="big" id="g-count"></span><span class="cap">setups graded since August, every one on the record</span></div>
+          <div class="wcard weeks">
+            <div class="weeks-head"><h3 class="h3" style="font-size:22px">Closed each week</h3><span class="key"><i></i>Hit the target</span></div>
+            <div class="bars" id="g-bars"></div>
+            <div class="x" id="g-x"></div>
+          </div>
+        </div>
+        <div>
+          <div class="wcard record">
+            <table>
+              <caption class="sr">The most recently graded setups</caption>
+              <thead><tr><th scope="col">Published</th><th scope="col">Setup</th><th scope="col" class="plan-col">Entry to target</th><th scope="col" style="text-align:right">Result</th></tr></thead>
+              <tbody id="g-rows"></tbody>
+            </table>
+          </div>
+          <p class="fine g-note">Every setup has a 3–5 day window and is graded at the close. The newest seven, Oct 27–30.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- The desk: one terminal, every tool, this morning's real numbers -->
+  <section class="room section desk" id="desk" aria-labelledby="desk-title">
+    <div class="light"></div><div class="field"></div>
+    <div class="wrap">
+      <div class="section-head">
+        <h2 id="desk-title" class="display h2">Everything on the desk</h2>
+        <p class="lead muted">One terminal for the whole morning: the market's weather, the scanner, the setups, the alerts, insider filings and the crowd, with Trading School beside them.</p>
+      </div>
+      <div class="grid">
+        <ul class="tools">
+          <li class="on"><b>Market weather</b><span>Volatility, opportunity and direction, scored 0 to 100 before every open, with a written note on the tape.</span></li>
+          <li><b>Flow scanner</b><span>5,400+ stocks ranked by options flow against their own baseline, not the market's.</span></li>
+          <li><b>Trade setups</b><span>Entry rules, a target, a time window and suggested contracts on every idea.</span></li>
+          <li><b>Alerts</b><span>A message the moment a setup's entry rules trigger.</span></li>
+          <li><b>Insiders and chatter</b><span>Form 4 sells and buys from the last 30 days, and the crowd's mood.</span></li>
+          <li><b>Trading School</b><span>The full curriculum, from options mechanics to grading your own trades.</span></li>
+        </ul>
+        <div class="glass term" data-ui="">
+          <div class="bar">
+            <span class="lights"><i></i><i></i><i></i></span>
+            <span class="search"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="#7F8B86" stroke-width="1.6"/><path d="M11 11 L14.5 14.5" stroke="#7F8B86" stroke-width="1.6" stroke-linecap="round"/></svg><b>NVDA</b><i class="caret"></i><span style="margin-left:auto">Look up a ticker</span></span>
+            <span class="tabs"><span class="on">Briefing</span><span>Scanner</span><span>Setups</span><span>Alerts</span><span>School</span></span>
+          </div>
+          <div class="body">
+            <div class="pane">
+              <h4>Market weather <span id="d-date"></span></h4>
+              <div class="gauges" id="d-gauges"></div>
+              <p class="note" id="d-note"></p>
+              <h4 style="margin-top:24px">Today's slate <span>flow · side · last close</span></h4>
+              <div class="rows" id="d-slate"></div>
+            </div>
+            <div class="col">
+              <div class="pane"><h4>Insider selling <span>30 days</span></h4><div class="insiders" id="d-insiders"></div></div>
+              <div class="pane"><h4>The crowd <span>bulls vs bears</span></h4><div class="insiders" id="d-crowd"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- One plan, sold as an order ticket -->
+  <section class="room section pricing" id="pricing" aria-labelledby="pricing-title">
+    <div class="light"></div><div class="field"></div>
+    <div class="wrap">
+      <div class="grid">
+        <div>
+          <h2 id="pricing-title" class="display h2"><span class="line">Everything for</span><span class="line"><span class="tag">$99</span> a month</span></h2>
+          <p class="lead muted">The terminal, the daily setups, the alerts and the full Trading School, for one price. No upsells, no tiers.</p>
+          <ul class="included">
+            <li>The AI terminal and the flow scanner</li>
+            <li>Daily setups with the entry, the target and the reasoning</li>
+            <li>Alerts the moment a setup triggers</li>
+            <li>Trading School, the full curriculum</li>
+          </ul>
+          <p class="proofline"><b>10,000+ traders</b> in <b>142 countries</b> have learned with HighStrike since 2018.</p>
+        </div>
+        <div class="glass order" data-ui="">
+          <div class="ui-head"><i class="bull" style="width:26px;height:26px"></i><span class="tk">HighStrike</span><span class="nm">Everything</span><span class="sp pill green"><i></i>7-day trial</span></div>
+          <dl>
+            <div><dt>Plan</dt><dd>One plan, everything in it</dd></div>
+            <div><dt>Price</dt><dd>$99.00 a month</dd></div>
+            <div><dt>Free trial</dt><dd>7 days</dd></div>
+            <div><dt>Cancel</dt><dd>Anytime, from your account</dd></div>
+          </dl>
+          <div class="due"><span>Due today</span><b class="num">$0.00</b></div>
+          <a class="button wide" href="/signup">Start free trial</a>
+          <p class="after">Then $99 a month from day 8. Cancel before then and you pay nothing.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- The close: the last session on one map, and the full lockup -->
+  <section class="room close" id="close" aria-labelledby="close-title">
+    <div class="light"></div><div class="field"></div>
+    <div class="wrap">
+      <div class="glass map" data-ui="">
+        <div class="map-head"><span class="tk">The desk's 48 names</span><span class="nm" id="map-date"></span><span class="sp nm">coloured by the move</span></div>
+        <div class="tiles-map" id="map"></div>
+      </div>
+      <div class="end">
+        <span class="pool"></span>
+        <i class="bull"></i>
+        <img class="word" src="brand/wordmark.png" alt="HighStrike" width="169" height="34">
+        <h2 id="close-title" class="display h2">Start before tomorrow's open</h2>
+        <p class="lead muted" style="max-width:none">Seven days free, then $99 a month. Tomorrow's slate is out before 9:30 ET.</p>
+        <a class="button" href="/signup">Start free trial</a>
+      </div>
+    </div>
+    <footer class="foot">
+      <div class="wrap">
+        <span class="fine">© 2026 HighStrike</span>
+        <p>HighStrike is analytics and education software. Setups are market commentary, not recommendations, and nothing here is financial advice. Trading involves substantial risk, including the loss of principal, and past results do not guarantee future ones.</p>
+      </div>
+    </footer>
+  </section>
+</main>
+
+<script src="world.js"></script>
+<script src="hsweb.js"></script>
+</body>
+</html>

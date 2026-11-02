@@ -1,0 +1,132 @@
+/* The keyframe page's remaining pieces: the hero's stack, the charts' boxes, the report's minis, the record's weeks,
+   the terminal's columns and the map's head. */
+
+/* The hero stack: this morning's report behind (top right), the graded setup in front, the alert landing on top. */
+.hero { min-height: max(760px, calc(100vh - 56px)); }
+.hero .wrap { min-height: 0; }
+.stack { margin: 0; }
+.stack .report { left: auto; right: -34px; top: 0; width: 360px; height: 188px; transform: translateZ(-160px) rotateY(-9deg) rotateX(3deg); }
+.stack .setup { left: -6px; top: 150px; width: 676px; height: 452px; }
+.stack { height: 668px; }
+.stack .alert { left: -44px; top: 584px; width: 396px; }
+.setup .chart { position: relative; height: 352px; margin-top: 4px; }
+.setup .src { padding: 8px 24px 0; }
+.nav .button.small { white-space: nowrap; }
+.tag { padding-right: 0.25em; }
+.how .chart { position: relative; height: 236px; margin-top: 14px; }
+.callout { pointer-events: none; }
+.callout .tag { font-family: var(--cal); }
+
+/* This morning's report: three scores and the slate */
+.minis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 14px 18px 0; }
+.mini { padding: 10px 12px 11px; border-radius: 12px; background: rgba(255, 255, 255, 0.04); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06); }
+.mini b { display: block; font: 400 26px/1 var(--cal); }
+.mini span { display: block; margin-top: 5px; font-size: 12px; color: var(--ink-2); }
+.mini i { display: block; margin-top: 8px; height: 3px; border-radius: 3px; background: rgba(255, 255, 255, 0.08); position: relative; }
+.mini i em { position: absolute; inset: 0 auto 0 0; border-radius: 3px; background: var(--green); }
+.slate { margin: 8px 18px 0; display: none; }
+
+/* The record's weeks */
+.weeks-head { display: flex; align-items: baseline; justify-content: space-between; }
+.weeks-head .key { display: inline-flex; align-items: center; gap: 8px; font-size: 15px; color: var(--l-ink-2); }
+.weeks-head .key i { width: 12px; height: 12px; border-radius: 3px; background: linear-gradient(180deg, #13B47E, #009366); }
+
+/* The terminal's right column */
+.term .col { display: grid; grid-template-rows: auto 1fr; gap: 16px; min-height: 0; }
+.term .pane { display: flex; flex-direction: column; }
+
+/* The map's head */
+.map-head { display: flex; align-items: center; gap: 12px; padding: 6px 6px 14px; font-size: 15px; }
+.map-head .tk { font-weight: 700; }
+.map-head .nm { color: var(--ink-2); }
+.map-head .sp { margin-left: auto; }
+.close .map { display: flex; flex-direction: column; }
+.close .tiles-map { flex: 1; grid-template-rows: repeat(5, minmax(0, 1fr)); }
+
+@media (max-width: 760px) {
+  .nav .button.small { height: 38px; padding: 0 14px; font-size: 14px; }
+  .ui-head .nm.full { display: none; }
+  .toast .s { display: none; }
+  .stack { height: 436px; }
+  .toast .t { white-space: nowrap; }
+  .toast .r small { display: none; }
+  .stack .setup { left: 0; right: 0; width: auto; top: 0; height: 352px; transform: none; }
+  .stack .alert { left: 12px; right: 12px; width: auto; top: 364px; transform: none; }
+  .setup .chart { height: 270px; }
+  .setup .src .full { display: none; }
+  .setup .src { font-size: 12px; }
+  .axchip { height: 24px; font-size: 13px; padding: 0 7px; }
+  .axchip .k { font-size: 10px; margin-right: 5px; }
+  .callout .tag { font-size: 22px !important; }
+  .toast { padding: 12px 14px; gap: 12px; }
+  .toast .ic { width: 34px; height: 34px; }
+  .toast .t { font-size: 15px; }
+  .toast .s { font-size: 13px; }
+  .ui-head { padding: 16px 16px 0; gap: 9px; }
+  .ui-head .tk { font-size: 17px; }
+  .ui-head .nm { font-size: 14px; }
+  .pill { height: 24px; font-size: 11px; padding: 0 9px; }
+}
+
+/* Rooms after the first fade in at their top edge, so two dark rooms never meet on a seam. */
+.room:not(.hero) > .light { -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 180px); mask-image: linear-gradient(180deg, transparent 0, #000 180px); }
+
+/* How: the alert lands over the chart's empty top right, clear of the rules. */
+.stage { height: auto; padding-bottom: 8px; }
+.stage .ticket { position: relative; height: auto; padding-bottom: 26px; }
+.stage .alert { top: 196px; right: -30px; }
+
+/* Graded: the head (title and the three figures), then the count and weeks beside the record. */
+.g-head { display: grid; grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr); gap: 64px; align-items: end; }
+.g-head .lead { margin-top: 26px; }
+.g-body { display: grid; grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr); gap: 64px; align-items: start; margin-top: 56px; }
+.graded .figure { margin-top: 0; }
+.graded .weeks { margin-top: 40px; }
+.tile { min-height: 150px; }
+.tile .k { display: flex; align-items: center; gap: 10px; }
+.tile .v { font-size: 50px; }
+.tile .ring { position: static; width: 26px; height: 26px; flex: none; }
+.record { margin-top: 0; }
+.record td, .record th { padding-left: 20px; padding-right: 20px; }
+.g-note { margin-top: 14px; color: var(--l-ink-3); font-size: 14px; }
+
+/* Desk: the terminal fits one screen. */
+.term { height: 620px; }
+.tools li { padding: 13px 20px; }
+.tools li span { font-size: 15px; }
+
+/* Close: the map fades into the dark the lockup stands in. */
+.close .map { height: 440px; }
+.close .map::before { content: ""; position: absolute; inset: 0; z-index: 2; border-radius: inherit; pointer-events: none; background: linear-gradient(180deg, rgba(4, 7, 10, 0) 26%, rgba(4, 7, 10, 0.5) 62%, rgba(4, 7, 10, 0.94) 100%); }
+.close .map::after { background: linear-gradient(122deg, rgba(160, 255, 216, 0.62) 0%, rgba(160, 255, 216, 0.16) 22%, rgba(255, 255, 255, 0.05) 48%, rgba(255, 255, 255, 0.02) 100%); }
+.close .end { margin-top: -110px; }
+
+@media (max-width: 760px) {
+  .g-head, .g-body { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+  .g-body { margin-top: 36px; }
+  .section-head, .how .grid, .graded .top, .desk .grid, .pricing .grid, .hero .wrap { grid-template-columns: minmax(0, 1fr); }
+  .tiles { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .tile { min-height: 120px; padding: 18px; }
+  .tile .v { font-size: 40px; }
+  .record td, .record th { padding-left: 14px; padding-right: 14px; }
+  .record .plan-col, .record td.res .st { display: none; }
+  .graded .figure .big { font-size: 120px; }
+  .graded .figure .cap { font-size: 17px; }
+}
+
+/* Final pass: the record fits its card; the lockup stands just under the map. */
+.record table { font-size: 15px; }
+.record td, .record th { padding-left: 16px; padding-right: 16px; }
+.record td.date { width: auto; }
+.record td.res .st { margin-right: 10px; }
+.close .map::before { background: linear-gradient(180deg, rgba(4, 7, 10, 0) 22%, rgba(4, 7, 10, 0.55) 58%, rgba(4, 7, 10, 0.97) 96%); }
+.close .end { margin-top: -78px; }
+.close .end .word { margin-top: 6px; }
+.close .end .pool { top: 40px; width: 720px; height: 240px; background: radial-gradient(50% 50% at 50% 50%, rgba(31, 191, 134, 0.3), rgba(31, 191, 134, 0) 70%); }
+
+/* The price field fades out before a room ends, so its fills never draw an edge across the page. */
+.field svg { -webkit-mask-image: linear-gradient(180deg, #000 55%, transparent 100%); mask-image: linear-gradient(180deg, #000 55%, transparent 100%); }
+
+/* Each room's light fades out before its foot (the cone runs long), so rooms meet on the page's own black. */
+.room > .light { -webkit-mask-image: linear-gradient(180deg, #000 0, #000 calc(100% - 240px), transparent 100%); mask-image: linear-gradient(180deg, #000 0, #000 calc(100% - 240px), transparent 100%); }
+.room:not(.hero) > .light { -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 180px, #000 calc(100% - 240px), transparent 100%); mask-image: linear-gradient(180deg, transparent 0, #000 180px, #000 calc(100% - 240px), transparent 100%); }

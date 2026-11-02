@@ -1,0 +1,2846 @@
+{
+ "fetched": "2026-11-02T15:36:23.202Z",
+ "weather": [
+  {
+   "report_date": "2026-11-02",
+   "volatility": 87,
+   "opportunity": 94,
+   "direction": 29,
+   "summary": "14 of 48 tracked names positive; average absolute move 3.12%. Defensive tape — be selective and size down."
+  },
+  {
+   "report_date": "2026-10-30",
+   "volatility": 75,
+   "opportunity": 76,
+   "direction": 54,
+   "summary": "26 of 48 tracked names positive; average absolute move 2.69%. Constructive tape — favor momentum continuation."
+  },
+  {
+   "report_date": "2026-10-29",
+   "volatility": 41,
+   "opportunity": 56,
+   "direction": 58,
+   "summary": "28 of 48 tracked names positive; average absolute move 1.47%. Constructive tape — favor momentum continuation."
+  },
+  {
+   "report_date": "2026-10-28",
+   "volatility": 66,
+   "opportunity": 73,
+   "direction": 60,
+   "summary": "29 of 48 tracked names positive; average absolute move 2.36%. Constructive tape — favor momentum continuation."
+  },
+  {
+   "report_date": "2026-10-27",
+   "volatility": 43,
+   "opportunity": 55,
+   "direction": 54,
+   "summary": "26 of 48 tracked names positive; average absolute move 1.54%. Constructive tape — favor momentum continuation."
+  }
+ ],
+ "today": [
+  {
+   "report_date": "2026-11-02",
+   "ticker": "PFE",
+   "direction": "long",
+   "flow_score": 74
+  },
+  {
+   "report_date": "2026-11-02",
+   "ticker": "XOM",
+   "direction": "long",
+   "flow_score": 73
+  },
+  {
+   "report_date": "2026-11-02",
+   "ticker": "VICR",
+   "direction": "short",
+   "flow_score": 0
+  }
+ ],
+ "closed": [
+  {
+   "report_date": "2026-10-22",
+   "ticker": "NFLX",
+   "direction": "short",
+   "entry_price": 65.04,
+   "target_price": 61.79,
+   "time_frame": "3-5 days",
+   "entry_criteria": [
+    "Price fails below $68.29 on a 15-minute close",
+    "Relative volume above 1.5× at trigger time",
+    "Broad-market direction score unchanged or improving"
+   ],
+   "status": "expired",
+   "result_pct": 4.55,
+   "closed_at": "2026-11-02T12:30:31.205+00:00"
+  },
+  {
+   "report_date": "2026-10-21",
+   "ticker": "UNH",
+   "direction": "long",
+   "entry_price": 419.26,
+   "target_price": 440.22,
+   "time_frame": "3-5 days",
+   "entry_criteria": [
+    "Price holds above $398.30 on a 15-minute close",
+    "Relative volume above 1.5× at trigger time",
+    "Broad-market direction score unchanged or improving"
+   ],
+   "status": "expired",
+   "result_pct": -2.93,
+   "closed_at": "2026-11-01T12:30:29.993+00:00"
+  },
+  {
+   "report_date": "2026-10-30",
+   "ticker": "IREN",
+   "direction": "short",
+   "entry_price": 26.25,
+   "target_price": 24.94,
+   "time_frame": "3-5 days",
+   "entry_criteria": [
+    "Price fails below $27.56 on a 15-minute close",
+    "Relative volume above 1.5× at trigger time",
+    "Broad-market direction score unchanged or improving"
+   ],
+   "status": "target_hit",
+   "result_pct": 8.76,
+   "closed_at": "2026-10-31T12:30:31.97+00:00"
+  },
+  {
+   "report_date": "2026-10-29",
+   "ticker": "HOOD",
+   "direction": "short",
+   "entry_price": 91.43,
+   "target_price": 86.86,
+   "time_frame": "3-5 days",
+   "entry_criteria": [
+    "Price fails below $96.00 on a 15-minute close",
+    "Relative volume above 1.5× at trigger time",
+    "Broad-market direction score unchanged or improving"
+   ],
+   "status": "target_hit",
+   "result_pct": 7.04,
+   "closed_at": "2026-10-31T12:30:31.781+00:00"
+  },
+  {
+   "report_date": "2026-10-28",
+   "ticker": "DELL",
+   "direction": "long",
+   "entry_price": 501.96,
+   "target_price": 527.06,
+   "time_frame": "3-5 days",
+   "entry_criteria": [
+    "Price holds above $476.86 on a 15-minute close",
+    "Relative volume above 1.5× at trigger time",
+    "Broad-market direction score unchanged or improving"
+   ],
+   "status": "stopped",
+   "result_pct": -15.47,
+   "closed_at": "2026-10-31T12:30:31.557+00:00"
+  },
+  {
+   "report_date": "2026-10-20",
+   "ticker": "AMZN",
+   "direction": "long",
+   "entry_price": 262.45,
+   "target_price": 275.57,
+   "time_frame": "3-5 days",
+   "entry_criteria": [
+    "Price holds above $249.33 on a 15-minute close",
+    "Relative volume above 1.5× at trigger time",
+    "Broad-market direction score unchanged or improving"
+   ],
+   "status": "stopped",
+   "result_pct": -8.42,
+   "closed_at": "2026-10-31T12:30:31.394+00:00"
+  },
+  {
+   "report_date": "2026-10-29",
+   "ticker": "MU",
+   "direction": "long",
+   "entry_price": 983.23,
+   "target_price": 1032.39,
+   "time_frame": "3-5 days",
+   "entry_criteria": [
+    "Price holds above $934.07 on a 15-minute close",
+    "Relative volume above 1.5× at trigger time",
+    "Broad-market direction score unchanged or improving"
+   ],
+   "status": "stopped",
+   "result_pct": -10.02,
+   "closed_at": "2026-10-31T12:30:31.298+00:00"
+  },
+  {
+   "report_date": "2026-10-29",
+   "ticker": "ORCL",
+   "direction": "long",
+   "entry_price": 144.54,
+   "target_price": 151.77,
+   "time_frame": "3-5 days",
+   "entry_criteria": [
+    "Price holds above $137.31 on a 15-minute close",
+    "Relative volume above 1.5× at trigger time",
+    "Broad-market direction score unchanged or improving"
+   ],
+   "status": "stopped",
+   "result_pct": -9.6,
+   "closed_at": "2026-10-31T12:30:30.867+00:00"
+  },
+  {
+   "report_date": "2026-10-27",
+   "ticker": "MSTR",
+   "direction": "short",
+   "entry_price": 139.82,
+   "target_price": 132.83,
+   "time_frame": "3-5 days",
+   "entry_criteria": [
+    "Price fails below $146.81 on a 15-minute close",
+    "Relative volume above 1.5× at trigger time",
+    "Broad-market direction score unchanged or improving"
+   ],
+   "status": "target_hit",
+   "result_pct": 6.66,
+   "closed_at": "2026-10-31T12:30:30.704+00:00"
+  },
+  {
+   "report_date": "2026-10-19",
+   "ticker": "CVX",
+   "direction": "long",
+   "entry_price": 224.99,
+   "target_price": 236.24,
+   "time_frame": "3-5 days",
+   "entry_criteria": [
+    "Price holds above $213.74 on a 15-minute close",
+    "Relative volume above 1.5× at trigger time",
+    "Broad-market direction score unchanged or improving"
+   ],
+   "status": "expired",
+   "result_pct": 2.88,
+   "closed_at": "2026-10-30T12:30:31.31+00:00"
+  },
+  {
+   "report_date": "2026-10-19",
+   "ticker": "XOM",
+   "direction": "long",
+   "entry_price": 178.98,
+   "target_price": 187.93,
+   "time_frame": "3-5 days",
+   "entry_criteria": [
+    "Price holds above $170.03 on a 15-minute close",
+    "Relative volume above 1.5× at trigger time",
+    "Broad-market direction score unchanged or improving"
+   ],
+   "status": "expired",
+   "result_pct": 2.41,
+   "closed_at": "2026-10-30T12:30:31.051+00:00"
+  },
+  {
+   "report_date": "2026-10-23",
+   "ticker": "IREN",
+   "direction": "short",
+   "entry_price": 25.51,
+   "target_price": 24.23,
+   "time_frame": "3-5 days",
+   "entry_criteria": [
+    "Price fails below $26.79 on a 15-minute close",
+    "Relative volume above 1.5× at trigger time",
+    "Broad-market direction score unchanged or improving"
+   ],
+   "status": "stopped",
+   "result_pct": -13.05,
+   "closed_at": "2026-10-29T12:30:31.783+00:00"
+  },
+  {
+   "report_date": "2026-10-20",
+   "ticker": "HOOD",
+   "direction": "short",
+   "entry_price": 96.52,
+   "target_price": 91.69,
+   "time_frame": "3-5 days",
+   "entry_criteria": [
+    "Price fails below $101.35 on a 15-minute close",
+    "Relative volume above 1.5× at trigger time",
+    "Broad-market direction score unchanged or improving"
+   ],
+   "status": "target_hit",
+   "result_pct": 5.27,
+   "closed_at": "2026-10-29T12:30:30.716+00:00"
+  },
+  {
+   "report_date": "2026-10-27",
+   "ticker": "VICR",
+   "direction": "long",
+   "entry_price": 194.77,
+   "target_price": 204.51,
+   "time_frame": "3-5 days",
+   "entry_criteria": [
+    "Price holds above $185.03 on a 15-minute close",
+    "Relative volume above 1.5× at trigger time",
+    "Broad-market direction score unchanged or improving"
+   ],
+   "status": "target_hit",
+   "result_pct": 8.85,
+   "closed_at": "2026-10-28T12:30:40.294+00:00"
+  },
+  {
+   "report_date": "2026-10-16",
+   "ticker": "DELL",
+   "direction": "short",
+   "entry_price": 473.39,
+   "target_price": 449.72,
+   "time_frame": "3-5 days",
+   "entry_criteria": [
+    "Price fails below $497.06 on a 15-minute close",
+    "Relative volume above 1.5× at trigger time",
+    "Broad-market direction score unchanged or improving"
+   ],
+   "status": "expired",
+   "result_pct": 1.33,
+   "closed_at": "2026-10-27T12:30:31.138+00:00"
+  },
+  {
+   "report_date": "2026-10-16",
+   "ticker": "NKE",
+   "direction": "long",
+   "entry_price": 37.14,
+   "target_price": 39,
+   "time_frame": "3-5 days",
+   "entry_criteria": [
+    "Price holds above $35.28 on a 15-minute close",
+    "Relative volume above 1.5× at trigger time",
+    "Broad-market direction score unchanged or improving"
+   ],
+   "status": "expired",
+   "result_pct": 2.07,
+   "closed_at": "2026-10-27T12:30:31.019+00:00"
+  },
+  {
+   "report_date": "2026-10-22",
+   "ticker": "MSTR",
+   "direction": "long",
+   "entry_price": 153.48,
+   "target_price": 161.15,
+   "time_frame": "3-5 days",
+   "entry_criteria": [
+    "Price holds above $145.81 on a 15-minute close",
+    "Relative volume above 1.5× at trigger time",
+    "Broad-market direction score unchanged or improving"
+   ],
+   "status": "stopped",
+   "result_pct": -8.9,
+   "closed_at": "2026-10-27T12:30:30.746+00:00"
+  },
+  {
+   "report_date": "2026-10-22",
+   "ticker": "SMCI",
+   "direction": "long",
+   "entry_price": 35.57,
+   "target_price": 37.35,
+   "time_frame": "3-5 days",
+   "entry_criteria": [
+    "Price holds above $33.79 on a 15-minute close",
+    "Relative volume above 1.5× at trigger time",
+    "Broad-market direction score unchanged or improving"
+   ],
+   "status": "stopped",
+   "result_pct": -8.1,
+   "closed_at": "2026-10-27T12:30:30.586+00:00"
+  },
+  {
+   "report_date": "2026-10-15",
+   "ticker": "SOFI",
+   "direction": "short",
+   "entry_price": 14.22,
+   "target_price": 13.51,
+   "time_frame": "3-5 days",
+   "entry_criteria": [
+    "Price fails below $14.93 on a 15-minute close",
+    "Relative volume above 1.5× at trigger time",
+    "Broad-market direction score unchanged or improving"
+   ],
+   "status": "expired",
+   "result_pct": -2.78,
+   "closed_at": "2026-10-26T12:30:30.542+00:00"
+  },
+  {
+   "report_date": "2026-10-15",
+   "ticker": "WMT",
+   "direction": "long",
+   "entry_price": 116.16,
+   "target_price": 121.97,
+   "time_frame": "3-5 days",
+   "entry_criteria": [
+    "Price holds above $110.35 on a 15-minute close",
+    "Relative volume above 1.5× at trigger time",
+    "Broad-market direction score unchanged or improving"
+   ],
+   "status": "expired",
+   "result_pct": 3.21,
+   "closed_at": "2026-10-26T12:30:30.381+00:00"
+  }
+ ],
+ "spy": [
+  {
+   "price_date": "2026-08-26",
+   "close": 766.08
+  },
+  {
+   "price_date": "2026-08-27",
+   "close": 766.08
+  },
+  {
+   "price_date": "2026-08-28",
+   "close": 771.1
+  },
+  {
+   "price_date": "2026-08-31",
+   "close": 769.35
+  },
+  {
+   "price_date": "2026-09-01",
+   "close": 767.05
+  },
+  {
+   "price_date": "2026-09-02",
+   "close": 761.78
+  },
+  {
+   "price_date": "2026-09-03",
+   "close": 765.16
+  },
+  {
+   "price_date": "2026-09-04",
+   "close": 773.17
+  },
+  {
+   "price_date": "2026-09-07",
+   "close": 770.19
+  },
+  {
+   "price_date": "2026-09-08",
+   "close": 770.19
+  },
+  {
+   "price_date": "2026-09-09",
+   "close": 765.96
+  },
+  {
+   "price_date": "2026-09-10",
+   "close": 762.4
+  },
+  {
+   "price_date": "2026-09-11",
+   "close": 757.83
+  },
+  {
+   "price_date": "2026-09-14",
+   "close": 764.29
+  },
+  {
+   "price_date": "2026-09-15",
+   "close": 760.88
+  },
+  {
+   "price_date": "2026-09-16",
+   "close": 757.39
+  },
+  {
+   "price_date": "2026-09-17",
+   "close": 754.05
+  },
+  {
+   "price_date": "2026-09-18",
+   "close": 762.6
+  },
+  {
+   "price_date": "2026-09-21",
+   "close": 761.69
+  },
+  {
+   "price_date": "2026-09-22",
+   "close": 773.5
+  },
+  {
+   "price_date": "2026-09-23",
+   "close": 773.38
+  },
+  {
+   "price_date": "2026-09-24",
+   "close": 767.81
+  },
+  {
+   "price_date": "2026-09-25",
+   "close": 767.18
+  },
+  {
+   "price_date": "2026-09-28",
+   "close": 771.35
+  },
+  {
+   "price_date": "2026-09-29",
+   "close": 765.61
+  },
+  {
+   "price_date": "2026-09-30",
+   "close": 764.2
+  },
+  {
+   "price_date": "2026-10-01",
+   "close": 762.63
+  },
+  {
+   "price_date": "2026-10-02",
+   "close": 763.99
+  },
+  {
+   "price_date": "2026-10-05",
+   "close": 769.64
+  },
+  {
+   "price_date": "2026-10-06",
+   "close": 774.83
+  },
+  {
+   "price_date": "2026-10-07",
+   "close": 779.09
+  },
+  {
+   "price_date": "2026-10-08",
+   "close": 777.22
+  },
+  {
+   "price_date": "2026-10-09",
+   "close": 773.93
+  },
+  {
+   "price_date": "2026-10-12",
+   "close": 778.57
+  },
+  {
+   "price_date": "2026-10-13",
+   "close": 778.1
+  },
+  {
+   "price_date": "2026-10-14",
+   "close": 778.01
+  },
+  {
+   "price_date": "2026-10-15",
+   "close": 769.6
+  },
+  {
+   "price_date": "2026-10-16",
+   "close": 771.79
+  },
+  {
+   "price_date": "2026-10-19",
+   "close": 763.25
+  },
+  {
+   "price_date": "2026-10-20",
+   "close": 766.48
+  },
+  {
+   "price_date": "2026-10-21",
+   "close": 769.05
+  },
+  {
+   "price_date": "2026-10-22",
+   "close": 773.09
+  },
+  {
+   "price_date": "2026-10-23",
+   "close": 763.96
+  },
+  {
+   "price_date": "2026-10-26",
+   "close": 759.97
+  },
+  {
+   "price_date": "2026-10-27",
+   "close": 765.37
+  },
+  {
+   "price_date": "2026-10-28",
+   "close": 769.66
+  },
+  {
+   "price_date": "2026-10-29",
+   "close": 772.31
+  },
+  {
+   "price_date": "2026-10-30",
+   "close": 769.36
+  },
+  {
+   "price_date": "2026-11-02",
+   "close": 755.72
+  }
+ ],
+ "stats": [
+  {
+   "closed_count": 134,
+   "open_count": 13,
+   "win_rate": 31.3,
+   "avg_gain": 5.3,
+   "avg_loss": -6.1
+  }
+ ],
+ "weeks": [
+  {
+   "week": "2026-08-31",
+   "closed": 7,
+   "hits": 4
+  },
+  {
+   "week": "2026-09-07",
+   "closed": 17,
+   "hits": 3
+  },
+  {
+   "week": "2026-09-14",
+   "closed": 17,
+   "hits": 6
+  },
+  {
+   "week": "2026-09-21",
+   "closed": 12,
+   "hits": 4
+  },
+  {
+   "week": "2026-09-28",
+   "closed": 10,
+   "hits": 2
+  },
+  {
+   "week": "2026-10-05",
+   "closed": 19,
+   "hits": 5
+  },
+  {
+   "week": "2026-10-12",
+   "closed": 20,
+   "hits": 6
+  },
+  {
+   "week": "2026-10-19",
+   "closed": 12,
+   "hits": 7
+  },
+  {
+   "week": "2026-10-26",
+   "closed": 19,
+   "hits": 5
+  },
+  {
+   "week": "2026-11-02",
+   "closed": 1,
+   "hits": 0
+  }
+ ],
+ "movers": [
+  {
+   "ticker": "AMD",
+   "close": 504.8,
+   "change_pct": -10.88
+  },
+  {
+   "ticker": "DELL",
+   "close": 424.3,
+   "change_pct": -10.77
+  },
+  {
+   "ticker": "COIN",
+   "close": 143.54,
+   "change_pct": -10.62
+  },
+  {
+   "ticker": "IREN",
+   "close": 23.95,
+   "change_pct": -8.76
+  },
+  {
+   "ticker": "MSTR",
+   "close": 130.51,
+   "change_pct": -7.84
+  },
+  {
+   "ticker": "VICR",
+   "close": 191.09,
+   "change_pct": -7.52
+  },
+  {
+   "ticker": "HOOD",
+   "close": 84.99,
+   "change_pct": -7.21
+  },
+  {
+   "ticker": "ORCL",
+   "close": 130.67,
+   "change_pct": -6.37
+  },
+  {
+   "ticker": "PLTR",
+   "close": 184.11,
+   "change_pct": -6.27
+  },
+  {
+   "ticker": "AVGO",
+   "close": 326.08,
+   "change_pct": -5.48
+  },
+  {
+   "ticker": "MU",
+   "close": 884.74,
+   "change_pct": -5.3
+  },
+  {
+   "ticker": "SOFI",
+   "close": 16.76,
+   "change_pct": -4.83
+  },
+  {
+   "ticker": "SMCI",
+   "close": 32.95,
+   "change_pct": -4.3
+  },
+  {
+   "ticker": "NVDA",
+   "close": 204.64,
+   "change_pct": -4.22
+  },
+  {
+   "ticker": "CAT",
+   "close": 622.75,
+   "change_pct": -3.81
+  },
+  {
+   "ticker": "GS",
+   "close": 894.55,
+   "change_pct": -3.58
+  },
+  {
+   "ticker": "QQQ",
+   "close": 690.49,
+   "change_pct": -3.47
+  },
+  {
+   "ticker": "LLY",
+   "close": 1417.54,
+   "change_pct": 3.19
+  },
+  {
+   "ticker": "BAC",
+   "close": 50.01,
+   "change_pct": -2.21
+  },
+  {
+   "ticker": "XOM",
+   "close": 187.25,
+   "change_pct": 2.16
+  },
+  {
+   "ticker": "JPM",
+   "close": 337.04,
+   "change_pct": -1.9
+  },
+  {
+   "ticker": "PFE",
+   "close": 30.52,
+   "change_pct": 1.9
+  },
+  {
+   "ticker": "WMT",
+   "close": 123.51,
+   "change_pct": 1.86
+  },
+  {
+   "ticker": "SPY",
+   "close": 755.72,
+   "change_pct": -1.77
+  },
+  {
+   "ticker": "CVX",
+   "close": 235.52,
+   "change_pct": 1.75
+  },
+  {
+   "ticker": "SBUX",
+   "close": 103.67,
+   "change_pct": -1.74
+  },
+  {
+   "ticker": "IWM",
+   "close": 279.33,
+   "change_pct": -1.65
+  },
+  {
+   "ticker": "COST",
+   "close": 1012.28,
+   "change_pct": 1.63
+  },
+  {
+   "ticker": "MSFT",
+   "close": 521.91,
+   "change_pct": -1.55
+  },
+  {
+   "ticker": "META",
+   "close": 614.99,
+   "change_pct": -1.53
+  },
+  {
+   "ticker": "GOOG",
+   "close": 278.22,
+   "change_pct": -1.45
+  },
+  {
+   "ticker": "AMZN",
+   "close": 240.35,
+   "change_pct": -1.41
+  },
+  {
+   "ticker": "GOOGL",
+   "close": 279.84,
+   "change_pct": -1.4
+  },
+  {
+   "ticker": "KO",
+   "close": 94.08,
+   "change_pct": 1.36
+  },
+  {
+   "ticker": "AAPL",
+   "close": 344.63,
+   "change_pct": -1.23
+  },
+  {
+   "ticker": "DIA",
+   "close": 517.13,
+   "change_pct": -1.07
+  },
+  {
+   "ticker": "UNH",
+   "close": 406.97,
+   "change_pct": -0.96
+  },
+  {
+   "ticker": "TSLA",
+   "close": 399.81,
+   "change_pct": -0.87
+  },
+  {
+   "ticker": "CRM",
+   "close": 229.17,
+   "change_pct": -0.75
+  },
+  {
+   "ticker": "UBER",
+   "close": 65.25,
+   "change_pct": -0.75
+  },
+  {
+   "ticker": "V",
+   "close": 413.59,
+   "change_pct": 0.74
+  },
+  {
+   "ticker": "NKE",
+   "close": 38.67,
+   "change_pct": 0.65
+  },
+  {
+   "ticker": "BA",
+   "close": 171.55,
+   "change_pct": -0.64
+  },
+  {
+   "ticker": "MCD",
+   "close": 258.12,
+   "change_pct": 0.29
+  },
+  {
+   "ticker": "BRK.B",
+   "close": 542.49,
+   "change_pct": 0.1
+  },
+  {
+   "ticker": "HD",
+   "close": 329.2,
+   "change_pct": 0.07
+  },
+  {
+   "ticker": "NFLX",
+   "close": 62.08,
+   "change_pct": 0.05
+  },
+  {
+   "ticker": "DIS",
+   "close": 110.94,
+   "change_pct": 0.03
+  }
+ ],
+ "settings": [
+  {
+   "key": "logo",
+   "value": "https://dobrcbahlbypzvbuwkoe.supabase.co/storage/v1/object/public/site-assets/logo/1787159132488--highstrike.png"
+  },
+  {
+   "key": "logo_dark",
+   "value": "https://dobrcbahlbypzvbuwkoe.supabase.co/storage/v1/object/public/site-assets/logo_dark/1787159136102--highstrike.png"
+  }
+ ],
+ "reads": {
+  "NVDA": {
+   "today": null,
+   "closes": [
+    {
+     "date": "2026-10-30",
+     "close": 213.66
+    },
+    {
+     "date": "2026-11-02",
+     "close": 204.64
+    }
+   ],
+   "graded": {
+    "date": "2026-08-28",
+    "result": 1.04,
+    "status": "expired",
+    "direction": "long"
+   },
+   "ticker": "NVDA",
+   "chatter": {
+    "day": "2026-11-01",
+    "bearish": 5,
+    "bullish": 8,
+    "perHour": 12,
+    "watchers": 674187
+   },
+   "insiders": {
+    "buys": 0,
+    "sold": 0,
+    "sells": 0,
+    "bought": 0
+   }
+  },
+  "PFE": {
+   "today": {
+    "flow": 74,
+    "direction": "long"
+   },
+   "closes": [
+    {
+     "date": "2026-10-30",
+     "close": 29.95
+    },
+    {
+     "date": "2026-11-02",
+     "close": 30.52
+    }
+   ],
+   "graded": {
+    "date": "2026-09-24",
+    "result": -1.35,
+    "status": "expired",
+    "direction": "long"
+   },
+   "ticker": "PFE",
+   "chatter": {
+    "day": "2026-11-01",
+    "bearish": 0,
+    "bullish": 8,
+    "perHour": 0.6,
+    "watchers": 114840
+   },
+   "insiders": {
+    "buys": 0,
+    "sold": 0,
+    "sells": 0,
+    "bought": 0
+   }
+  },
+  "XOM": {
+   "today": {
+    "flow": 73,
+    "direction": "long"
+   },
+   "closes": [
+    {
+     "date": "2026-10-30",
+     "close": 183.29
+    },
+    {
+     "date": "2026-11-02",
+     "close": 187.25
+    }
+   ],
+   "graded": {
+    "date": "2026-10-19",
+    "result": 2.41,
+    "status": "expired",
+    "direction": "long"
+   },
+   "ticker": "XOM",
+   "chatter": {
+    "day": "2026-11-01",
+    "bearish": 3,
+    "bullish": 6,
+    "perHour": 0.6,
+    "watchers": 99831
+   },
+   "insiders": {
+    "buys": 0,
+    "sold": 0,
+    "sells": 0,
+    "bought": 0
+   }
+  },
+  "VICR": {
+   "today": {
+    "flow": 0,
+    "direction": "short"
+   },
+   "closes": [
+    {
+     "date": "2026-10-30",
+     "close": 206.62
+    },
+    {
+     "date": "2026-11-02",
+     "close": 191.09
+    }
+   ],
+   "graded": {
+    "date": "2026-10-27",
+    "result": 8.85,
+    "status": "target_hit",
+    "direction": "long"
+   },
+   "ticker": "VICR",
+   "chatter": {
+    "day": "2026-11-01",
+    "bearish": 1,
+    "bullish": 16,
+    "perHour": 0.25,
+    "watchers": 2330
+   },
+   "insiders": {
+    "buys": 0,
+    "sold": 0,
+    "sells": 0,
+    "bought": 0
+   }
+  },
+  "NFLX": {
+   "today": null,
+   "closes": [
+    {
+     "date": "2026-10-30",
+     "close": 62.05
+    },
+    {
+     "date": "2026-11-02",
+     "close": 62.08
+    }
+   ],
+   "graded": {
+    "date": "2026-10-22",
+    "result": 4.55,
+    "status": "expired",
+    "direction": "short"
+   },
+   "ticker": "NFLX",
+   "chatter": {
+    "day": "2026-11-01",
+    "bearish": 2,
+    "bullish": 7,
+    "perHour": 1.18,
+    "watchers": 523435
+   },
+   "insiders": {
+    "buys": 0,
+    "sold": 1151193,
+    "sells": 1,
+    "bought": 0
+   }
+  },
+  "UNH": {
+   "today": null,
+   "closes": [
+    {
+     "date": "2026-10-30",
+     "close": 410.91
+    },
+    {
+     "date": "2026-11-02",
+     "close": 406.97
+    }
+   ],
+   "graded": {
+    "date": "2026-10-21",
+    "result": -2.93,
+    "status": "expired",
+    "direction": "long"
+   },
+   "ticker": "UNH",
+   "chatter": {
+    "day": "2026-11-01",
+    "bearish": 1,
+    "bullish": 5,
+    "perHour": 0.56,
+    "watchers": 55850
+   },
+   "insiders": {
+    "buys": 0,
+    "sold": 0,
+    "sells": 0,
+    "bought": 0
+   }
+  },
+  "IREN": {
+   "today": null,
+   "closes": [
+    {
+     "date": "2026-10-30",
+     "close": 26.25
+    },
+    {
+     "date": "2026-11-02",
+     "close": 23.95
+    }
+   ],
+   "graded": {
+    "date": "2026-10-30",
+    "result": 8.76,
+    "status": "target_hit",
+    "direction": "short"
+   },
+   "ticker": "IREN",
+   "chatter": {
+    "day": "2026-11-01",
+    "bearish": 4,
+    "bullish": 12,
+    "perHour": 3.67,
+    "watchers": 53806
+   },
+   "insiders": {
+    "buys": 0,
+    "sold": 0,
+    "sells": 0,
+    "bought": 0
+   }
+  },
+  "HOOD": {
+   "today": null,
+   "closes": [
+    {
+     "date": "2026-10-30",
+     "close": 91.59
+    },
+    {
+     "date": "2026-11-02",
+     "close": 84.99
+    }
+   ],
+   "graded": {
+    "date": "2026-10-29",
+    "result": 7.04,
+    "status": "target_hit",
+    "direction": "short"
+   },
+   "ticker": "HOOD",
+   "chatter": {
+    "day": "2026-11-01",
+    "bearish": 6,
+    "bullish": 7,
+    "perHour": 1.14,
+    "watchers": 102007
+   },
+   "insiders": {
+    "buys": 0,
+    "sold": 53634628,
+    "sells": 12,
+    "bought": 0
+   }
+  },
+  "DELL": {
+   "today": null,
+   "closes": [
+    {
+     "date": "2026-10-30",
+     "close": 475.51
+    },
+    {
+     "date": "2026-11-02",
+     "close": 424.3
+    }
+   ],
+   "graded": {
+    "date": "2026-10-28",
+    "result": -15.47,
+    "status": "stopped",
+    "direction": "long"
+   },
+   "ticker": "DELL",
+   "chatter": {
+    "day": "2026-11-01",
+    "bearish": 5,
+    "bullish": 10,
+    "perHour": 0.59,
+    "watchers": 31743
+   },
+   "insiders": {
+    "buys": 0,
+    "sold": 145853446,
+    "sells": 11,
+    "bought": 0
+   }
+  },
+  "AMZN": {
+   "today": null,
+   "closes": [
+    {
+     "date": "2026-10-30",
+     "close": 243.79
+    },
+    {
+     "date": "2026-11-02",
+     "close": 240.35
+    }
+   ],
+   "graded": {
+    "date": "2026-10-20",
+    "result": -8.42,
+    "status": "stopped",
+    "direction": "long"
+   },
+   "ticker": "AMZN",
+   "chatter": {
+    "day": "2026-11-01",
+    "bearish": 2,
+    "bullish": 7,
+    "perHour": 5.38,
+    "watchers": 709795
+   },
+   "insiders": {
+    "buys": 0,
+    "sold": 251500,
+    "sells": 1,
+    "bought": 0
+   }
+  },
+  "MU": {
+   "today": null,
+   "closes": [
+    {
+     "date": "2026-10-30",
+     "close": 934.27
+    },
+    {
+     "date": "2026-11-02",
+     "close": 884.74
+    }
+   ],
+   "graded": {
+    "date": "2026-10-29",
+    "result": -10.02,
+    "status": "stopped",
+    "direction": "long"
+   },
+   "ticker": "MU",
+   "chatter": {
+    "day": "2026-11-01",
+    "bearish": 3,
+    "bullish": 7,
+    "perHour": 8.23,
+    "watchers": 220891
+   },
+   "insiders": {
+    "buys": 0,
+    "sold": 31573676,
+    "sells": 3,
+    "bought": 0
+   }
+  },
+  "ORCL": {
+   "today": null,
+   "closes": [
+    {
+     "date": "2026-10-30",
+     "close": 139.56
+    },
+    {
+     "date": "2026-11-02",
+     "close": 130.67
+    }
+   ],
+   "graded": {
+    "date": "2026-10-29",
+    "result": -9.6,
+    "status": "stopped",
+    "direction": "long"
+   },
+   "ticker": "ORCL",
+   "chatter": {
+    "day": "2026-11-01",
+    "bearish": 1,
+    "bullish": 8,
+    "perHour": 1,
+    "watchers": 72828
+   },
+   "insiders": {
+    "buys": 0,
+    "sold": 0,
+    "sells": 0,
+    "bought": 0
+   }
+  },
+  "MSTR": {
+   "today": null,
+   "closes": [
+    {
+     "date": "2026-10-30",
+     "close": 141.62
+    },
+    {
+     "date": "2026-11-02",
+     "close": 130.51
+    }
+   ],
+   "graded": {
+    "date": "2026-10-27",
+    "result": 6.66,
+    "status": "target_hit",
+    "direction": "short"
+   },
+   "ticker": "MSTR",
+   "chatter": {
+    "day": "2026-11-01",
+    "bearish": 16,
+    "bullish": 1,
+    "perHour": 10.67,
+    "watchers": 83573
+   },
+   "insiders": {
+    "buys": 0,
+    "sold": 422225,
+    "sells": 1,
+    "bought": 0
+   }
+  },
+  "CVX": {
+   "today": null,
+   "closes": [
+    {
+     "date": "2026-10-30",
+     "close": 231.46
+    },
+    {
+     "date": "2026-11-02",
+     "close": 235.52
+    }
+   ],
+   "graded": {
+    "date": "2026-10-19",
+    "result": 2.88,
+    "status": "expired",
+    "direction": "long"
+   },
+   "ticker": "CVX",
+   "chatter": {
+    "day": "2026-11-01",
+    "bearish": 1,
+    "bullish": 9,
+    "perHour": 0.56,
+    "watchers": 37293
+   },
+   "insiders": {
+    "buys": 0,
+    "sold": 9766243,
+    "sells": 1,
+    "bought": 0
+   }
+  },
+  "NKE": {
+   "today": null,
+   "closes": [
+    {
+     "date": "2026-10-30",
+     "close": 38.42
+    },
+    {
+     "date": "2026-11-02",
+     "close": 38.67
+    }
+   ],
+   "graded": {
+    "date": "2026-10-16",
+    "result": 2.07,
+    "status": "expired",
+    "direction": "long"
+   },
+   "ticker": "NKE",
+   "chatter": {
+    "day": "2026-11-01",
+    "bearish": 1,
+    "bullish": 10,
+    "perHour": 0.63,
+    "watchers": 142034
+   },
+   "insiders": {
+    "buys": 0,
+    "sold": 0,
+    "sells": 0,
+    "bought": 0
+   }
+  },
+  "SMCI": {
+   "today": null,
+   "closes": [
+    {
+     "date": "2026-10-30",
+     "close": 34.43
+    },
+    {
+     "date": "2026-11-02",
+     "close": 32.95
+    }
+   ],
+   "graded": {
+    "date": "2026-10-22",
+    "result": -8.1,
+    "status": "stopped",
+    "direction": "long"
+   },
+   "ticker": "SMCI",
+   "chatter": {
+    "day": "2026-11-01",
+    "bearish": 2,
+    "bullish": 12,
+    "perHour": 2.88,
+    "watchers": 93778
+   },
+   "insiders": {
+    "buys": 0,
+    "sold": 9004000,
+    "sells": 2,
+    "bought": 0
+   }
+  },
+  "SOFI": {
+   "today": null,
+   "closes": [
+    {
+     "date": "2026-10-30",
+     "close": 17.61
+    },
+    {
+     "date": "2026-11-02",
+     "close": 16.76
+    }
+   ],
+   "graded": {
+    "date": "2026-10-15",
+    "result": -2.78,
+    "status": "expired",
+    "direction": "short"
+   },
+   "ticker": "SOFI",
+   "chatter": {
+    "day": "2026-11-01",
+    "bearish": 0,
+    "bullish": 11,
+    "perHour": 1.25,
+    "watchers": 157499
+   },
+   "insiders": {
+    "buys": 0,
+    "sold": 150215,
+    "sells": 1,
+    "bought": 0
+   }
+  },
+  "WMT": {
+   "today": null,
+   "closes": [
+    {
+     "date": "2026-10-30",
+     "close": 121.25
+    },
+    {
+     "date": "2026-11-02",
+     "close": 123.51
+    }
+   ],
+   "graded": {
+    "date": "2026-10-15",
+    "result": 3.21,
+    "status": "expired",
+    "direction": "long"
+   },
+   "ticker": "WMT",
+   "chatter": {
+    "day": "2026-11-01",
+    "bearish": 3,
+    "bullish": 7,
+    "perHour": 0.58,
+    "watchers": 139318
+   },
+   "insiders": {
+    "buys": 0,
+    "sold": 2507652,
+    "sells": 3,
+    "bought": 0
+   }
+  }
+ },
+ "series": {
+  "VICR": [
+   {
+    "price_date": "2026-10-26",
+    "close": 176.04
+   },
+   {
+    "price_date": "2026-10-27",
+    "close": 194.77
+   },
+   {
+    "price_date": "2026-10-28",
+    "close": 212
+   },
+   {
+    "price_date": "2026-10-29",
+    "close": 216.65
+   },
+   {
+    "price_date": "2026-10-30",
+    "close": 206.62
+   },
+   {
+    "price_date": "2026-11-02",
+    "close": 191.09
+   }
+  ],
+  "IREN": [
+   {
+    "price_date": "2026-10-02",
+    "close": 40.65
+   },
+   {
+    "price_date": "2026-10-05",
+    "close": 41.76
+   },
+   {
+    "price_date": "2026-10-06",
+    "close": 40.48
+   },
+   {
+    "price_date": "2026-10-07",
+    "close": 41.28
+   },
+   {
+    "price_date": "2026-10-08",
+    "close": 38.69
+   },
+   {
+    "price_date": "2026-10-09",
+    "close": 35.71
+   },
+   {
+    "price_date": "2026-10-12",
+    "close": 35.19
+   },
+   {
+    "price_date": "2026-10-13",
+    "close": 34.8
+   },
+   {
+    "price_date": "2026-10-14",
+    "close": 34.8
+   },
+   {
+    "price_date": "2026-10-15",
+    "close": 30.56
+   },
+   {
+    "price_date": "2026-10-16",
+    "close": 30.39
+   },
+   {
+    "price_date": "2026-10-19",
+    "close": 26.99
+   },
+   {
+    "price_date": "2026-10-20",
+    "close": 27.73
+   },
+   {
+    "price_date": "2026-10-21",
+    "close": 26.62
+   },
+   {
+    "price_date": "2026-10-22",
+    "close": 27.84
+   },
+   {
+    "price_date": "2026-10-23",
+    "close": 25.51
+   },
+   {
+    "price_date": "2026-10-26",
+    "close": 24.905
+   },
+   {
+    "price_date": "2026-10-27",
+    "close": 25.43
+   },
+   {
+    "price_date": "2026-10-28",
+    "close": 27.44
+   },
+   {
+    "price_date": "2026-10-29",
+    "close": 28.84
+   },
+   {
+    "price_date": "2026-10-30",
+    "close": 26.25
+   },
+   {
+    "price_date": "2026-11-02",
+    "close": 23.95
+   }
+  ],
+  "HOOD": [
+   {
+    "price_date": "2026-09-24",
+    "close": 122.7
+   },
+   {
+    "price_date": "2026-09-25",
+    "close": 120.82
+   },
+   {
+    "price_date": "2026-09-28",
+    "close": 119.4
+   },
+   {
+    "price_date": "2026-09-29",
+    "close": 116.46
+   },
+   {
+    "price_date": "2026-09-30",
+    "close": 116.22
+   },
+   {
+    "price_date": "2026-10-01",
+    "close": 112.5
+   },
+   {
+    "price_date": "2026-10-02",
+    "close": 111.15
+   },
+   {
+    "price_date": "2026-10-05",
+    "close": 112.74
+   },
+   {
+    "price_date": "2026-10-06",
+    "close": 114.11
+   },
+   {
+    "price_date": "2026-10-07",
+    "close": 112
+   },
+   {
+    "price_date": "2026-10-08",
+    "close": 109.51
+   },
+   {
+    "price_date": "2026-10-09",
+    "close": 107.01
+   },
+   {
+    "price_date": "2026-10-12",
+    "close": 109.02
+   },
+   {
+    "price_date": "2026-10-13",
+    "close": 109.22
+   },
+   {
+    "price_date": "2026-10-14",
+    "close": 110.52
+   },
+   {
+    "price_date": "2026-10-15",
+    "close": 101.08
+   },
+   {
+    "price_date": "2026-10-16",
+    "close": 103.99
+   },
+   {
+    "price_date": "2026-10-19",
+    "close": 98.87
+   },
+   {
+    "price_date": "2026-10-20",
+    "close": 96.52
+   },
+   {
+    "price_date": "2026-10-21",
+    "close": 98.21
+   },
+   {
+    "price_date": "2026-10-22",
+    "close": 101.93
+   },
+   {
+    "price_date": "2026-10-23",
+    "close": 96.58
+   },
+   {
+    "price_date": "2026-10-26",
+    "close": 95.07
+   },
+   {
+    "price_date": "2026-10-27",
+    "close": 92.84
+   },
+   {
+    "price_date": "2026-10-28",
+    "close": 94.56
+   },
+   {
+    "price_date": "2026-10-29",
+    "close": 91.43
+   },
+   {
+    "price_date": "2026-10-30",
+    "close": 91.59
+   },
+   {
+    "price_date": "2026-11-02",
+    "close": 84.99
+   }
+  ],
+  "MSTR": [
+   {
+    "price_date": "2026-09-21",
+    "close": 153.92
+   },
+   {
+    "price_date": "2026-09-22",
+    "close": 168.5
+   },
+   {
+    "price_date": "2026-09-23",
+    "close": 167.33
+   },
+   {
+    "price_date": "2026-09-24",
+    "close": 162.2
+   },
+   {
+    "price_date": "2026-09-25",
+    "close": 161.61
+   },
+   {
+    "price_date": "2026-09-28",
+    "close": 158.61
+   },
+   {
+    "price_date": "2026-09-29",
+    "close": 157.14
+   },
+   {
+    "price_date": "2026-09-30",
+    "close": 154.67
+   },
+   {
+    "price_date": "2026-10-01",
+    "close": 153.09
+   },
+   {
+    "price_date": "2026-10-02",
+    "close": 160.5
+   },
+   {
+    "price_date": "2026-10-05",
+    "close": 160.01
+   },
+   {
+    "price_date": "2026-10-06",
+    "close": 164.43
+   },
+   {
+    "price_date": "2026-10-07",
+    "close": 164.55
+   },
+   {
+    "price_date": "2026-10-08",
+    "close": 153.37
+   },
+   {
+    "price_date": "2026-10-09",
+    "close": 151.47
+   },
+   {
+    "price_date": "2026-10-12",
+    "close": 154.34
+   },
+   {
+    "price_date": "2026-10-13",
+    "close": 152.68
+   },
+   {
+    "price_date": "2026-10-14",
+    "close": 152.18
+   },
+   {
+    "price_date": "2026-10-15",
+    "close": 143.24
+   },
+   {
+    "price_date": "2026-10-16",
+    "close": 151.29
+   },
+   {
+    "price_date": "2026-10-19",
+    "close": 136.83
+   },
+   {
+    "price_date": "2026-10-20",
+    "close": 136.02
+   },
+   {
+    "price_date": "2026-10-21",
+    "close": 142.72
+   },
+   {
+    "price_date": "2026-10-22",
+    "close": 153.48
+   },
+   {
+    "price_date": "2026-10-23",
+    "close": 145.8
+   },
+   {
+    "price_date": "2026-10-26",
+    "close": 146.01
+   },
+   {
+    "price_date": "2026-10-27",
+    "close": 139.82
+   },
+   {
+    "price_date": "2026-10-28",
+    "close": 141.4
+   },
+   {
+    "price_date": "2026-10-29",
+    "close": 145.16
+   },
+   {
+    "price_date": "2026-10-30",
+    "close": 141.62
+   },
+   {
+    "price_date": "2026-11-02",
+    "close": 130.51
+   }
+  ],
+  "DELL": [
+   {
+    "price_date": "2026-08-26",
+    "close": 463.82
+   },
+   {
+    "price_date": "2026-08-27",
+    "close": 463.82
+   },
+   {
+    "price_date": "2026-08-28",
+    "close": 472.26
+   },
+   {
+    "price_date": "2026-08-31",
+    "close": 456.24
+   },
+   {
+    "price_date": "2026-09-01",
+    "close": 456.01
+   },
+   {
+    "price_date": "2026-09-02",
+    "close": 425
+   },
+   {
+    "price_date": "2026-09-03",
+    "close": 492.2
+   },
+   {
+    "price_date": "2026-09-04",
+    "close": 516.39
+   },
+   {
+    "price_date": "2026-09-07",
+    "close": 524.14
+   },
+   {
+    "price_date": "2026-09-08",
+    "close": 524.14
+   },
+   {
+    "price_date": "2026-09-09",
+    "close": 533.88
+   },
+   {
+    "price_date": "2026-09-10",
+    "close": 535.25
+   },
+   {
+    "price_date": "2026-09-11",
+    "close": 506.62
+   },
+   {
+    "price_date": "2026-09-14",
+    "close": 567.29
+   },
+   {
+    "price_date": "2026-09-15",
+    "close": 534.28
+   },
+   {
+    "price_date": "2026-09-16",
+    "close": 543.51
+   },
+   {
+    "price_date": "2026-09-17",
+    "close": 563.29
+   },
+   {
+    "price_date": "2026-09-18",
+    "close": 588.4
+   },
+   {
+    "price_date": "2026-09-21",
+    "close": 568.06
+   },
+   {
+    "price_date": "2026-09-22",
+    "close": 575.31
+   },
+   {
+    "price_date": "2026-09-23",
+    "close": 548.92
+   },
+   {
+    "price_date": "2026-09-24",
+    "close": 549.83
+   },
+   {
+    "price_date": "2026-09-25",
+    "close": 536.02
+   },
+   {
+    "price_date": "2026-09-28",
+    "close": 562.89
+   },
+   {
+    "price_date": "2026-09-29",
+    "close": 543.43
+   },
+   {
+    "price_date": "2026-09-30",
+    "close": 539.59
+   },
+   {
+    "price_date": "2026-10-01",
+    "close": 537.95
+   },
+   {
+    "price_date": "2026-10-02",
+    "close": 541.74
+   },
+   {
+    "price_date": "2026-10-05",
+    "close": 562.52
+   },
+   {
+    "price_date": "2026-10-06",
+    "close": 552.29
+   },
+   {
+    "price_date": "2026-10-07",
+    "close": 574
+   },
+   {
+    "price_date": "2026-10-08",
+    "close": 578.96
+   },
+   {
+    "price_date": "2026-10-09",
+    "close": 574.55
+   },
+   {
+    "price_date": "2026-10-12",
+    "close": 586.06
+   },
+   {
+    "price_date": "2026-10-13",
+    "close": 576.76
+   },
+   {
+    "price_date": "2026-10-14",
+    "close": 572.47
+   },
+   {
+    "price_date": "2026-10-15",
+    "close": 507.93
+   },
+   {
+    "price_date": "2026-10-16",
+    "close": 473.39
+   },
+   {
+    "price_date": "2026-10-19",
+    "close": 451.71
+   },
+   {
+    "price_date": "2026-10-20",
+    "close": 455.44
+   },
+   {
+    "price_date": "2026-10-21",
+    "close": 461.56
+   },
+   {
+    "price_date": "2026-10-22",
+    "close": 485.88
+   },
+   {
+    "price_date": "2026-10-23",
+    "close": 452.95
+   },
+   {
+    "price_date": "2026-10-26",
+    "close": 456.44
+   },
+   {
+    "price_date": "2026-10-27",
+    "close": 467.09
+   },
+   {
+    "price_date": "2026-10-28",
+    "close": 501.96
+   },
+   {
+    "price_date": "2026-10-29",
+    "close": 493.79
+   },
+   {
+    "price_date": "2026-10-30",
+    "close": 475.51
+   },
+   {
+    "price_date": "2026-11-02",
+    "close": 424.3
+   }
+  ],
+  "PFE": [
+   {
+    "price_date": "2026-08-26",
+    "close": 28.3
+   },
+   {
+    "price_date": "2026-08-27",
+    "close": 28.3
+   },
+   {
+    "price_date": "2026-08-28",
+    "close": 28.02
+   },
+   {
+    "price_date": "2026-08-31",
+    "close": 27.96
+   },
+   {
+    "price_date": "2026-09-01",
+    "close": 28.46
+   },
+   {
+    "price_date": "2026-09-02",
+    "close": 28.55
+   },
+   {
+    "price_date": "2026-09-03",
+    "close": 29.02
+   },
+   {
+    "price_date": "2026-09-04",
+    "close": 28.81
+   },
+   {
+    "price_date": "2026-09-07",
+    "close": 28.45
+   },
+   {
+    "price_date": "2026-09-08",
+    "close": 28.45
+   },
+   {
+    "price_date": "2026-09-09",
+    "close": 27.79
+   },
+   {
+    "price_date": "2026-09-10",
+    "close": 27.78
+   },
+   {
+    "price_date": "2026-09-11",
+    "close": 27.65
+   },
+   {
+    "price_date": "2026-09-14",
+    "close": 27.72
+   },
+   {
+    "price_date": "2026-09-15",
+    "close": 27.72
+   },
+   {
+    "price_date": "2026-09-16",
+    "close": 27.55
+   },
+   {
+    "price_date": "2026-09-17",
+    "close": 27.46
+   },
+   {
+    "price_date": "2026-09-18",
+    "close": 27.64
+   },
+   {
+    "price_date": "2026-09-21",
+    "close": 27.66
+   },
+   {
+    "price_date": "2026-09-22",
+    "close": 27.74
+   },
+   {
+    "price_date": "2026-09-23",
+    "close": 27.93
+   },
+   {
+    "price_date": "2026-09-24",
+    "close": 28.18
+   },
+   {
+    "price_date": "2026-09-25",
+    "close": 28.41
+   },
+   {
+    "price_date": "2026-09-28",
+    "close": 28.67
+   },
+   {
+    "price_date": "2026-09-29",
+    "close": 28.72
+   },
+   {
+    "price_date": "2026-09-30",
+    "close": 28.72
+   },
+   {
+    "price_date": "2026-10-01",
+    "close": 28.52
+   },
+   {
+    "price_date": "2026-10-02",
+    "close": 28.12
+   },
+   {
+    "price_date": "2026-10-05",
+    "close": 27.8
+   },
+   {
+    "price_date": "2026-10-06",
+    "close": 27.41
+   },
+   {
+    "price_date": "2026-10-07",
+    "close": 27.5
+   },
+   {
+    "price_date": "2026-10-08",
+    "close": 28
+   },
+   {
+    "price_date": "2026-10-09",
+    "close": 27.82
+   },
+   {
+    "price_date": "2026-10-12",
+    "close": 28.28
+   },
+   {
+    "price_date": "2026-10-13",
+    "close": 28.4
+   },
+   {
+    "price_date": "2026-10-14",
+    "close": 28.37
+   },
+   {
+    "price_date": "2026-10-15",
+    "close": 29.21
+   },
+   {
+    "price_date": "2026-10-16",
+    "close": 29.44
+   },
+   {
+    "price_date": "2026-10-19",
+    "close": 29.58
+   },
+   {
+    "price_date": "2026-10-20",
+    "close": 29.44
+   },
+   {
+    "price_date": "2026-10-21",
+    "close": 30.11
+   },
+   {
+    "price_date": "2026-10-22",
+    "close": 29.85
+   },
+   {
+    "price_date": "2026-10-23",
+    "close": 30.42
+   },
+   {
+    "price_date": "2026-10-26",
+    "close": 30.03
+   },
+   {
+    "price_date": "2026-10-27",
+    "close": 29.79
+   },
+   {
+    "price_date": "2026-10-28",
+    "close": 29.8
+   },
+   {
+    "price_date": "2026-10-29",
+    "close": 29.45
+   },
+   {
+    "price_date": "2026-10-30",
+    "close": 29.95
+   },
+   {
+    "price_date": "2026-11-02",
+    "close": 30.52
+   }
+  ],
+  "XOM": [
+   {
+    "price_date": "2026-08-26",
+    "close": 158.19
+   },
+   {
+    "price_date": "2026-08-27",
+    "close": 158.19
+   },
+   {
+    "price_date": "2026-08-28",
+    "close": 156.44
+   },
+   {
+    "price_date": "2026-08-31",
+    "close": 156.71
+   },
+   {
+    "price_date": "2026-09-01",
+    "close": 160.95
+   },
+   {
+    "price_date": "2026-09-02",
+    "close": 164.55
+   },
+   {
+    "price_date": "2026-09-03",
+    "close": 164.15
+   },
+   {
+    "price_date": "2026-09-04",
+    "close": 162.21
+   },
+   {
+    "price_date": "2026-09-07",
+    "close": 159.47
+   },
+   {
+    "price_date": "2026-09-08",
+    "close": 159.47
+   },
+   {
+    "price_date": "2026-09-09",
+    "close": 160.66
+   },
+   {
+    "price_date": "2026-09-10",
+    "close": 164.23
+   },
+   {
+    "price_date": "2026-09-11",
+    "close": 165.23
+   },
+   {
+    "price_date": "2026-09-14",
+    "close": 165.99
+   },
+   {
+    "price_date": "2026-09-15",
+    "close": 165.08
+   },
+   {
+    "price_date": "2026-09-16",
+    "close": 169.32
+   },
+   {
+    "price_date": "2026-09-17",
+    "close": 163.32
+   },
+   {
+    "price_date": "2026-09-18",
+    "close": 163.27
+   },
+   {
+    "price_date": "2026-09-21",
+    "close": 163.54
+   },
+   {
+    "price_date": "2026-09-22",
+    "close": 158.3
+   },
+   {
+    "price_date": "2026-09-23",
+    "close": 158.71
+   },
+   {
+    "price_date": "2026-09-24",
+    "close": 161.23
+   },
+   {
+    "price_date": "2026-09-25",
+    "close": 162.14
+   },
+   {
+    "price_date": "2026-09-28",
+    "close": 160.59
+   },
+   {
+    "price_date": "2026-09-29",
+    "close": 162.52
+   },
+   {
+    "price_date": "2026-09-30",
+    "close": 161.35
+   },
+   {
+    "price_date": "2026-10-01",
+    "close": 162.75
+   },
+   {
+    "price_date": "2026-10-02",
+    "close": 163.82
+   },
+   {
+    "price_date": "2026-10-05",
+    "close": 164.01
+   },
+   {
+    "price_date": "2026-10-06",
+    "close": 164
+   },
+   {
+    "price_date": "2026-10-07",
+    "close": 164.48
+   },
+   {
+    "price_date": "2026-10-08",
+    "close": 164.05
+   },
+   {
+    "price_date": "2026-10-09",
+    "close": 168.5
+   },
+   {
+    "price_date": "2026-10-12",
+    "close": 168.94
+   },
+   {
+    "price_date": "2026-10-13",
+    "close": 172.15
+   },
+   {
+    "price_date": "2026-10-14",
+    "close": 174.08
+   },
+   {
+    "price_date": "2026-10-15",
+    "close": 177.01
+   },
+   {
+    "price_date": "2026-10-16",
+    "close": 174.68
+   },
+   {
+    "price_date": "2026-10-19",
+    "close": 178.98
+   },
+   {
+    "price_date": "2026-10-20",
+    "close": 178.28
+   },
+   {
+    "price_date": "2026-10-21",
+    "close": 177.86
+   },
+   {
+    "price_date": "2026-10-22",
+    "close": 178.09
+   },
+   {
+    "price_date": "2026-10-23",
+    "close": 178.23
+   },
+   {
+    "price_date": "2026-10-26",
+    "close": 183.21
+   },
+   {
+    "price_date": "2026-10-27",
+    "close": 184.54
+   },
+   {
+    "price_date": "2026-10-28",
+    "close": 179.91
+   },
+   {
+    "price_date": "2026-10-29",
+    "close": 182.02
+   },
+   {
+    "price_date": "2026-10-30",
+    "close": 183.29
+   },
+   {
+    "price_date": "2026-11-02",
+    "close": 187.25
+   }
+  ],
+  "NVDA": [
+   {
+    "price_date": "2026-08-26",
+    "close": 209.66
+   },
+   {
+    "price_date": "2026-08-27",
+    "close": 209.66
+   },
+   {
+    "price_date": "2026-08-28",
+    "close": 227.98
+   },
+   {
+    "price_date": "2026-08-31",
+    "close": 217.55
+   },
+   {
+    "price_date": "2026-09-01",
+    "close": 220.78
+   },
+   {
+    "price_date": "2026-09-02",
+    "close": 217.44
+   },
+   {
+    "price_date": "2026-09-03",
+    "close": 224.41
+   },
+   {
+    "price_date": "2026-09-04",
+    "close": 228.45
+   },
+   {
+    "price_date": "2026-09-07",
+    "close": 230.36
+   },
+   {
+    "price_date": "2026-09-08",
+    "close": 230.36
+   },
+   {
+    "price_date": "2026-09-09",
+    "close": 225.73
+   },
+   {
+    "price_date": "2026-09-10",
+    "close": 223.67
+   },
+   {
+    "price_date": "2026-09-11",
+    "close": 218.07
+   },
+   {
+    "price_date": "2026-09-14",
+    "close": 218.29
+   },
+   {
+    "price_date": "2026-09-15",
+    "close": 210.96
+   },
+   {
+    "price_date": "2026-09-16",
+    "close": 212.17
+   },
+   {
+    "price_date": "2026-09-17",
+    "close": 213.9
+   },
+   {
+    "price_date": "2026-09-18",
+    "close": 219.34
+   },
+   {
+    "price_date": "2026-09-21",
+    "close": 222.27
+   },
+   {
+    "price_date": "2026-09-22",
+    "close": 227.38
+   },
+   {
+    "price_date": "2026-09-23",
+    "close": 228.87
+   },
+   {
+    "price_date": "2026-09-24",
+    "close": 225.51
+   },
+   {
+    "price_date": "2026-09-25",
+    "close": 224.58
+   },
+   {
+    "price_date": "2026-09-28",
+    "close": 225.07
+   },
+   {
+    "price_date": "2026-09-29",
+    "close": 228.86
+   },
+   {
+    "price_date": "2026-09-30",
+    "close": 227.21
+   },
+   {
+    "price_date": "2026-10-01",
+    "close": 228.38
+   },
+   {
+    "price_date": "2026-10-02",
+    "close": 230.86
+   },
+   {
+    "price_date": "2026-10-05",
+    "close": 233.95
+   },
+   {
+    "price_date": "2026-10-06",
+    "close": 238.9
+   },
+   {
+    "price_date": "2026-10-07",
+    "close": 239.24
+   },
+   {
+    "price_date": "2026-10-08",
+    "close": 237.47
+   },
+   {
+    "price_date": "2026-10-09",
+    "close": 230.48
+   },
+   {
+    "price_date": "2026-10-12",
+    "close": 229.28
+   },
+   {
+    "price_date": "2026-10-13",
+    "close": 226.32
+   },
+   {
+    "price_date": "2026-10-14",
+    "close": 228.52
+   },
+   {
+    "price_date": "2026-10-15",
+    "close": 221.3
+   },
+   {
+    "price_date": "2026-10-16",
+    "close": 217.23
+   },
+   {
+    "price_date": "2026-10-19",
+    "close": 214.13
+   },
+   {
+    "price_date": "2026-10-20",
+    "close": 217.09
+   },
+   {
+    "price_date": "2026-10-21",
+    "close": 216.47
+   },
+   {
+    "price_date": "2026-10-22",
+    "close": 221.97
+   },
+   {
+    "price_date": "2026-10-23",
+    "close": 212.21
+   },
+   {
+    "price_date": "2026-10-26",
+    "close": 210.96
+   },
+   {
+    "price_date": "2026-10-27",
+    "close": 216
+   },
+   {
+    "price_date": "2026-10-28",
+    "close": 217.94
+   },
+   {
+    "price_date": "2026-10-29",
+    "close": 215.38
+   },
+   {
+    "price_date": "2026-10-30",
+    "close": 213.66
+   },
+   {
+    "price_date": "2026-11-02",
+    "close": 204.64
+   }
+  ],
+  "QQQ": [
+   {
+    "price_date": "2026-08-26",
+    "close": 711.37
+   },
+   {
+    "price_date": "2026-08-27",
+    "close": 711.37
+   },
+   {
+    "price_date": "2026-08-28",
+    "close": 721.11
+   },
+   {
+    "price_date": "2026-08-31",
+    "close": 716.43
+   },
+   {
+    "price_date": "2026-09-01",
+    "close": 716.76
+   },
+   {
+    "price_date": "2026-09-02",
+    "close": 707.64
+   },
+   {
+    "price_date": "2026-09-03",
+    "close": 709.24
+   },
+   {
+    "price_date": "2026-09-04",
+    "close": 717.67
+   },
+   {
+    "price_date": "2026-09-07",
+    "close": 718.96
+   },
+   {
+    "price_date": "2026-09-08",
+    "close": 718.96
+   },
+   {
+    "price_date": "2026-09-09",
+    "close": 718.36
+   },
+   {
+    "price_date": "2026-09-10",
+    "close": 716.31
+   },
+   {
+    "price_date": "2026-09-11",
+    "close": 708.69
+   },
+   {
+    "price_date": "2026-09-14",
+    "close": 714.88
+   },
+   {
+    "price_date": "2026-09-15",
+    "close": 709.18
+   },
+   {
+    "price_date": "2026-09-16",
+    "close": 704.54
+   },
+   {
+    "price_date": "2026-09-17",
+    "close": 704.72
+   },
+   {
+    "price_date": "2026-09-18",
+    "close": 716.92
+   },
+   {
+    "price_date": "2026-09-21",
+    "close": 721.45
+   },
+   {
+    "price_date": "2026-09-22",
+    "close": 741.47
+   },
+   {
+    "price_date": "2026-09-23",
+    "close": 747.46
+   },
+   {
+    "price_date": "2026-09-24",
+    "close": 741.21
+   },
+   {
+    "price_date": "2026-09-25",
+    "close": 741.1
+   },
+   {
+    "price_date": "2026-09-28",
+    "close": 744.5
+   },
+   {
+    "price_date": "2026-09-29",
+    "close": 736.53
+   },
+   {
+    "price_date": "2026-09-30",
+    "close": 737.93
+   },
+   {
+    "price_date": "2026-10-01",
+    "close": 739.77
+   },
+   {
+    "price_date": "2026-10-02",
+    "close": 742.03
+   },
+   {
+    "price_date": "2026-10-05",
+    "close": 749.58
+   },
+   {
+    "price_date": "2026-10-06",
+    "close": 756.2
+   },
+   {
+    "price_date": "2026-10-07",
+    "close": 759.66
+   },
+   {
+    "price_date": "2026-10-08",
+    "close": 757.73
+   },
+   {
+    "price_date": "2026-10-09",
+    "close": 747.58
+   },
+   {
+    "price_date": "2026-10-12",
+    "close": 751.27
+   },
+   {
+    "price_date": "2026-10-13",
+    "close": 746.04
+   },
+   {
+    "price_date": "2026-10-14",
+    "close": 743.57
+   },
+   {
+    "price_date": "2026-10-15",
+    "close": 728.95
+   },
+   {
+    "price_date": "2026-10-16",
+    "close": 728
+   },
+   {
+    "price_date": "2026-10-19",
+    "close": 709.8
+   },
+   {
+    "price_date": "2026-10-20",
+    "close": 718.36
+   },
+   {
+    "price_date": "2026-10-21",
+    "close": 717.63
+   },
+   {
+    "price_date": "2026-10-22",
+    "close": 725.2
+   },
+   {
+    "price_date": "2026-10-23",
+    "close": 704.47
+   },
+   {
+    "price_date": "2026-10-26",
+    "close": 704.4
+   },
+   {
+    "price_date": "2026-10-27",
+    "close": 712.2
+   },
+   {
+    "price_date": "2026-10-28",
+    "close": 721.25
+   },
+   {
+    "price_date": "2026-10-29",
+    "close": 725.61
+   },
+   {
+    "price_date": "2026-10-30",
+    "close": 715.34
+   },
+   {
+    "price_date": "2026-11-02",
+    "close": 690.49
+   }
+  ]
+ }
+}
