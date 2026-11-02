@@ -321,8 +321,9 @@ function PayForm({
           onUnavailable();
         }}
         // Apple Pay in Safari and Google Pay in Chrome, as tabs beside the card (the site's domain is registered with
-        // Stripe by the popup's first look, GET /api/billing/lifetime).
-        options={{ layout: "tabs", wallets: { applePay: "auto", googlePay: "auto" } }}
+        // Stripe by the popup's first look, GET /api/billing/lifetime). Not Link: it adds its own Bank and Klarna tabs,
+        // which this card-only payment would turn down at Pay.
+        options={{ layout: "tabs", wallets: { applePay: "auto", googlePay: "auto", link: "never" } }}
       />
       {!shown && <Loading text="Loading the card form" />}
       {agreement && <div className="mt-5">{agreement}</div>}
