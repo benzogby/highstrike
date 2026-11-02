@@ -1,13 +1,14 @@
 import { LIFETIME } from "@/lib/offer";
+import { esc, sendMail } from "@/lib/mail";
 
 // The email Ben gets for every $397 purchase (Ben, 2026-11-02: "format an email to ben.zogby@gmail.com like the attached
 // every time someone purchases for $397"). He picked the classic layout, after HighStrike's 2021 Trading School sale
-// email: a grey-blue band with "<buyer> just joined", the price large, then the line item over a dashed rule. Sent through
-// Resend like the price alerts (RESEND_API_KEY), once per payment (src/lib/lifetime.ts → settleLifetime), and from
+// email: a grey-blue band with "<buyer> just joined", the price large, then the line item over a dashed rule. Sent from
+// highstrike.com through Resend (src/lib/mail.ts), once per payment (src/lib/lifetime.ts → settleLifetime), and from
 // Admin → Overview as a test.
 
 export const SALE_ALERT_TO = process.env.SALE_ALERT_TO || "ben.zogby@gmail.com";
-const FROM = process.env.SALE_ALERT_FROM || process.env.RESEND_FROM || "Ben from HighStrike <onboarding@resend.dev>";
+const FROM = process.env.SALE_ALERT_FROM || "Ben from HighStrike <alerts@highstrike.com>";
 
 export type Sale = {
   /** The buyer: the email the account is under (the checkout asks for no name). */
@@ -22,9 +23,6 @@ export type Sale = {
   /** Admin → Overview's test: nobody paid. */
   test?: boolean;
 };
-
-const ESCAPES: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
-const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ESCAPES[c]);
 
 /** The subject, the HTML and a plain-text copy of the alert. */
 export function saleAlertEmail(sale: Sale) {
@@ -61,20 +59,6 @@ ${row("Account", account)}${row("Paid", esc(when))}
 }
 
 /** Sends the alert to SALE_ALERT_TO. Never throws: the reason it didn't go out comes back instead. */
-export async function sendSaleAlert(sale: Sale): Promise<{ ok: true } | { ok: false; error: string }> {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) return { ok: false, error: "RESEND_API_KEY isn't set on Vercel, so the server can't send email." };
-  const { subject, html, text } = saleAlertEmail(sale);
-  try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from: FROM, to: [SALE_ALERT_TO], subject, html, text }),
-    });
-    if (res.ok) return { ok: true };
-    const body = (await res.json().catch(() => ({}))) as { message?: string; error?: string };
-    return { ok: false, error: `Resend said ${res.status}: ${String(body.message ?? body.error ?? "no reason given").slice(0, 200)}` };
-  } catch (e) {
-    return { ok: false, error: `Couldn't reach Resend: ${e instanceof Error ? e.message : String(e)}` };
-  }
+export async function sendSaleAlert(sale: Sale) {
+  return sendMail({ ...saleAlertEmail(sale), to: SALE_ALERT_TO, from: FROM });
 }

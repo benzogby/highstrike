@@ -1,8 +1,7 @@
 import type Stripe from "stripe";
-import { createClient } from "@supabase/supabase-js";
 import { getStripe, supabaseService } from "@/lib/stripe";
-import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabaseConfig";
 import { LIFETIME } from "@/lib/offer";
+import { SITE_URL, esc, sendMail } from "@/lib/mail";
 import { TERMS_VERSION, agreedToTerms } from "@/lib/terms";
 import { sendSaleAlert } from "@/lib/saleAlert";
 
@@ -302,11 +301,30 @@ async function saleAlert(pi: Stripe.PaymentIntent, email: string, created: boole
   }
 }
 
+/** The buyer's confirmation: what they bought, the account it's on, and how to get in on any device. */
+function confirmation(email: string) {
+  const open = `${SITE_URL}/dashboard`;
+  const subject = "Your HighStrike lifetime access is ready";
+  const p = (text: string, extra = "") => `<p style="margin:0 0 14px;font-size:15px;line-height:1.55;color:#14161a${extra}">${text}</p>`;
+  const html = `<div style="margin:0;padding:28px 16px;background:#ffffff;font-family:Inter,Helvetica,Arial,sans-serif;color:#14161a">
+<div style="max-width:480px;margin:0 auto">
+<p style="margin:0 0 18px;font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#009f6f">HighStrike</p>
+<h1 style="margin:0 0 12px;font-size:26px;line-height:1.2">You're in</h1>
+${p(`Your lifetime access is ready: the daily trades, the tools and HighStrike Trading School, for life, with nothing more to pay. Your account is <b>${esc(email)}</b>.`)}
+<p style="margin:8px 0 24px"><a href="${open}" style="display:inline-block;padding:13px 22px;border-radius:8px;background:#009f6f;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none">Open HighStrike</a></p>
+${p("To sign in on another device, use Continue with Google if this is a Google address, or set a password in Settings while you're signed in.", ";font-size:13px;color:#4a5160")}
+${p("Stripe emails your receipt separately. Questions? Write to support@highstrike.com.", ";font-size:13px;color:#4a5160")}
+</div>
+</div>`;
+  const text = `You're in.\n\nYour HighStrike lifetime access is ready: the daily trades, the tools and HighStrike Trading School, for life. Your account is ${email}.\n\nOpen HighStrike: ${open}\n\nTo sign in on another device, use Continue with Google if this is a Google address, or set a password in Settings while you're signed in.\n\nStripe emails your receipt separately. Questions? Write to support@highstrike.com.`;
+  return { subject, html, text };
+}
+
 /**
- * The confirmation email, once per payment: Supabase's "Magic link" email, which HighStrike's template words as the
- * welcome ("Your HighStrike lifetime access is ready") with a button that signs them in (/auth/callback). It goes out
- * through Supabase's mail; until the project has its own SMTP sender, Supabase delivers only to its own team, so for
- * anyone else this fails and the reason is kept on the purchase (email_error). Access never waits on it.
+ * The confirmation email, once per payment, from highstrike.com through Resend (src/lib/mail.ts). It carries no one-time
+ * sign-in link: Supabase keeps one live link per account, so the browser's automatic sign-in right after paying would
+ * cancel any link in the email. The buyer is in already; the email confirms it and says how to get in elsewhere. Why it
+ * didn't go out is kept on the purchase (email_error). Access never waits on it.
  */
 async function confirmationEmail(paymentIntent: string, email: string) {
   const service = supabaseService();
@@ -317,11 +335,10 @@ async function confirmationEmail(paymentIntent: string, email: string) {
     .is("emailed_at", null)
     .select("payment_intent");
   if (!claimed?.length) return;
-  const mailer = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, { auth: { flowType: "implicit", persistSession: false, autoRefreshToken: false } });
-  const { error } = await mailer.auth.signInWithOtp({ email, options: { shouldCreateUser: false } });
-  if (error) {
-    console.error(`lifetime: the confirmation email to ${email.replace(/^(.).*@/, "$1…@")} didn't go out:`, error.message);
-    await service.from("lifetime_purchases").update({ email_error: error.message.slice(0, 300) }).eq("payment_intent", paymentIntent);
+  const sent = await sendMail({ to: email, ...confirmation(email) });
+  if (!sent.ok) {
+    console.error(`lifetime: the confirmation email to ${email.replace(/^(.).*@/, "$1…@")} didn't go out:`, sent.error);
+    await service.from("lifetime_purchases").update({ email_error: sent.error.slice(0, 300) }).eq("payment_intent", paymentIntent);
   }
 }
 
