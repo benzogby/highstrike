@@ -1,0 +1,40 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import JoinButton from "@/components/join/JoinButton";
+import { Bull } from "@/components/landing/Pieces";
+
+/**
+ * The homepage's floating bar at the foot (Ben, 2026-11-02: "Give page a floating footer like getripping.com/staging
+ * when the page is scrolled beyond the hero"): the price and the button, from when the hero's button (#hero-cta) has
+ * scrolled away until the close (#closing) comes into sight, so the button is always at hand but never doubled.
+ */
+export default function LandingDock({ price }: { price: string }) {
+  const [heroGone, setHeroGone] = useState(false);
+  const [atEnd, setAtEnd] = useState(false);
+  useEffect(() => {
+    if (typeof IntersectionObserver === "undefined") return;
+    const hero = document.getElementById("hero-cta");
+    const end = document.getElementById("closing");
+    const watch = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (e.target === hero) setHeroGone(!e.isIntersecting && e.boundingClientRect.top < 0);
+        if (e.target === end) setAtEnd(e.isIntersecting || e.boundingClientRect.top < 0);
+      }
+    });
+    if (hero) watch.observe(hero);
+    if (end) watch.observe(end);
+    return () => watch.disconnect();
+  }, []);
+  const on = heroGone && !atEnd;
+  return (
+    <div className="hs-dock" data-on={on} aria-hidden={!on} inert={!on}>
+      <Bull />
+      <p className="hs-dock__text">
+        <b>Lifetime access</b>
+        {price} once. No subscription.
+      </p>
+      <JoinButton className="hs-btn hs-btn--sm">Get lifetime access</JoinButton>
+    </div>
+  );
+}

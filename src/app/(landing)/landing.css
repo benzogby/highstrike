@@ -11,12 +11,15 @@
 /* ── Tokens ─────────────────────────────────────────────────────────────────────────────────────────────────── */
 :root:has([data-landing]) {
   color-scheme: dark;
-  background: #04070a;
+  background: #0b0c0d;
+  /* Anchors land under the fixed bar, not behind it. */
+  scroll-padding-top: 96px;
 }
 
 [data-landing] {
-  /* The dark room */
-  --bg: #04070a;
+  /* The dark room: graphite, almost black, with a film grain over it (Ben, 2026-11-02, option A of four) */
+  --bg: #0b0c0d;
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='linear' slope='0.2'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   --ink: #f2f6f4;
   --ink-2: #b4bfba;
   --ink-3: #8b9792;
@@ -45,7 +48,7 @@
   --cal: var(--font-cal-sans), system-ui, sans-serif;
   --ui: var(--font-inter), system-ui, sans-serif;
 
-  background: var(--bg);
+  background: var(--grain) 0 0 / 200px 200px, var(--bg);
   color: var(--ink);
   font-family: var(--ui);
   font-size: 18px;
@@ -113,10 +116,8 @@
   inset: 0;
   z-index: -2;
   pointer-events: none;
-  background:
-    radial-gradient(70% 60% at 14% -6%, rgba(31, 191, 134, 0.19) 0%, rgba(31, 191, 134, 0.06) 34%, rgba(31, 191, 134, 0) 62%),
-    radial-gradient(50% 45% at 102% 20%, rgba(120, 190, 255, 0.06) 0%, rgba(120, 190, 255, 0) 60%),
-    linear-gradient(180deg, #091216 0%, #05090c 60%, #04070a 100%);
+  /* Only the key light: the grained graphite ground shows through everywhere else. */
+  background: radial-gradient(70% 60% at 14% -6%, rgba(31, 191, 134, 0.16) 0%, rgba(31, 191, 134, 0.05) 34%, rgba(31, 191, 134, 0) 62%);
   /* Each room fades in at its top and out at its foot, so rooms meet on the page's own black. */
   -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 180px, #000 calc(100% - 240px), transparent 100%);
   mask-image: linear-gradient(180deg, transparent 0, #000 180px, #000 calc(100% - 240px), transparent 100%);
@@ -400,12 +401,15 @@
 }
 
 /* ── The bar: the bull and the word, a few links, one action ─────────────────────────────────────────────── */
+/* The bar: black, and fixed, so it floats over the page as it scrolls (Ben, 2026-11-02). */
 .hs-bar {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   right: 0;
-  z-index: 20;
+  z-index: 40;
+  background: #000;
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.07), 0 12px 30px -18px rgba(0, 0, 0, 0.9);
 }
 
 .hs-bar__in {
@@ -2414,42 +2418,166 @@
   padding: 120px 0 48px;
 }
 
-.hs-foot__line {
-  display: flex;
-  align-items: center;
-  gap: 32px;
-  padding-top: 34px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+/* The footer (Ben, 2026-11-02: "all legal links are in the actual footer, along with all other relevant links and
+   information"): the lockup and who runs HighStrike, then the page, the site, and the legal pages in columns. */
+.hs-foot__top {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) repeat(3, minmax(0, 1fr));
+  gap: 40px;
+  padding-top: 40px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
 }
 
-.hs-foot__links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 24px;
+.hs-foot__about {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--ink-3);
+}
+
+.hs-foot__about .hs-brand {
+  margin-right: 0;
+  justify-self: start;
+}
+
+.hs-foot__about a {
+  color: var(--ink-2);
+}
+
+.hs-foot__about a:hover {
+  color: var(--ink);
+}
+
+.hs-foot__col h2 {
+  margin: 0 0 14px;
+  font: 600 14px/1.2 var(--ui);
+  color: var(--ink);
+}
+
+.hs-foot__col ul {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
   font-size: 15px;
   color: var(--ink-2);
 }
 
-.hs-foot__links a:hover {
+.hs-foot__col a,
+.hs-foot__col button {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition: color 0.18s ease;
+}
+
+.hs-foot__col a:hover,
+.hs-foot__col button:hover {
   color: var(--ink);
 }
 
-.hs-foot__c {
+.hs-foot__base {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 24px;
+  margin-top: 40px;
+  padding-top: 24px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
   font-size: 14px;
   color: var(--ink-3);
 }
 
 .hs-foot__legal {
-  margin-top: 28px;
+  margin-top: 24px;
   display: grid;
   gap: 12px;
-  max-width: 72ch;
+  max-width: 90ch;
 }
 
 .hs-foot__legal p {
-  font-size: 16px;
+  font-size: 14px;
   line-height: 1.6;
+  color: var(--ink-3);
+}
+
+/* ── The floating bar at the foot (getripping.com/staging's): the price and the button, once the hero's button has
+   scrolled away and until the close comes into sight. A pill on a wide screen, a bar along the bottom on a phone. ── */
+.hs-dock {
+  position: fixed;
+  left: 50%;
+  bottom: 20px;
+  z-index: 35;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  width: min(640px, calc(100% - 32px));
+  padding: 10px 10px 10px 22px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.86);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.09), 0 24px 50px -20px rgba(0, 0, 0, 0.9);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  transform: translate(-50%, 0);
+  transition: transform 0.35s var(--ease-out), opacity 0.25s ease;
+}
+
+.hs-dock[data-on="false"] {
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, calc(100% + 32px));
+}
+
+.hs-dock .hs-bull {
+  flex: none;
+}
+
+.hs-dock__text {
+  flex: 1;
+  min-width: 0;
+  font-size: 15px;
+  line-height: 1.3;
   color: var(--ink-2);
+}
+
+.hs-dock__text b {
+  display: block;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+@media (max-width: 640px) {
+  .hs-dock {
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    gap: 12px;
+    padding: 12px 16px max(12px, env(safe-area-inset-bottom));
+    border-radius: 0;
+    transform: none;
+    background: #000;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09);
+  }
+
+  .hs-dock[data-on="false"] {
+    transform: translateY(100%);
+  }
+
+  .hs-dock .hs-bull {
+    display: none;
+  }
+
+  .hs-dock .hs-btn {
+    height: 46px;
+    padding: 0 18px;
+    font-size: 15px;
+  }
 }
 
 /* ── Rolling figures ────────────────────────────────────────────────────────────────────────────────────── */
@@ -3113,10 +3241,13 @@
     width: 100%;
   }
 
-  .hs-foot__line {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 18px;
+  .hs-foot__top {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 32px 24px;
+  }
+
+  .hs-foot__about {
+    grid-column: 1 / -1;
   }
 }
 

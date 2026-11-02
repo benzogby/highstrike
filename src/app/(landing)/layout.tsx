@@ -2,13 +2,50 @@ import Link from "next/link";
 import JoinButton from "@/components/join/JoinButton";
 import LandingMotion from "@/components/landing/LandingMotion";
 import { Bull } from "@/components/landing/Pieces";
+import CookieSettings from "@/components/landing/CookieSettings";
+import LandingDock from "@/components/landing/LandingDock";
 import { LEGAL } from "@/lib/legal";
+import { LIFETIME_PRICE } from "@/lib/offer";
 import "./landing.css";
 
-// The homepage's own frame in the HighStrike reels system: a plain bar with the
-// bull and the word on top, the legal lines at the foot (the rest of the site
-// keeps the shared Header and Footer with the theme toggle). [data-landing]
-// holds this page dark whatever the stored theme; see landing.css.
+// The homepage's own frame in the HighStrike reels system: a black bar with the
+// bull and the word, fixed over the page as it scrolls; the footer with every
+// link, the legal pages and who runs HighStrike; and the floating bar at the
+// foot once the hero's button has gone (LandingDock). See landing.css.
+
+/** The footer's columns: this page, the rest of the site, and the legal pages (with Cookie settings under them). */
+const FOOT = [
+  {
+    title: "HighStrike",
+    links: [
+      { href: "/#how", label: "How it works" },
+      { href: "/#record", label: "Record" },
+      { href: "/#desk", label: "The desk" },
+      { href: "/#trading-school", label: "Trading School" },
+      { href: "/#pricing", label: "Pricing" },
+    ],
+  },
+  {
+    title: "Company",
+    links: [
+      { href: "/results", label: "Results" },
+      { href: "/blog", label: "Blog" },
+      { href: "/about", label: "About" },
+      { href: "/company", label: "Company" },
+      { href: "/signin", label: "Sign in" },
+      { href: "mailto:support@highstrike.com", label: "Support" },
+    ],
+  },
+  {
+    title: "Legal",
+    links: [
+      { href: "/terms-of-service", label: "Terms of Service" },
+      { href: "/terms-of-service#refunds", label: "Refund policy" },
+      { href: "/privacy-policy", label: "Privacy Policy" },
+      { href: "/privacy-policy#cookies", label: "Cookie policy" },
+    ],
+  },
+];
 
 export default function LandingLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
@@ -38,29 +75,50 @@ export default function LandingLayout({ children }: Readonly<{ children: React.R
 
       <footer className="hs-foot">
         <div className="hs-wrap">
-          <div className="hs-foot__line">
-            <Link href="/" className="hs-brand" aria-label="HighStrike, home">
-              <Bull />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img className="hs-brand__word" src="/brand/wordmark.png" alt="" width={85} height={17} />
-            </Link>
-            <nav className="hs-foot__links" aria-label="Footer">
-              <a href="#pricing">Pricing</a>
-              <Link href="/results">Results</Link>
-              <Link href="/about">About</Link>
-              <a href="mailto:support@highstrike.com">Support</a>
-              <Link href="/signin">Sign in</Link>
-              <a href="https://www.highstrike.com/privacy-policy">Privacy</a>
-            </nav>
-            <span className="hs-foot__c">© 2026 HighStrike · AI options research, since 2018</span>
+          <div className="hs-foot__top">
+            <div className="hs-foot__about">
+              <Link href="/" className="hs-brand" aria-label="HighStrike, home">
+                <Bull />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img className="hs-brand__word" src="/brand/wordmark.png" alt="" width={85} height={17} />
+              </Link>
+              <p>AI options research and the HighStrike Trading School, since 2018. {LIFETIME_PRICE} once for lifetime access.</p>
+              <p>
+                HighStrike is owned and operated by ZERO DTE HOLDINGS LLC, a Wyoming limited liability company.
+                <br />
+                <a href="mailto:support@highstrike.com">support@highstrike.com</a>
+              </p>
+            </div>
+            {FOOT.map((col) => (
+              <nav key={col.title} className="hs-foot__col" aria-label={col.title}>
+                <h2>{col.title}</h2>
+                <ul>
+                  {col.links.map((l) => (
+                    <li key={l.label}>
+                      {l.href.startsWith("/") && !l.href.startsWith("/#") ? <Link href={l.href}>{l.label}</Link> : <a href={l.href}>{l.label}</a>}
+                    </li>
+                  ))}
+                  {col.title === "Legal" && (
+                    <li>
+                      <CookieSettings />
+                    </li>
+                  )}
+                </ul>
+              </nav>
+            ))}
           </div>
           <div className="hs-foot__legal">
             {LEGAL.map((p) => (
               <p key={p.slice(0, 24)}>{p}</p>
             ))}
           </div>
+          <div className="hs-foot__base">
+            <span>© {new Date().getFullYear()} ZERO DTE HOLDINGS LLC. All rights reserved.</span>
+            <span>Market commentary and education, not investment advice.</span>
+          </div>
         </div>
       </footer>
+      <LandingDock price={LIFETIME_PRICE} />
       <LandingMotion />
     </div>
   );

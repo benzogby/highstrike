@@ -30,3 +30,13 @@ export function saveConsent(c: Consent) {
   }
   window.dispatchEvent(new CustomEvent(CONSENT_EVENT, { detail: c }));
 }
+
+/** Forgets the answer, so the banner asks again (the footer's Cookie settings). */
+export function resetConsent() {
+  try {
+    localStorage.removeItem(KEY);
+  } catch {
+    /* the banner still opens for this page */
+  }
+  window.dispatchEvent(new CustomEvent(CONSENT_EVENT, { detail: null }));
+}

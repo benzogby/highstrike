@@ -186,7 +186,7 @@ export default async function Home() {
             <p className="hs-lead" data-reveal="" style={{ "--i": 2 } as React.CSSProperties}>
               Every morning HighStrike&apos;s AI scans 5,400+ stocks and publishes the day&apos;s options setups: the entry, the target and the reasoning.
             </p>
-            <div className="hs-hero__actions" data-reveal="" style={{ "--i": 3 } as React.CSSProperties}>
+            <div id="hero-cta" className="hs-hero__actions" data-reveal="" style={{ "--i": 3 } as React.CSSProperties}>
               <JoinButton className="hs-btn">Get lifetime access</JoinButton>
               <a href="#lookup" className="hs-link">
                 Look up a ticker
@@ -758,7 +758,7 @@ export default async function Home() {
       </section>
 
       {/* The close: the last session on one map, and the full lockup */}
-      <section className="hs-room hs-close" aria-labelledby="hs-close-title">
+      <section id="closing" className="hs-room hs-close" aria-labelledby="hs-close-title">
         <Field spy={spy} qqq={qqq} seed={46} />
         <div className="hs-wrap">
           {map.length > 0 && (
