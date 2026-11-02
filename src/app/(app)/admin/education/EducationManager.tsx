@@ -9,7 +9,7 @@ import { clock, lessonHref, moduleLabel } from "@/lib/educationShared";
 import NotesEditor from "./NotesEditor";
 import type { PipelineProgress } from "./videoPipeline";
 
-// Admin → Education (Ben, 2026-11-02: "Give me an education tab in admin panel to edit each lesson, including video
+// Admin → Trading School (Ben, 2026-11-02: "Give me an education tab in admin panel to edit each lesson, including video
 // uploads, and supporting text"). Modules and their lessons on the left (reorder, add); the chosen lesson on the right:
 // title, module, notes, its video (upload, replace, remove, or a YouTube id) and its files. Every change goes through
 // the admin routes in src/app/api/admin/education.

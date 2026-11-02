@@ -1,4 +1,4 @@
-// The pure parts of the Education library (src/lib/education.ts), with nothing server-only in them, so the admin's
+// The pure parts of the HighStrike Trading School library (src/lib/education.ts), with nothing server-only in them, so the admin's
 // editor in the browser can use them too.
 
 /** The private storage bucket every lesson video, poster and file sits in. */

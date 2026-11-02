@@ -3,7 +3,7 @@ import { supabaseServer } from "@/lib/supabase/server";
 import { LESSONS_BUCKET, isLessonId } from "@/lib/education";
 import { MAX_REL_PATH, dirOf, isLessonVersion, isSafeRelPath, masterUris, masterVariants, mediaSummary, playlistKind, resolveUri, segmentUris } from "@/lib/hls";
 
-// Admin → Education (Ben, 2026-11-02): the server side of every edit to the library. Each route asks adminContext()
+// Admin → Trading School (Ben, 2026-11-02): the server side of every edit to the library. Each route asks adminContext()
 // first and then writes through the admin's own session, so the tables' and the bucket's admin-only rules
 // (supabase/migrations/20261102230000_education_admin.sql) have the last word too. Video files never pass through
 // here: the admin's browser makes the HLS and uploads each file straight to storage through a signed upload link.

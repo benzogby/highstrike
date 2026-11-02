@@ -3,12 +3,12 @@ import { outline, publishedVideos } from "@/lib/education";
 import EducationManager, { type AdminLesson } from "./EducationManager";
 
 export const metadata = {
-  title: "Education — Admin — HighStrike",
+  title: "Trading School — Admin — HighStrike",
 };
 
 export const dynamic = "force-dynamic";
 
-/** Admin → Education: every module and lesson of the library, to edit (the admin layout has already checked is_admin). */
+/** Admin → Trading School: every module and lesson of HighStrike Trading School, to edit (the admin layout has already checked is_admin). */
 export default async function AdminEducationPage() {
   const supabase = await supabaseServer();
   const [{ modules, lessons }, videos] = await Promise.all([outline(supabase), publishedVideos(supabase)]);
