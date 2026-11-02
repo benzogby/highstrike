@@ -77,5 +77,5 @@ ${row("Buyer", esc(sale.email))}${row("Account", badge(sale.created ? "New accou
 
 /** Sends the alert to SALE_ALERT_TO. Never throws: the reason it didn't go out comes back instead. */
 export async function sendSaleAlert(sale: Sale) {
-  return sendMail({ ...saleAlertEmail(sale), to: SALE_ALERT_TO, from: FROM });
+  return sendMail({ ...saleAlertEmail(sale), to: SALE_ALERT_TO, from: FROM, kind: "sale_alert" });
 }

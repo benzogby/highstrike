@@ -1,5 +1,6 @@
 import { fetchQuotes } from "@/lib/quotes";
 import { supabaseService } from "@/lib/stripe";
+import { sendMail } from "@/lib/mail";
 
 // Price-alert sweep: evaluates active alerts against quotes, fires matches
 // into the activity feed, and emails the owner when RESEND_API_KEY is set.
@@ -27,23 +28,21 @@ export async function recordActivity(
 }
 
 async function sendAlertEmail(userId: string, subject: string, body: string) {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) return;
   try {
     const service = supabaseService();
     const { data } = await service.auth.admin.getUserById(userId);
     const to = data.user?.email;
     if (!to) return;
-    await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        from: process.env.RESEND_FROM ?? "HighStrike Alerts <onboarding@resend.dev>",
-        to,
-        subject,
-        text: `${body}\n\nManage alerts: https://www.highstrike.com/dashboard\n\nMarket commentary, not investment advice.`,
-      }),
+    // Through sendMail, so it shows in Admin → Emails like every other email.
+    const sent = await sendMail({
+      to,
+      subject,
+      html: "",
+      text: `${body}\n\nManage alerts: https://www.highstrike.com/dashboard\n\nMarket commentary, not investment advice.`,
+      from: process.env.RESEND_FROM ?? "HighStrike Alerts <onboarding@resend.dev>",
+      kind: "price_alert",
     });
+    if (!sent.ok) console.error("alert email failed:", sent.error);
   } catch (e) {
     console.error("alert email failed:", e instanceof Error ? e.message : e);
   }

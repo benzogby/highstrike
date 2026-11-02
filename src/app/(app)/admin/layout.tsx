@@ -1,11 +1,15 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
 import AppShell from "@/components/AppShell";
 import AdminTabs from "./AdminTabs";
 import { PageHeader } from "@/components/ui";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Admin — HighStrike",
+  // Saved to a phone's home screen, Admin opens as its own app, straight to Overview (as getripping.com's does).
+  manifest: "/admin.webmanifest",
+  appleWebApp: { capable: true, title: "Admin", statusBarStyle: "black-translucent" },
 };
 
 export default async function AdminLayout({
@@ -34,9 +38,11 @@ export default async function AdminLayout({
       displayName={me?.name}
       avatarUrl={me?.avatar_url}
     >
-      <PageHeader title="Admin" subtitle="The control room: the setup engine, members, traffic, content and Trading School." />
-      <AdminTabs />
-      <div className="mt-8">{children}</div>
+      <PageHeader title="Admin" subtitle="The control room: accounts, payments, growth, content and how the site is holding up." />
+      <div className="mt-6 flex flex-col gap-6 lg:grid lg:grid-cols-[168px_minmax(0,1fr)] lg:gap-8">
+        <AdminTabs />
+        <div className="min-w-0">{children}</div>
+      </div>
     </AppShell>
   );
 }

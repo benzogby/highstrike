@@ -1,157 +1,118 @@
-import { supabaseServer } from "@/lib/supabase/server";
+import Link from "next/link";
+import { Badge, CARD, Stat } from "@/components/ui";
+import { DATE, daysAgo, requireAdmin } from "@/lib/adminGate";
+import { growth } from "@/lib/adminGrowth";
+import { supabaseService } from "@/lib/stripe";
+import { LIFETIME } from "@/lib/offer";
+import { SALE_ALERT_TO } from "@/lib/saleAlert";
 import GenerateNowButton from "./GenerateNowButton";
 import TestSaleAlertButton from "./TestSaleAlertButton";
-import { SALE_ALERT_TO } from "@/lib/saleAlert";
 
-function formatWhen(iso: string) {
-  return new Date(iso).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    timeZone: "America/New_York",
-  });
-}
+export const dynamic = "force-dynamic";
 
+const money = (cents: number) => `$${Math.round(cents / 100).toLocaleString("en-US")}`;
+const DAY = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", weekday: "short", month: "short", day: "numeric" });
+
+/**
+ * Overview, as getripping.com's admin has it: the figures that matter on top (accounts, members, money, errors), the
+ * last 14 days a row each, and the newest accounts; with HighStrike's own switches (the setup engine, the sale alert).
+ */
 export default async function AdminOverviewPage() {
-  const supabase = await supabaseServer();
-  const weekAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
-
-  const [members, waitlist, memberCount, weekCount, waitlistCount] =
-    await Promise.all([
-      supabase
-        .from("profiles")
-        .select("email, is_admin, created_at")
-        .order("created_at", { ascending: false })
-        .limit(50),
-      supabase
-        .from("waitlist_signups")
-        .select("email, source, created_at")
-        .order("created_at", { ascending: false })
-        .limit(50),
-      supabase.from("profiles").select("id", { count: "exact", head: true }),
-      supabase
-        .from("profiles")
-        .select("id", { count: "exact", head: true })
-        .gte("created_at", weekAgo),
-      supabase
-        .from("waitlist_signups")
-        .select("id", { count: "exact", head: true }),
-    ]);
-
-  const stats = [
-    { label: "Total members", value: memberCount.count ?? 0 },
-    { label: "New this week", value: weekCount.count ?? 0 },
-    { label: "Waitlist signups", value: waitlistCount.count ?? 0 },
-  ];
+  await requireAdmin();
+  const db = supabaseService();
+  const [g, accounts7d, errors24h, latest] = await Promise.all([
+    growth(14).catch(() => null),
+    db.from("profiles").select("id", { count: "exact", head: true }).gte("created_at", daysAgo(7)),
+    db.from("error_reports").select("id", { count: "exact", head: true }).gte("created_at", daysAgo(1)),
+    db.from("profiles").select("id, email, plan, is_admin, created_at").order("created_at", { ascending: false }).limit(8),
+  ]);
+  const days = [...(g?.days ?? [])].reverse();
+  const revenue14 = days.reduce((s, d) => s + d.revenue, 0);
+  const sales14 = days.reduce((s, d) => s + d.sales, 0);
 
   return (
-    <>
-      <div className="mb-8 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-panel px-5 py-4">
-        <div>
-          <p className="font-display text-[15px] text-ink">Setup engine</p>
-          <p className="mt-0.5 text-[13px] text-ink-3">
-            Runs automatically at 8:30 AM ET — or trigger a fresh report now.
-          </p>
-        </div>
-        <GenerateNowButton />
-      </div>
-      <div className="mb-8 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-panel px-5 py-4">
-        <div>
-          <p className="font-display text-[15px] text-ink">Sale alerts</p>
-          <p className="mt-0.5 text-[13px] text-ink-3">An email for every $397 purchase, from payments@mail.highstrike.com.</p>
-        </div>
-        <TestSaleAlertButton to={SALE_ALERT_TO} />
-      </div>
-      <div className="grid gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-3">
-        {stats.map((s) => (
-          <div key={s.label} className="bg-panel px-5 py-4">
-            <p className="text-[13px] text-ink-3">{s.label}</p>
-            <p className="mt-1 font-display text-3xl leading-none text-ink">{s.value}</p>
-          </div>
-        ))}
+    <div className="flex flex-col gap-6">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <Stat label="Accounts" value={(g?.accounts ?? 0).toLocaleString("en-US")} note={`${accounts7d.count ?? 0} new in 7 days`} />
+        <Stat label="Lifetime members" value={(g?.members ?? 0).toLocaleString("en-US")} note={`${sales14} ${sales14 === 1 ? "sale" : "sales"} in 14 days`} />
+        <Stat label="Revenue, 14 days" value={money(revenue14)} note="Paid in Stripe, less refunds" />
+        <Stat
+          label="Errors, 24 hours"
+          value={(errors24h.count ?? 0).toLocaleString("en-US")}
+          aside={(errors24h.count ?? 0) > 0 ? <Link href="/admin/errors" className="text-xs text-ink-2 hover:text-ink hover:underline">See them</Link> : undefined}
+          note="Reported by pages, routes and browsers"
+        />
       </div>
 
-      <div className="mt-10 grid gap-8 xl:grid-cols-2">
-        <section>
-          <h2 className="font-display text-[15px] text-ink">
-            Members {members.data ? `(latest ${members.data.length})` : ""}
-          </h2>
-          <div className="mt-3 overflow-hidden rounded-xl border border-line bg-panel">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-line text-left text-xs text-ink-3 font-medium">
-                  <th className="w-full px-5 py-2.5 font-medium">Email</th>
-                  <th className="px-3 py-2.5 font-medium">Role</th>
-                  <th className="px-5 py-2.5 text-right font-medium">Joined</th>
+      <div className="grid gap-6 xl:grid-cols-2">
+        <section className={CARD}>
+          <h2 className="border-b border-line px-4 py-2.5 text-sm font-medium text-ink">By day (14 days)</h2>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs text-ink-3">
+                <th className="px-4 py-2 font-medium">Day</th>
+                <th className="px-2 py-2 text-right font-medium">New accounts</th>
+                <th className="px-2 py-2 text-right font-medium">Sales</th>
+                <th className="px-4 py-2 text-right font-medium">Revenue</th>
+              </tr>
+            </thead>
+            <tbody>
+              {days.map((d) => (
+                <tr key={d.day} className="border-t border-line">
+                  <td className="px-4 py-1.5 text-ink-2">{DAY.format(new Date(`${d.day}T12:00:00Z`))}</td>
+                  <td className="px-2 py-1.5 text-right tabular-nums text-ink">{d.signups}</td>
+                  <td className="px-2 py-1.5 text-right tabular-nums text-ink">{d.sales}</td>
+                  <td className="px-4 py-1.5 text-right tabular-nums text-ink">{money(d.revenue)}</td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-line">
-                {(members.data ?? []).map((m) => (
-                  <tr key={m.email}>
-                    <td className="px-5 py-2.5 text-ink">{m.email}</td>
-                    <td className="px-3 py-2.5">
-                      {m.is_admin ? (
-                        <span className="rounded-md bg-accent-soft px-1.5 py-0.5 text-xs font-medium text-accent-ink ring-1 ring-inset ring-accent/25">
-                          ADMIN
-                        </span>
-                      ) : (
-                        <span className="text-xs text-ink-3">Member</span>
-                      )}
-                    </td>
-                    <td className="whitespace-nowrap px-5 py-2.5 text-right font-mono-nums text-xs text-ink-2">
-                      {formatWhen(m.created_at)}
-                    </td>
-                  </tr>
-                ))}
-                {(members.data ?? []).length === 0 && (
-                  <tr>
-                    <td colSpan={3} className="px-5 py-6 text-center text-sm text-ink-3">
-                      No members yet.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+              ))}
+              {days.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="px-4 py-3 text-ink-3">
+                    The figures couldn&apos;t be read.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </section>
 
-        <section>
-          <h2 className="font-display text-[15px] text-ink">
-            Waitlist {waitlist.data ? `(latest ${waitlist.data.length})` : ""}
-          </h2>
-          <div className="mt-3 overflow-hidden rounded-xl border border-line bg-panel">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-line text-left text-xs text-ink-3 font-medium">
-                  <th className="w-full px-5 py-2.5 font-medium">Email</th>
-                  <th className="px-3 py-2.5 font-medium">Source</th>
-                  <th className="px-5 py-2.5 text-right font-medium">Signed up</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line">
-                {(waitlist.data ?? []).map((w) => (
-                  <tr key={w.email}>
-                    <td className="px-5 py-2.5 text-ink">{w.email}</td>
-                    <td className="px-3 py-2.5 text-xs text-ink-3">{w.source ?? "—"}</td>
-                    <td className="whitespace-nowrap px-5 py-2.5 text-right font-mono-nums text-xs text-ink-2">
-                      {formatWhen(w.created_at)}
-                    </td>
-                  </tr>
-                ))}
-                {(waitlist.data ?? []).length === 0 && (
-                  <tr>
-                    <td colSpan={3} className="px-5 py-6 text-center text-sm text-ink-3">
-                      No waitlist signups yet.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </section>
+        <div className="flex flex-col gap-6">
+          <section className={CARD}>
+            <div className="flex items-center justify-between border-b border-line px-4 py-2.5">
+              <h2 className="text-sm font-medium text-ink">Newest accounts</h2>
+              <Link href="/admin/accounts" className="text-xs text-ink-2 hover:text-ink hover:underline">
+                All accounts
+              </Link>
+            </div>
+            <ul className="divide-y divide-line text-sm">
+              {((latest.data ?? []) as { id: string; email: string | null; plan: string | null; is_admin: boolean; created_at: string }[]).map((a) => (
+                <li key={a.id} className="flex items-center gap-2 px-4 py-2">
+                  <Link href={`/admin/accounts/${a.id}`} prefetch={false} className="min-w-0 flex-1 truncate text-ink hover:underline">
+                    {a.email ?? a.id.slice(0, 8)}
+                  </Link>
+                  {a.plan === LIFETIME.plan ? <Badge tone="up">Lifetime</Badge> : a.is_admin ? <Badge tone="accent">Admin</Badge> : <Badge>Not paid</Badge>}
+                  <span className="whitespace-nowrap text-xs tabular-nums text-ink-3">{DATE.format(new Date(a.created_at))}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section className={`${CARD} flex flex-wrap items-center justify-between gap-3 px-4 py-3.5`}>
+            <div>
+              <p className="text-sm font-medium text-ink">Setup engine</p>
+              <p className="mt-0.5 text-[13px] text-ink-3">Runs automatically at 8:30 AM ET, or trigger a fresh report now.</p>
+            </div>
+            <GenerateNowButton />
+          </section>
+          <section className={`${CARD} flex flex-wrap items-center justify-between gap-3 px-4 py-3.5`}>
+            <div>
+              <p className="text-sm font-medium text-ink">Sale alerts</p>
+              <p className="mt-0.5 text-[13px] text-ink-3">An email for every $397 purchase, from payments@mail.highstrike.com.</p>
+            </div>
+            <TestSaleAlertButton to={SALE_ALERT_TO} />
+          </section>
+        </div>
       </div>
-    </>
+    </div>
   );
 }
