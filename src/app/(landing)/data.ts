@@ -72,6 +72,7 @@ export type LandingData = {
   reads: Record<string, TickerRead>;
   lookup: TickerRead | null;
   badges: { traders: string; countries: string };
+  proof: Proof;
   /** The newest report is this morning's (false before the morning run, on weekends and holidays). */
   slateToday: boolean;
   /** HighStrike Trading School, as the membership includes it: each module's title and lesson count (get_landing_education). */
@@ -85,6 +86,9 @@ export const LOOKUP_START = "NVDA";
 
 // Same defaults as Admin ▸ Site (src/lib/siteContent.ts), read here on the server.
 const DEFAULT_BADGES = { traders: "10,000+", countries: "142" };
+/** The star rating and the member photos beside it (Admin → Site → Proof; Ben, 2026-11-02, from HighStrike's own reviews). */
+export type Proof = { rating: string; avatars: string[] };
+const DEFAULT_PROOF: Proof = { rating: "4.9", avatars: [] };
 
 // Sessions of history the hero needs before a setup's morning to draw it.
 const HERO_HISTORY = 10;
@@ -177,7 +181,7 @@ export async function getLandingData(): Promise<LandingData> {
     supabase.rpc("get_setup_stats"),
     supabase.rpc("get_landing_weekly_record"),
     supabase.rpc("get_landing_movers"),
-    supabase.from("site_settings").select("key, value").in("key", ["hero_badges"]),
+    supabase.from("site_settings").select("key, value").in("key", ["hero_badges", "proof"]),
     supabase.rpc("get_landing_education"),
   ]);
 
@@ -270,6 +274,7 @@ export async function getLandingData(): Promise<LandingData> {
     reads,
     lookup: reads[LOOKUP_START] ?? null,
     badges: parseSetting(settings.hero_badges, DEFAULT_BADGES),
+    proof: parseSetting(settings.proof, DEFAULT_PROOF),
     slateToday: r?.report_date === newYorkDate(Date.now()),
     course: ((courseRes.data ?? []) as { module_position: number; title: string; lessons: number }[]).map((m) => ({
       position: m.module_position,

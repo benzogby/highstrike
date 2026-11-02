@@ -22,6 +22,7 @@ export const SITE_DEFAULTS = {
     ],
   },
   legal_disclaimer: [] as string[], // empty = built-in footer paragraphs
+  proof: { rating: "4.9", avatars: [] as string[] }, // the homepage's stars and member photos
 };
 
 export type SiteKey = keyof typeof SITE_DEFAULTS;

@@ -19,7 +19,6 @@ const FOOT = [
     title: "HighStrike",
     links: [
       { href: "/#how", label: "How it works" },
-      { href: "/#record", label: "Record" },
       { href: "/#desk", label: "The desk" },
       { href: "/#trading-school", label: "Trading School" },
       { href: "/#pricing", label: "Pricing" },
@@ -59,7 +58,6 @@ export default function LandingLayout({ children }: Readonly<{ children: React.R
           </Link>
           <nav className="hs-bar__links" aria-label="Main">
             <a href="#how">How it works</a>
-            <a href="#record">Record</a>
             <a href="#desk">The desk</a>
             <a href="#trading-school">Trading School</a>
             <a href="#pricing">Pricing</a>
@@ -67,7 +65,7 @@ export default function LandingLayout({ children }: Readonly<{ children: React.R
           <Link href="/signin" className="hs-bar__signin">
             Sign in
           </Link>
-          <JoinButton className="hs-btn hs-btn--sm">Get access</JoinButton>
+          <JoinButton className="hs-btn hs-btn--sm">Get HighStrike</JoinButton>
         </div>
       </header>
 

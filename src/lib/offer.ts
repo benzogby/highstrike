@@ -16,6 +16,9 @@ export function dollars(cents: number) {
 
 export const LIFETIME_PRICE = dollars(LIFETIME.cents);
 
+/** The anchor the homepage strikes through ahead of the price (Ben, 2026-11-02: "put 1997 crossed out, $397"). */
+export const LIFETIME_WAS = "$1,997";
+
 /** HighStrike Trading School's size, for the lines that say what's included (get_landing_education / education_summary). */
 export type Library = { modules: number; lessons: number };
 

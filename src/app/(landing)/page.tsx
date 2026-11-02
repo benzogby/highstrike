@@ -1,100 +1,103 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import DeskSearch from "@/components/landing/DeskSearch";
 import FaqIndex from "@/components/landing/FaqIndex";
 import Field from "@/components/landing/Field";
-import { Bull, Pill, Tag, Toast, Tri, compact, price, shortDate, sideLabel, signedPct, statusLabel, triggerOf, weekdayDate } from "@/components/landing/Pieces";
+import { Bull, Pill, Tag, Toast, Tri, compact, price, shortDate, sideLabel, signedPct, triggerOf, weekdayDate } from "@/components/landing/Pieces";
 import SetupChart, { entryIndexOf, hitIndex } from "@/components/landing/SetupChart";
 import JoinButton from "@/components/join/JoinButton";
 import JoinDialog from "@/components/join/JoinDialog";
 import { moduleLabel } from "@/lib/education";
-import { LIFETIME_PRICE, lifetimeIncludes, type Library } from "@/lib/offer";
+import ProofRow from "@/components/landing/Proof";
+import { LIFETIME_PRICE, LIFETIME_WAS, type Library } from "@/lib/offer";
 import { LOOKUP_START, getLandingData, type HeroSetup } from "./data";
 
 // The homepage in the HighStrike reels system (design/keyframes-2026-11-02,
 // approved by Ben on 2026-11-02): the dark room with one light punch, Cal Sans
 // and Inter, HighStrike green for the accent and for gains, red only for
 // losses, smoked glass, the price tag as the key word, and live charts drawn
-// from HighStrike's real graded setups. Styles in landing.css. Refresh the
+// from HighStrike's real graded setups. Styles in landing.css. The words are
+// Ben's approved rewrite of 2026-11-02: active traders, the AI's options flow
+// explained as the product, Trading School as the bonus, no record section. Refresh the
 // report, setups and record every 30 minutes. It sells one thing (Ben,
 // 2026-11-02): $397 once for lifetime access to the daily trades, the tools and
 // HighStrike Trading School, bought in the popup (components/join/JoinDialog).
 export const revalidate = 1800;
 
 export const metadata: Metadata = {
-  title: "HighStrike — Finished trades before the bell",
+  title: "HighStrike — See the big money's bets before the bell",
   description:
-    "Every morning HighStrike's AI scans 5,400+ stocks and publishes the day's options setups with the entry, the target and the reasoning. Lifetime access to the trades, the tools and HighStrike Trading School: $397 once.",
+    "HighStrike's AI scans options trades on 5,400+ stocks, finds the bets that are way bigger than normal, and tells you in plain English what each one means. The best ones become the day's trades.",
   openGraph: {
-    title: "HighStrike — Finished trades before the bell",
+    title: "HighStrike — See the big money's bets before the bell",
     description:
-      "Every morning HighStrike's AI scans 5,400+ stocks and publishes the day's options setups with the entry, the target and the reasoning.",
+      "HighStrike's AI finds the unusual options bets on 5,400+ stocks and explains each one in plain English.",
     type: "website",
   },
 };
 
-// The questions, with the course's real size where the answer gives it.
+// The questions (Ben, 2026-11-02: what you get and the price, how the AI works, broker and experience, advice and
+// refunds), with the course's real size where the answer gives it.
 function faqsFor(library: Library | null) {
-  const course = library ? `HighStrike Trading School, ${library.modules} modules and ${library.lessons} lessons` : "all of HighStrike Trading School";
+  const course = library ? `the full HighStrike Trading School (${library.modules} modules, ${library.lessons} lessons)` : "the full HighStrike Trading School";
   return [
     {
       q: `What do I get for ${LIFETIME_PRICE}?`,
-      a: `Everything, for life: the daily setups with entry, target, time window and suggested contracts; the AI terminal with market weather, the flow scanner, insider filings and alerts; and ${course}, the live recordings included. One payment, no tiers, no upsells.`,
+      a: `Everything: the AI's options flow feed, the daily setups and alerts, every tool on the desk, and ${course}. One payment, for life. Nothing renews.`,
     },
     {
-      q: "Is it really one payment?",
-      a: `Yes. ${LIFETIME_PRICE} once, by card through Stripe. There's no subscription and nothing renews. Lifetime means for as long as HighStrike runs.`,
+      q: "How does the AI work?",
+      a: "Every night it scans options trades on 5,400+ stocks and flags the bets that are unusually big for that stock. Before 9:30 ET it writes up what they mean and turns the strongest into setups, each with an entry, a target and a time window.",
     },
     {
       q: "How fast do I get in?",
-      a: "Right away. Pay in the popup with your email: your account opens under it the moment the payment goes through and you're signed in, today's slate included. Already have an account under that email? It's upgraded instead.",
+      a: "Right away. Pay with your email and your account opens the second the payment goes through. Already have an account under that email? It's upgraded instead.",
     },
     {
-      q: "When do setups publish?",
-      a: "Before the open on every market day. The report and the slate are ready before 9:30 ET, and an alert arrives when a setup's entry rules trigger.",
+      q: "Do I connect my broker?",
+      a: "No. HighStrike never touches your account or your money. You trade wherever you already trade.",
     },
     {
-      q: "Do I connect my brokerage?",
-      a: "No, and you can't. HighStrike is analytics software: it never touches your broker, your positions or your money. You trade wherever you already trade.",
-    },
-    {
-      q: "What experience do I need?",
-      a: "You should know what a call and a put are. Every setup is a worked example with its reasoning written out, and Trading School covers the rest, from setting up to selling options.",
+      q: "Who is it for?",
+      a: "Traders who already know what a call and a put are. New to options? Start with Trading School, which is included.",
     },
     {
       q: "Is this financial advice?",
-      a: "No. HighStrike is an analytics and education tool, and setups are market commentary, not recommendations. Trading involves substantial risk, including loss of principal.",
+      a: "No. It's research and education, and you make every decision. Trading involves real risk, including losing money.",
+    },
+    {
+      q: "Can I get a refund?",
+      a: "No. All sales are final, as the Terms of Service say.",
     },
   ];
 }
 
+// How it works, in four steps (Ben's approved copy, 2026-11-02).
 const moments = [
-  {
-    lead: "Overnight",
-    text: "The scanner ranks 5,400+ stocks by options flow, relative volume and momentum, and keeps the names whose flow has broken from their own baseline.",
-  },
-  {
-    lead: "Before the open",
-    text: "The AI writes each finalist up as a setup: the price that has to hold, the target, the time window and the reasoning, in plain English.",
-  },
-  {
-    lead: "When the price agrees",
-    text: "The entry rules trigger and an alert goes out. Until then the setup waits, and nothing is published after the fact.",
-  },
-  {
-    lead: "After it closes",
-    text: "Every setup is graded against real prices, hit or miss, and the result joins the public record.",
-  },
+  { lead: "Overnight, the AI spots the unusual bets", text: "It scans options trades on 5,400+ stocks and flags the ones that are way bigger than normal for that stock." },
+  { lead: "Before the open, it explains them", text: "For each one it says who's betting, which way, how much, and what it probably means. No jargon." },
+  { lead: "It picks the best few", text: "The strongest bets become the day's setups: when to get in, where to take profit, and how long to give it." },
+  { lead: "You get pinged", text: "When a setup's price hits, you get an alert. You decide whether to take it." },
 ];
 
 const tools = [
-  { name: "Market weather", text: "Volatility, opportunity and direction, scored 0 to 100 before every open, with a written note on the tape." },
-  { name: "Flow scanner", text: "5,400+ stocks ranked by options flow against their own baseline, not the market's." },
-  { name: "Trade setups", text: "Entry rules, a target, a time window and suggested contracts on every idea." },
-  { name: "Alerts", text: "A message the moment a setup's entry rules trigger." },
-  { name: "Insiders and chatter", text: "Form 4 sells and buys from the last 30 days, and the crowd's mood." },
-  { name: "Trading School", text: "The course beside the desk, from your first setup to selling options, with every live session recorded." },
+  { name: "Options flow", text: "The day's biggest unusual bets, ranked, each with the AI's read." },
+  { name: "Trade setups", text: "The best few turned into trades, with the entry, the target, a time window and the contract to look at." },
+  { name: "Market score", text: "Is today a day to push, or to sit on your hands? Scored 0 to 100 before the open." },
+  { name: "Alerts", text: "A ping the moment a setup's price hits." },
+  { name: "Insiders", text: "What company insiders bought and sold in the last 30 days." },
+  { name: "The crowd", text: "What other traders are watching and which way they lean." },
 ];
+
+/** What the price buys, as the pricing section lists it. */
+function included(library: Library | null) {
+  return [
+    "The options flow, explained by AI, every trading day",
+    "The daily trade setups and alerts",
+    "Every tool: market score, scanner, insiders, the crowd",
+    library ? `HighStrike Trading School: ${library.modules} modules, ${library.lessons} lessons` : "HighStrike Trading School, every module",
+    "Every future update, free",
+  ];
+}
 
 // The first session from the setup's morning whose close met its price rule
 // ("fails below $96.00" for a short, "holds above" for a long), up to the hit.
@@ -137,7 +140,7 @@ function shade(v: number) {
 }
 
 export default async function Home() {
-  const { report, today, closed, spy, qqq, stats, weeks, movers, hero, reads, lookup, badges, slateToday, course } = await getLandingData();
+  const { report, today, spy, qqq, movers, hero, reads, lookup, badges, proof, slateToday, course } = await getLandingData();
 
   const session = spy[spy.length - 1]?.date;
   // The day after a holiday repeats the last close, so every move reads zero:
@@ -145,10 +148,6 @@ export default async function Home() {
   const tape = movers.some((m) => m.changePct !== 0) ? movers.slice(0, 24) : [];
   const heroHit = hero ? hitIndex(hero.closes, hero.setup, entryIndexOf(hero.closes, hero.setup)) : -1;
   const rule = hero ? priceRuleMet(hero) : null;
-  const record = [...closed]
-    .sort((a, b) => (a.reportDate < b.reportDate ? 1 : a.reportDate > b.reportDate ? -1 : a.ticker.localeCompare(b.ticker)))
-    .slice(0, 7);
-  const maxClosed = Math.max(1, ...weeks.map((w) => w.closed));
   const slate = today.map((t) => {
     const cl = reads[t.ticker]?.closes ?? [];
     return { ...t, last: cl[cl.length - 1]?.close ?? null };
@@ -177,24 +176,28 @@ export default async function Home() {
           <div className="hs-hero__copy">
             <h1 id="hs-title" className="hs-display hs-h1">
               <span className="hs-line" data-reveal="">
-                Finished trades
+                See the big money&apos;s bets
               </span>
               <span className="hs-line" data-reveal="" style={{ "--i": 1 } as React.CSSProperties}>
                 <Tag className="hs-tag--land">before the bell</Tag>
               </span>
             </h1>
             <p className="hs-lead" data-reveal="" style={{ "--i": 2 } as React.CSSProperties}>
-              Every morning HighStrike&apos;s AI scans 5,400+ stocks and publishes the day&apos;s options setups: the entry, the target and the reasoning.
+              HighStrike&apos;s AI scans options trades on 5,400+ stocks, finds the bets that are way bigger than normal, and tells you in plain English what each one means. The best ones become the day&apos;s trades.
             </p>
             <div id="hero-cta" className="hs-hero__actions" data-reveal="" style={{ "--i": 3 } as React.CSSProperties}>
-              <JoinButton className="hs-btn">Get lifetime access</JoinButton>
+              <JoinButton className="hs-btn">Get HighStrike</JoinButton>
               <a href="#lookup" className="hs-link">
                 Look up a ticker
               </a>
             </div>
             <p className="hs-hero__price" data-reveal="" style={{ "--i": 3 } as React.CSSProperties}>
-              {LIFETIME_PRICE} once for the daily trades, the tools and HighStrike Trading School. No subscription.
+              <s className="hs-was">{LIFETIME_WAS}</s>
+              <b>{LIFETIME_PRICE} once.</b> Lifetime access, no subscription.
             </p>
+            <div data-reveal="" style={{ "--i": 4 } as React.CSSProperties}>
+              <ProofRow proof={proof} traders={badges.traders} countries={badges.countries} />
+            </div>
             {report && (
               <p className="hs-hero__bell" data-reveal="" style={{ "--i": 4 } as React.CSSProperties}>
                 <span className="hs-live" aria-hidden="true" />
@@ -299,16 +302,16 @@ export default async function Home() {
           <div className="hs-wrap">
             <div className="hs-section-head">
               <h2 id="hs-how-title" className="hs-display hs-h2" data-reveal="">
-                How a setup happens
+                How it works
               </h2>
               <p className="hs-lead" data-reveal="" style={{ "--i": 1 } as React.CSSProperties}>
-                Nothing is published after the fact. A setup is written before the open, waits for its price, and is graded when it closes.
+                Four steps, every trading day.
               </p>
             </div>
             <div className="hs-how__grid">
               <ol className="hs-moments">
                 {moments.map((m, i) => (
-                  <li key={m.lead} className={i === 2 ? "is-on" : i < 2 ? "is-done" : undefined} data-reveal="" style={{ "--i": i } as React.CSSProperties}>
+                  <li key={m.lead} className={i === 3 ? "is-on" : i < 3 ? "is-done" : undefined} data-reveal="" style={{ "--i": i } as React.CSSProperties}>
                     <h3 className="hs-h3">{m.lead}</h3>
                     <p>{m.text}</p>
                   </li>
@@ -376,150 +379,16 @@ export default async function Home() {
         </section>
       )}
 
-      {/* The light punch: the record, wins and losses */}
-      {stats && record.length > 0 && (
-        <section id="record" className="hs-punch hs-section hs-graded" aria-labelledby="hs-graded-title">
-          <div className="hs-wrap">
-            <div className="hs-graded__head">
-              <div>
-                <h2 id="hs-graded-title" className="hs-display hs-h2" data-reveal="">
-                  Graded in public
-                </h2>
-                <p className="hs-lead" data-reveal="" style={{ "--i": 1 } as React.CSSProperties}>
-                  Every setup is recorded with its entry and target, then graded against real prices. Wins and losses stay on the page.
-                </p>
-              </div>
-              <div className="hs-card hs-stats" data-ui="" data-reveal="">
-                {stats.winRate != null && (
-                  <p className="hs-stat">
-                    <span className="hs-stat__v">
-                      <svg className="hs-ring" viewBox="0 0 54 54" aria-hidden="true">
-                        <circle cx="27" cy="27" r="22" className="hs-ring__track" />
-                        <circle cx="27" cy="27" r="22" className="hs-ring__value" pathLength={100} style={{ strokeDasharray: `${stats.winRate} 100` }} transform="rotate(-90 27 27)" />
-                      </svg>
-                      {stats.winRate.toFixed(1)}%
-                    </span>
-                    <span className="hs-stat__k">hit their target</span>
-                  </p>
-                )}
-                {stats.avgGain != null && (
-                  <p className="hs-stat">
-                    <span className="hs-stat__v">
-                      <Tag tone="gain">{signedPct(stats.avgGain, 1)}</Tag>
-                    </span>
-                    <span className="hs-stat__k">average gain</span>
-                  </p>
-                )}
-                {stats.avgLoss != null && (
-                  <p className="hs-stat">
-                    <span className="hs-stat__v">
-                      <Tag tone="loss">{signedPct(stats.avgLoss, 1)}</Tag>
-                    </span>
-                    <span className="hs-stat__k">average loss</span>
-                  </p>
-                )}
-              </div>
-            </div>
-            <div className="hs-graded__body">
-              <div>
-                <p className="hs-figure" data-reveal="">
-                  <span className="hs-figure__big">{stats.closedCount}</span>
-                  <span className="hs-figure__cap">setups graded since August, every one on the record</span>
-                </p>
-                {weeks.length > 0 && (
-                  <div className="hs-card hs-weeks" data-ui="" data-reveal="">
-                    <div className="hs-weeks__head">
-                      <h3 className="hs-h3">Closed each week</h3>
-                      <span className="hs-weeks__key">
-                        <i aria-hidden="true" />
-                        Hit the target
-                      </span>
-                    </div>
-                    <div className="hs-weeks__bars" role="list" aria-label="Setups closed each week">
-                      {weeks.map((w, i) => (
-                        <div
-                          key={w.week}
-                          role="listitem"
-                          aria-label={`Week of ${shortDate(w.week)}: ${w.closed} closed, ${w.hits} hit the target`}
-                          className="hs-weeks__bar"
-                          style={{ height: `${((w.closed / maxClosed) * 100).toFixed(1)}%`, "--i": i } as React.CSSProperties}
-                        >
-                          <i style={{ height: `${w.closed ? ((w.hits / w.closed) * 100).toFixed(1) : 0}%` }} />
-                        </div>
-                      ))}
-                    </div>
-                    <div className="hs-weeks__x" aria-hidden="true">
-                      {weeks.map((w) => (
-                        <span key={w.week}>{shortDate(w.week)}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div>
-                <div className="hs-card hs-record" data-ui="" data-reveal="" style={{ "--i": 1 } as React.CSSProperties}>
-                  <table>
-                    <caption className="hs-sr">The most recently graded setups</caption>
-                    <thead>
-                      <tr>
-                        <th scope="col">Published</th>
-                        <th scope="col">Setup</th>
-                        <th scope="col" className="hs-record__plan">
-                          Entry to target
-                        </th>
-                        <th scope="col" className="hs-record__res">
-                          Result
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {record.map((c, i) => {
-                        const r = c.resultPct ?? 0;
-                        return (
-                          <tr key={`${c.ticker}-${c.reportDate}`}>
-                            <td className="hs-record__date">{i === 0 || record[i - 1].reportDate !== c.reportDate ? shortDate(c.reportDate) : ""}</td>
-                            <td>
-                              <span className="hs-record__tk">{c.ticker}</span>
-                              <span className={c.direction.toLowerCase() === "short" ? "hs-dn" : "hs-up"}>{sideLabel(c.direction)}</span>
-                            </td>
-                            <td className="hs-record__plan">
-                              ${price(c.entry)} → ${price(c.target)}
-                            </td>
-                            <td className="hs-record__res">
-                              <span className="hs-record__st">{statusLabel(c.status)}</span>
-                              <span className={`hs-chip ${r > 0 ? "hs-chip--g" : r < 0 ? "hs-chip--r" : "hs-chip--n"}`}>
-                                <Tri up={r >= 0} />
-                                {Math.abs(r).toFixed(2)}%
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-                <p className="hs-graded__note">
-                  Each setup is graded at the close against its own window. The newest seven, {shortDate(record[record.length - 1].reportDate)} to {shortDate(record[0].reportDate)}.{" "}
-                  <Link href="/results" className="hs-link">
-                    The full record
-                  </Link>
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
-
       {/* The desk: one terminal, every tool, this morning's real numbers */}
       <section id="desk" className="hs-room hs-section hs-desk" aria-labelledby="hs-desk-title">
         <Field spy={spy} qqq={qqq} seed={25} />
         <div className="hs-wrap">
           <div className="hs-section-head">
             <h2 id="hs-desk-title" className="hs-display hs-h2" data-reveal="">
-              Everything on the desk
+              Everything in one screen
             </h2>
             <p className="hs-lead" data-reveal="" style={{ "--i": 1 } as React.CSSProperties}>
-              One terminal for the whole morning: the market&apos;s weather, the scanner, the setups, the alerts, insider filings and the crowd, with Trading School beside them.
+              Open HighStrike in the morning and it&apos;s all there.
             </p>
           </div>
           <div className="hs-desk__grid">
@@ -640,14 +509,14 @@ export default async function Home() {
               <div>
                 <h2 id="hs-school-title" className="hs-display hs-h2">
                   <span className="hs-line" data-reveal="">
-                    Trading School
+                    Also included:
                   </span>
                   <span className="hs-line" data-reveal="" style={{ "--i": 1 } as React.CSSProperties}>
-                    <Tag className="hs-tag--land">included</Tag>
+                    <Tag className="hs-tag--land">Trading School</Tag>
                   </span>
                 </h2>
                 <p className="hs-lead" data-reveal="" style={{ "--i": 2 } as React.CSSProperties}>
-                  HighStrike Trading School is the full course: technical analysis, options from the basics to selling them, swing trades, smart money concepts, futures and prop firms, and every live trading and education session, recorded. It opens the day you join.
+                  Want to sharpen up? Every member gets the whole course: {course.length} modules, {lessons} lessons{recorded > 0 ? ` and ${recorded} recorded live sessions` : ""}, from reading charts to selling options.
                 </p>
               </div>
               <dl className="hs-school__figs" data-reveal="" style={{ "--i": 3 } as React.CSSProperties}>
@@ -692,25 +561,26 @@ export default async function Home() {
           <div>
             <h2 id="hs-pricing-title" className="hs-display hs-h2">
               <span className="hs-line" data-reveal="">
-                Everything for life,
+                Everything, for life,
               </span>
               <span className="hs-line" data-reveal="" style={{ "--i": 1 } as React.CSSProperties}>
+                <s className="hs-was">{LIFETIME_WAS}</s>
                 <Tag className="hs-tag--land">{LIFETIME_PRICE}</Tag> once
               </span>
             </h2>
             <p className="hs-lead" data-reveal="" style={{ "--i": 2 } as React.CSSProperties}>
-              One payment opens the daily trades, every tool on the desk and all of HighStrike Trading School. No subscription, nothing renews, and you&apos;re in the moment it goes through.
+              One payment. No subscription, nothing renews, and you&apos;re in the second it goes through.
             </p>
             <ul className="hs-included">
-              {lifetimeIncludes(library).map((t, i) => (
+              {included(library).map((t, i) => (
                 <li key={t} data-reveal="" style={{ "--i": i + 2 } as React.CSSProperties}>
                   {t}
                 </li>
               ))}
             </ul>
-            <p className="hs-proof" data-reveal="">
-              <b>{badges.traders} traders</b> in <b>{badges.countries} countries</b> have learned with HighStrike since 2018.
-            </p>
+            <div data-reveal="">
+              <ProofRow proof={proof} traders={badges.traders} countries={badges.countries} />
+            </div>
           </div>
           <div className="hs-glass hs-order" data-ui="" data-land="">
             <div className="hs-ui-head">
@@ -724,7 +594,7 @@ export default async function Home() {
             <dl>
               <div>
                 <dt>Access</dt>
-                <dd>Trades, tools, Trading School</dd>
+                <dd>Flow, setups, tools, Trading School</dd>
               </div>
               <div>
                 <dt>Price</dt>
@@ -743,8 +613,8 @@ export default async function Home() {
               <span>Due today</span>
               <b>{LIFETIME_PRICE}</b>
             </p>
-            <JoinButton className="hs-btn hs-btn--wide">Get lifetime access</JoinButton>
-            <p className="hs-order__after">By card through Stripe. No subscription, and nothing renews.</p>
+            <JoinButton className="hs-btn hs-btn--wide">Get HighStrike</JoinButton>
+            <p className="hs-order__after">Card or Apple Pay through Stripe. All sales are final.</p>
           </div>
         </div>
       </section>
@@ -784,13 +654,14 @@ export default async function Home() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img className="hs-end__word" src="/brand/wordmark.png" alt="HighStrike" width={169} height={34} />
             <h2 id="hs-close-title" className="hs-display hs-h2" data-reveal="">
-              Start before tomorrow&apos;s open
+              Tomorrow&apos;s bets are already being placed.
             </h2>
             <p className="hs-lead" data-reveal="" style={{ "--i": 1 } as React.CSSProperties}>
-              {LIFETIME_PRICE} once and you&apos;re in for life. Tomorrow&apos;s slate is out before 9:30 ET.
+              Get HighStrike for <s className="hs-was">{LIFETIME_WAS}</s>
+              {LIFETIME_PRICE} once and see them before the open.
             </p>
             <div data-reveal="" style={{ "--i": 2 } as React.CSSProperties}>
-              <JoinButton className="hs-btn">Get lifetime access</JoinButton>
+              <JoinButton className="hs-btn">Get HighStrike</JoinButton>
             </div>
           </div>
         </div>

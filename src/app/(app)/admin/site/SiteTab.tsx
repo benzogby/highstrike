@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { SITE_DEFAULTS, invalidateSiteContent } from "@/lib/siteContent";
+import { SUPABASE_URL } from "@/lib/supabaseConfig";
 
 // Admin ▸ Site: everything that shapes the public site in one place — the hero
 // badges, the scoreboard numbers, and the legal disclaimer. Same hub-of-
@@ -9,6 +10,7 @@ import { SITE_DEFAULTS, invalidateSiteContent } from "@/lib/siteContent";
 
 const SECTIONS = [
   { key: "hero", label: "Hero" },
+  { key: "proof", label: "Proof" },
   { key: "scoreboard", label: "Scoreboard" },
   { key: "legal", label: "Legal" },
 ] as const;
@@ -61,7 +63,7 @@ export default function SiteTab() {
           </button>
         ))}
       </div>
-      {section === "hero" ? <HeroSection /> : section === "scoreboard" ? <ScoreboardSection /> : <LegalSection />}
+      {section === "hero" ? <HeroSection /> : section === "proof" ? <ProofSection /> : section === "scoreboard" ? <ScoreboardSection /> : <LegalSection />}
     </div>
   );
 }
@@ -108,6 +110,112 @@ function SaveRow({
 const inputClass =
   "h-9 w-full rounded-lg border border-line-strong bg-bg px-3 text-sm text-ink placeholder:text-ink-3 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20";
 const labelClass = "mb-1.5 block text-[13px] font-medium text-ink";
+
+/**
+ * The homepage's proof line (Ben, 2026-11-02: "a 4.9 star rating with example profile circles", the circles "photos I
+ * upload in admin from our database"): the rating from HighStrike's own member reviews, and up to five member photos,
+ * stored in the public site-assets bucket under proof/. Live on the homepage within its 30-minute refresh.
+ */
+function ProofSection() {
+  const [rating, setRating] = useState(SITE_DEFAULTS.proof.rating);
+  const [avatars, setAvatars] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    loadRaw(["proof"]).then((map) => {
+      if (!map.proof) return;
+      try {
+        const p = JSON.parse(map.proof);
+        if (typeof p.rating === "string") setRating(p.rating);
+        if (Array.isArray(p.avatars)) setAvatars(p.avatars.filter((u: unknown) => typeof u === "string"));
+      } catch {
+        /* keep defaults */
+      }
+    });
+  }, []);
+
+  async function upload(files: FileList | null) {
+    if (!files?.length) return;
+    setUploading(true);
+    setError("");
+    setSaved(false);
+    try {
+      const urls: string[] = [];
+      for (const file of Array.from(files).slice(0, 5 - avatars.length)) {
+        if (!file.type.startsWith("image/")) continue;
+        const name = file.name.toLowerCase().replace(/[^a-z0-9.]+/g, "-").slice(-60);
+        const path = `proof/${Date.now()}-${name}`;
+        const { error: upErr } = await supabaseBrowser().storage.from("site-assets").upload(path, file, { cacheControl: "31536000", upsert: false });
+        if (upErr) throw new Error(upErr.message);
+        urls.push(`${SUPABASE_URL}/storage/v1/object/public/site-assets/${path}`);
+      }
+      setAvatars((a) => [...a, ...urls].slice(0, 5));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function save() {
+    setSaving(true);
+    setSaved(false);
+    setError("");
+    try {
+      await saveSetting("proof", JSON.stringify({ rating: rating.trim() || "4.9", avatars }));
+      setSaved(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Save failed");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="max-w-2xl">
+      <p className="text-sm text-ink-2">
+        The stars and member photos on the homepage, next to &ldquo;10k+ traders | 142 countries&rdquo; (those two numbers are on the Hero tab). Use photos of members who&apos;ve agreed to be shown.
+      </p>
+      <div className="mt-5 max-w-[200px]">
+        <label className={labelClass}>Star rating</label>
+        <input value={rating} onChange={(e) => setRating(e.target.value)} placeholder="4.9" className={inputClass} />
+      </div>
+      <div className="mt-5">
+        <p className={labelClass}>Member photos ({avatars.length} of 5)</p>
+        <div className="flex flex-wrap items-center gap-3">
+          {avatars.map((u) => (
+            <div key={u} className="relative">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={u} alt="" className="size-14 rounded-full object-cover ring-1 ring-line-strong" />
+              <button
+                type="button"
+                onClick={() => {
+                  setAvatars((a) => a.filter((x) => x !== u));
+                  setSaved(false);
+                }}
+                aria-label="Remove this photo"
+                className="absolute -right-1 -top-1 grid size-5 place-items-center rounded-full bg-panel-3 text-xs text-ink ring-1 ring-line-strong hover:bg-down hover:text-white"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+          {avatars.length < 5 && (
+            <label className="grid size-14 cursor-pointer place-items-center rounded-full border border-dashed border-line-strong text-xl text-ink-3 transition hover:border-accent hover:text-accent">
+              {uploading ? "…" : "+"}
+              <input type="file" accept="image/*" multiple className="sr-only" disabled={uploading} onChange={(e) => void upload(e.target.files)} />
+            </label>
+          )}
+        </div>
+        <p className="mt-2 text-[13px] text-ink-3">Square photos look best. Remember to press Save after uploading or removing.</p>
+      </div>
+      <SaveRow onSave={save} saving={saving} saved={saved} error={error} />
+    </div>
+  );
+}
 
 function HeroSection() {
   const [traders, setTraders] = useState(SITE_DEFAULTS.hero_badges.traders);
