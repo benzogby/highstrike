@@ -2,17 +2,13 @@ import Link from "next/link";
 import JoinButton from "@/components/join/JoinButton";
 import LandingMotion from "@/components/landing/LandingMotion";
 import { Bull } from "@/components/landing/Pieces";
+import { LEGAL } from "@/lib/legal";
 import "./landing.css";
 
 // The homepage's own frame in the HighStrike reels system: a plain bar with the
 // bull and the word on top, the legal lines at the foot (the rest of the site
 // keeps the shared Header and Footer with the theme toggle). [data-landing]
 // holds this page dark whatever the stored theme; see landing.css.
-
-const LEGAL = [
-  "The information provided by HighStrike and HighStrike AI is for informational and educational purposes only and should not be considered financial, investment, or trading advice. HighStrike does not make recommendations to buy or sell any securities. Trade ideas, analysis and insights are market commentary and should not be relied upon as the basis for any investment decision.",
-  "Trading and investing involve substantial risk, including the possible loss of principal. Past performance is not indicative of future results. Conduct your own research and consult a qualified financial advisor before making investment decisions. HighStrike and its operators are not responsible for trading losses or decisions that result from using the platform.",
-];
 
 export default function LandingLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
