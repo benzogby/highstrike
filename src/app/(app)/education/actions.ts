@@ -20,9 +20,9 @@ async function member(lessonId: unknown) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Sign in to save your progress.");
-  // Readable only with Education, so this also checks the plan.
+  // Readable only by members (Trading School comes with the membership), so this also checks access.
   const { data } = await supabase.from("course_lessons").select("id").eq("id", lessonId).maybeSingle();
-  if (!data) throw new Error("Education comes with every paid plan.");
+  if (!data) throw new Error("Trading School comes with lifetime access.");
   return { supabase, userId: user.id, lessonId };
 }
 

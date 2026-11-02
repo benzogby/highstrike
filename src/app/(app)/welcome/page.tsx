@@ -55,7 +55,7 @@ export default async function WelcomePage({ searchParams }: Props) {
         <p className="text-sm leading-relaxed text-ink-2">
           {purchase.created_account
             ? "Your account is made under that email. Sign in with it: Continue with Google works for a Google address."
-            : "That email already had a HighStrike account, so the payment upgraded it. Sign in with it to open the daily trades, the tools and the Alpha Mastermind."}
+            : "That email already had a HighStrike account, so the payment upgraded it. Sign in with it to open the daily trades, the tools and HighStrike Trading School."}
           {emailed ? " We emailed you a sign-in link too." : purchase.created_account ? " Can't get in? Write to support@highstrike.com and we'll sort it." : ""}
         </p>
         <Link href="/signin?next=/dashboard" className={`mt-6 w-full ${BUTTON} bg-accent text-bg hover:bg-accent-2`}>
@@ -81,7 +81,7 @@ export default async function WelcomePage({ searchParams }: Props) {
         </span>
         <h1 className="mt-6 font-display text-3xl font-bold tracking-tight sm:text-4xl">You&apos;re in</h1>
         <p className="mt-3 text-pretty text-[15px] leading-relaxed text-ink-2">
-          Lifetime access is on. Today&apos;s trades, every tool and the whole Alpha Mastermind are open to you now, with nothing more to pay.
+          Lifetime access is on. Today&apos;s trades, every tool and all of HighStrike Trading School are open to you now, with nothing more to pay.
         </p>
         {mine?.created_account && (
           <p className="mt-3 text-pretty text-[15px] leading-relaxed text-ink-2">
@@ -99,7 +99,7 @@ export default async function WelcomePage({ searchParams }: Props) {
             </Link>
           ) : (
             <Link href="/education" className={`${BUTTON} border border-line-strong text-ink hover:border-accent/50 hover:text-accent`}>
-              Start the Alpha Mastermind
+              Open Trading School
             </Link>
           )}
         </div>

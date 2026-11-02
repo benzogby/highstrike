@@ -52,8 +52,8 @@ function ModuleCard({ module: m, lessons, states, index }: { module: Module; les
 }
 
 /**
- * /education: the Highstrike Alpha Mastermind library, laid out like getripping.com's Ripping University: one card per
- * module (each a chapter of the Mastermind course), three across on wide screens. A card opens its module's lesson
+ * /education: HighStrike Trading School, laid out like getripping.com's Ripping University: one card per module (each
+ * a chapter of the course), three across on wide screens. A card opens its module's lesson
  * panel. Renders from its props alone, so a preview can draw it from a snapshot.
  */
 export default function LibraryView({ modules, lessons, states }: { modules: Module[]; lessons: Lesson[]; states: LessonStates }) {
@@ -61,8 +61,8 @@ export default function LibraryView({ modules, lessons, states }: { modules: Mod
   return (
     <div className="mx-auto max-w-6xl">
       <header className="anim-rise">
-        <p className="text-xs uppercase tracking-wider text-ink-3">Education</p>
-        <h1 className="mt-1 font-display text-3xl font-bold sm:text-4xl">Highstrike Alpha Mastermind</h1>
+        <p className="text-xs uppercase tracking-wider text-ink-3">Course library</p>
+        <h1 className="mt-1 font-display text-3xl font-bold sm:text-4xl">HighStrike Trading School</h1>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-ink-2">
           {modules.length} modules and {lessons.length} lessons, from setting up your trading station to options, smart money concepts and selling options, with the bonus modules and every live recording. Work down each module&apos;s lessons in order; your progress saves as you go.
         </p>

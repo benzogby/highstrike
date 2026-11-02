@@ -18,13 +18,13 @@ import { LOOKUP_START, getLandingData, type HeroSetup } from "./data";
 // from HighStrike's real graded setups. Styles in landing.css. Refresh the
 // report, setups and record every 30 minutes. It sells one thing (Ben,
 // 2026-11-02): $397 once for lifetime access to the daily trades, the tools and
-// the Alpha Mastermind, bought in the popup (components/join/JoinDialog).
+// HighStrike Trading School, bought in the popup (components/join/JoinDialog).
 export const revalidate = 1800;
 
 export const metadata: Metadata = {
   title: "HighStrike — Finished trades before the bell",
   description:
-    "Every morning HighStrike's AI scans 5,400+ stocks and publishes the day's options setups with the entry, the target and the reasoning. Lifetime access to the trades, the tools and the Alpha Mastermind course: $397 once.",
+    "Every morning HighStrike's AI scans 5,400+ stocks and publishes the day's options setups with the entry, the target and the reasoning. Lifetime access to the trades, the tools and HighStrike Trading School: $397 once.",
   openGraph: {
     title: "HighStrike — Finished trades before the bell",
     description:
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
 
 // The questions, with the course's real size where the answer gives it.
 function faqsFor(library: Library | null) {
-  const course = library ? `the Alpha Mastermind course, ${library.modules} modules and ${library.lessons} lessons` : "the full Alpha Mastermind course";
+  const course = library ? `HighStrike Trading School, ${library.modules} modules and ${library.lessons} lessons` : "all of HighStrike Trading School";
   return [
     {
       q: `What do I get for ${LIFETIME_PRICE}?`,
@@ -59,7 +59,7 @@ function faqsFor(library: Library | null) {
     },
     {
       q: "What experience do I need?",
-      a: "You should know what a call and a put are. Every setup is a worked example with its reasoning written out, and the Alpha Mastermind covers the rest, from setting up to selling options.",
+      a: "You should know what a call and a put are. Every setup is a worked example with its reasoning written out, and Trading School covers the rest, from setting up to selling options.",
     },
     {
       q: "Is this financial advice?",
@@ -93,7 +93,7 @@ const tools = [
   { name: "Trade setups", text: "Entry rules, a target, a time window and suggested contracts on every idea." },
   { name: "Alerts", text: "A message the moment a setup's entry rules trigger." },
   { name: "Insiders and chatter", text: "Form 4 sells and buys from the last 30 days, and the crowd's mood." },
-  { name: "The Alpha Mastermind", text: "The course beside the desk, from your first setup to selling options, with every live session recorded." },
+  { name: "Trading School", text: "The course beside the desk, from your first setup to selling options, with every live session recorded." },
 ];
 
 // The first session from the setup's morning whose close met its price rule
@@ -163,7 +163,7 @@ export default async function Home() {
     .sort((a, b) => (b.chatter?.watchers ?? 0) - (a.chatter?.watchers ?? 0))
     .slice(0, 5);
   const map = [...movers].sort((a, b) => Math.abs(b.changePct) - Math.abs(a.changePct));
-  // The Alpha Mastermind as the membership includes it.
+  // HighStrike Trading School as the membership includes it.
   const lessons = course.reduce((n, m) => n + m.lessons, 0);
   const recorded = course.filter((m) => /recordings/i.test(m.title)).reduce((n, m) => n + m.lessons, 0);
   const library: Library | null = course.length && lessons ? { modules: course.length, lessons } : null;
@@ -193,7 +193,7 @@ export default async function Home() {
               </a>
             </div>
             <p className="hs-hero__price" data-reveal="" style={{ "--i": 3 } as React.CSSProperties}>
-              {LIFETIME_PRICE} once for the daily trades, the tools and the Alpha Mastermind. No subscription.
+              {LIFETIME_PRICE} once for the daily trades, the tools and HighStrike Trading School. No subscription.
             </p>
             {report && (
               <p className="hs-hero__bell" data-reveal="" style={{ "--i": 4 } as React.CSSProperties}>
@@ -519,7 +519,7 @@ export default async function Home() {
               Everything on the desk
             </h2>
             <p className="hs-lead" data-reveal="" style={{ "--i": 1 } as React.CSSProperties}>
-              One terminal for the whole morning: the market&apos;s weather, the scanner, the setups, the alerts, insider filings and the crowd, with the Alpha Mastermind beside them.
+              One terminal for the whole morning: the market&apos;s weather, the scanner, the setups, the alerts, insider filings and the crowd, with Trading School beside them.
             </p>
           </div>
           <div className="hs-desk__grid">
@@ -544,7 +544,7 @@ export default async function Home() {
                   <span>Scanner</span>
                   <span>Setups</span>
                   <span>Alerts</span>
-                  <span>Mastermind</span>
+                  <span>School</span>
                 </span>
               </div>
               <div className="hs-term__body">
@@ -631,23 +631,23 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* The education package: the Alpha Mastermind, as its module index */}
+      {/* The education package: HighStrike Trading School, as its module index */}
       {library && (
-        <section id="mastermind" className="hs-room hs-section hs-school" aria-labelledby="hs-school-title">
+        <section id="trading-school" className="hs-room hs-section hs-school" aria-labelledby="hs-school-title">
           <Field spy={spy} qqq={qqq} seed={29} />
           <div className="hs-wrap">
             <div className="hs-school__head">
               <div>
                 <h2 id="hs-school-title" className="hs-display hs-h2">
                   <span className="hs-line" data-reveal="">
-                    Alpha Mastermind
+                    Trading School
                   </span>
                   <span className="hs-line" data-reveal="" style={{ "--i": 1 } as React.CSSProperties}>
                     <Tag className="hs-tag--land">included</Tag>
                   </span>
                 </h2>
                 <p className="hs-lead" data-reveal="" style={{ "--i": 2 } as React.CSSProperties}>
-                  HighStrike&apos;s full course: technical analysis, options from the basics to selling them, swing trades, smart money concepts, futures and prop firms, and every live trading and education session, recorded. It opens the day you join.
+                  HighStrike Trading School is the full course: technical analysis, options from the basics to selling them, swing trades, smart money concepts, futures and prop firms, and every live trading and education session, recorded. It opens the day you join.
                 </p>
               </div>
               <dl className="hs-school__figs" data-reveal="" style={{ "--i": 3 } as React.CSSProperties}>
@@ -667,7 +667,7 @@ export default async function Home() {
                 )}
               </dl>
             </div>
-            <ol className="hs-glass hs-syllabus" data-land="" aria-label="The Alpha Mastermind's modules">
+            <ol className="hs-glass hs-syllabus" data-land="" aria-label="HighStrike Trading School's modules">
               {course.map((m, i) => {
                 const { eyebrow, name } = moduleLabel(m.title);
                 return (
@@ -699,7 +699,7 @@ export default async function Home() {
               </span>
             </h2>
             <p className="hs-lead" data-reveal="" style={{ "--i": 2 } as React.CSSProperties}>
-              One payment opens the daily trades, every tool on the desk and the whole Alpha Mastermind. No subscription, nothing renews, and you&apos;re in the moment it goes through.
+              One payment opens the daily trades, every tool on the desk and all of HighStrike Trading School. No subscription, nothing renews, and you&apos;re in the moment it goes through.
             </p>
             <ul className="hs-included">
               {lifetimeIncludes(library).map((t, i) => (
@@ -724,7 +724,7 @@ export default async function Home() {
             <dl>
               <div>
                 <dt>Access</dt>
-                <dd>Trades, tools and Mastermind</dd>
+                <dd>Trades, tools, Trading School</dd>
               </div>
               <div>
                 <dt>Price</dt>

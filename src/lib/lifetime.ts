@@ -4,6 +4,7 @@ import { getStripe, supabaseService } from "@/lib/stripe";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabaseConfig";
 import { LIFETIME } from "@/lib/offer";
 import { TERMS_VERSION, agreedToTerms } from "@/lib/terms";
+import { sendSaleAlert } from "@/lib/saleAlert";
 
 // The $397 lifetime membership's payments, on the server only. Ben, 2026-11-02: "Lifetime access should just open to
 // the payment popup. Account is created upon payment, with a confirmation email sent to their email. If they already
@@ -188,7 +189,7 @@ export async function startLifetime(input: {
           price_data: {
             currency: "usd",
             unit_amount: LIFETIME.cents,
-            product_data: { name: LIFETIME.name, description: "The daily trades, the tools and the Alpha Mastermind, for life. One payment." },
+            product_data: { name: LIFETIME.name, description: "The daily trades, the tools and HighStrike Trading School, for life. One payment." },
           },
         },
       ],
@@ -280,7 +281,25 @@ export async function settleLifetime(pi: Stripe.PaymentIntent): Promise<Settled 
     await stripe.paymentIntents.update(pi.id, { metadata: { user_id: account.id } }).catch(() => null);
   }
   await confirmationEmail(pi.id, email);
+  await saleAlert(pi, email, created);
   return { userId: account.id, email, created };
+}
+
+/** Ben's email about the sale (src/lib/saleAlert.ts), once per payment; why it didn't go out is kept on the purchase. */
+async function saleAlert(pi: Stripe.PaymentIntent, email: string, created: boolean) {
+  const service = supabaseService();
+  const { data: claimed } = await service
+    .from("lifetime_purchases")
+    .update({ alerted_at: new Date().toISOString() })
+    .eq("payment_intent", pi.id)
+    .is("alerted_at", null)
+    .select("payment_intent");
+  if (!claimed?.length) return;
+  const sent = await sendSaleAlert({ email, created, cents: pi.amount_received, at: new Date(pi.created * 1000), paymentIntent: pi.id, live: pi.livemode });
+  if (!sent.ok) {
+    console.error(`lifetime: the sale alert for ${pi.id} didn't go out:`, sent.error);
+    await service.from("lifetime_purchases").update({ alert_error: sent.error.slice(0, 300) }).eq("payment_intent", pi.id);
+  }
 }
 
 /**

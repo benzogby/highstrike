@@ -1,5 +1,7 @@
 import { supabaseServer } from "@/lib/supabase/server";
 import GenerateNowButton from "./GenerateNowButton";
+import TestSaleAlertButton from "./TestSaleAlertButton";
+import { SALE_ALERT_TO } from "@/lib/saleAlert";
 
 function formatWhen(iso: string) {
   return new Date(iso).toLocaleString("en-US", {
@@ -54,6 +56,13 @@ export default async function AdminOverviewPage() {
           </p>
         </div>
         <GenerateNowButton />
+      </div>
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-panel px-5 py-4">
+        <div>
+          <p className="font-display text-sm font-semibold">Sale alerts</p>
+          <p className="text-xs text-ink-3">An email for every $397 purchase, in the classic layout.</p>
+        </div>
+        <TestSaleAlertButton to={SALE_ALERT_TO} />
       </div>
       <div className="grid gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-3">
         {stats.map((s) => (

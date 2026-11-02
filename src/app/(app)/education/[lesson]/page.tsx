@@ -13,10 +13,10 @@ type Props = { params: Promise<{ lesson: string }> };
 /** The lesson's title in the browser tab, for members who can read it. */
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { lesson } = await params;
-  if (!isLessonId(lesson)) return { title: "Education — HighStrike" };
+  if (!isLessonId(lesson)) return { title: "Trading School — HighStrike" };
   const supabase = await supabaseServer();
   const { data } = await supabase.from("course_lessons").select("title").eq("id", lesson).maybeSingle();
-  return { title: data?.title ? `${data.title} — HighStrike` : "Education — HighStrike" };
+  return { title: data?.title ? `${data.title} — HighStrike` : "Trading School — HighStrike" };
 }
 
 /**

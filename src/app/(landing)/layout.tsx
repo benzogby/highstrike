@@ -24,7 +24,7 @@ export default function LandingLayout({ children }: Readonly<{ children: React.R
             <a href="#how">How it works</a>
             <a href="#record">Record</a>
             <a href="#desk">The desk</a>
-            <a href="#mastermind">Mastermind</a>
+            <a href="#trading-school">Trading School</a>
             <a href="#pricing">Pricing</a>
           </nav>
           <Link href="/signin" className="hs-bar__signin">

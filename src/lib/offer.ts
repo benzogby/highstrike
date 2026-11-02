@@ -16,7 +16,7 @@ export function dollars(cents: number) {
 
 export const LIFETIME_PRICE = dollars(LIFETIME.cents);
 
-/** The Alpha Mastermind's size, for the lines that say what's included (get_landing_education / education_summary). */
+/** HighStrike Trading School's size, for the lines that say what's included (get_landing_education / education_summary). */
 export type Library = { modules: number; lessons: number };
 
 /** What the membership includes, in the popup's and the paywall's words. */
@@ -25,8 +25,8 @@ export function lifetimeIncludes(library: Library | null) {
     "The daily trades: every setup with its entry, target and reasoning, out before the bell",
     "The tools: the AI terminal, the flow scanner, alerts, insider filings and the crowd",
     library && library.lessons > 0
-      ? `The Alpha Mastermind: ${library.modules} modules and ${library.lessons} lessons, the live recordings included`
-      : "The Alpha Mastermind, every module and the live recordings",
+      ? `HighStrike Trading School: ${library.modules} modules and ${library.lessons} lessons, the live recordings included`
+      : "HighStrike Trading School, every module and the live recordings",
     "Every update to all of it, with nothing more to pay",
   ];
 }

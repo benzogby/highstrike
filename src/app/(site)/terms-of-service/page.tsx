@@ -37,7 +37,7 @@ const sections: LegalSection[] = [
         <ul>
           <li>The daily trade setups, each with an entry, target, time frame and written reasoning</li>
           <li>The tools: the AI terminal, the flow scanner, price alerts, insider filings and the crowd</li>
-          <li>The Alpha Mastermind course library, the live recordings included</li>
+          <li>HighStrike Trading School, the course library, the live recordings included</li>
           <li>Updates to all of the above</li>
         </ul>
         <p>

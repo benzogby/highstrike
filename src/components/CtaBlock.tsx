@@ -12,7 +12,7 @@ export default function CtaBlock() {
         Get Lifetime Access
       </a>
       <p className="text-sm text-ink-2">
-        {LIFETIME_PRICE} once for the daily trades, the tools and the Alpha Mastermind
+        {LIFETIME_PRICE} once for the daily trades, the tools and HighStrike Trading School
       </p>
     </div>
   );

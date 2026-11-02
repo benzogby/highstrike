@@ -1961,7 +1961,7 @@
   color: #cffbea;
 }
 
-/* ── The Alpha Mastermind: the education package, as the course's module index ─────────────────────────────── */
+/* ── HighStrike Trading School: the education package, as the course's module index ─────────────────────────────── */
 .hs-school__head {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -3120,7 +3120,7 @@
   }
 }
 
-/* ── The Alpha Mastermind on narrower screens ──────────────────────────────────────────────────────────────── */
+/* ── Trading School on narrower screens ──────────────────────────────────────────────────────────────── */
 @media (max-width: 1100px) {
   .hs-school__head {
     grid-template-columns: minmax(0, 1fr);

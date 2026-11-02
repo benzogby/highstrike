@@ -39,7 +39,7 @@ export default function MemberGate({
             Unlock HighStrike
           </h2>
           <p className="mx-auto mt-2 max-w-sm text-pretty text-center text-[15px] leading-relaxed text-ink-2">
-            Your account is ready. One payment of {LIFETIME_PRICE} opens the daily trades, the tools and the Alpha Mastermind, for life.
+            Your account is ready. One payment of {LIFETIME_PRICE} opens the daily trades, the tools and HighStrike Trading School, for life.
           </p>
           <div className="mt-6 rounded-2xl border border-line-strong bg-panel p-5 shadow-2xl">
             <LifetimeCheckout library={library} back="/dashboard" buyer={{ email, termsOnRecord }} publishableKey={publishableKey} onPaying={setPaying} />

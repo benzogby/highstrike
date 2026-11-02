@@ -313,7 +313,7 @@ export default function SettingsForm({
             <p className="mt-0.5 text-sm text-ink-2">
               {membership === "admin"
                 ? "Everything in HighStrike is open to this account."
-                : "Paid once. The daily trades, the tools and the Alpha Mastermind are yours, with nothing to renew."}
+                : "Paid once. The daily trades, the tools and HighStrike Trading School are yours, with nothing to renew."}
             </p>
           </div>
           <span className="rounded-full bg-accent px-2.5 py-0.5 font-display text-[10px] font-bold text-bg">

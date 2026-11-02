@@ -74,7 +74,7 @@ export type LandingData = {
   badges: { traders: string; countries: string };
   /** The newest report is this morning's (false before the morning run, on weekends and holidays). */
   slateToday: boolean;
-  /** The Alpha Mastermind, as the membership includes it: each module's title and lesson count (get_landing_education). */
+  /** HighStrike Trading School, as the membership includes it: each module's title and lesson count (get_landing_education). */
   course: CourseModule[];
 };
 

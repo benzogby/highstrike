@@ -68,7 +68,7 @@ export default function LessonView({ lesson, module: m, moduleLessons, states, p
         <ol className="flex flex-wrap items-center gap-1.5 text-sm text-ink-3">
           <li>
             <Link href="/education" className="rounded-sm underline-offset-4 hover:text-ink hover:underline">
-              Education
+              Trading School
             </Link>
           </li>
           <li aria-hidden="true">›</li>

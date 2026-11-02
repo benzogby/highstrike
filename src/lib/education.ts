@@ -1,7 +1,8 @@
 import { supabaseServer } from "@/lib/supabase/server";
 
-// Education: the Highstrike Alpha Mastermind library for members (Ben, 2026-11-02), laid out like getripping.com's
-// Ripping University: one module per Mastermind chapter, each a list of lessons. Everything comes from the database
+// HighStrike Trading School, the course library for members (Ben, 2026-11-02; imported from Whop's Alpha Mastermind and
+// renamed the same day), laid out like getripping.com's Ripping University: one module per course chapter, each a list of
+// lessons. Everything comes from the database
 // (supabase/migrations/20261102170000_education.sql) through the member's own session, so the tables' rules decide
 // what anyone sees: the $397 membership or an admin (public.has_education() → is_member()). The repository is public;
 // no lesson is in it.
