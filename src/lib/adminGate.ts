@@ -1,17 +1,13 @@
 import { notFound } from "next/navigation";
-import { supabaseServer } from "@/lib/supabase/server";
+import { viewer } from "@/lib/membership";
 
 // The admin pages' own check (Next can render a page without the layouts above it, so each page and each server action
-// asks here, not only admin/layout.tsx). An account that isn't an admin gets a 404, as on getripping.com.
+// asks here, not only admin/layout.tsx). An account that isn't an admin gets a 404, as on getripping.com. Through
+// viewer(), cached per request and checked against the project's keys locally, so it costs nothing after the layout's.
 export async function requireAdmin() {
-  const supabase = await supabaseServer();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) notFound();
-  const { data: me } = await supabase.from("profiles").select("is_admin").eq("id", user.id).maybeSingle();
-  if (!me?.is_admin) notFound();
-  return user;
+  const v = await viewer();
+  if (!v?.profile?.is_admin) notFound();
+  return v.user;
 }
 
 /** "Nov 2, 2026" and "3:41 PM" in New York, as the admin tables show times. */
