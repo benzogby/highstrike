@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { supabaseServer } from "@/lib/supabase/server";
-import AppShell from "@/components/AppShell";
+import { viewer } from "@/lib/membership";
 import AdminTabs from "./AdminTabs";
 import { PageHeader } from "@/components/ui";
 
@@ -17,32 +16,18 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await supabaseServer();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/signin?next=/admin");
-
-  const { data: me } = await supabase
-    .from("profiles")
-    .select("is_admin, name, avatar_url")
-    .eq("id", user.id)
-    .single();
-  if (!me?.is_admin) redirect("/dashboard");
+  // The account the (app) layout already read for the frame (cached per request), not a second sign-in check.
+  const me = await viewer();
+  if (!me) redirect("/signin?next=/admin");
+  if (!me.profile?.is_admin) redirect("/dashboard");
 
   return (
-    <AppShell
-      email={user.email ?? ""}
-      isAdmin
-      active="admin"
-      displayName={me?.name}
-      avatarUrl={me?.avatar_url}
-    >
+    <>
       <PageHeader title="Admin" subtitle="The control room: accounts, payments, growth, content and how the site is holding up." />
       <div className="mt-6 flex flex-col gap-6 lg:grid lg:grid-cols-[168px_minmax(0,1fr)] lg:gap-8">
         <AdminTabs />
-        <div className="min-w-0">{children}</div>
+        <div className="route-in min-w-0">{children}</div>
       </div>
-    </AppShell>
+    </>
   );
 }

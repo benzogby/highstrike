@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import AppShell from "@/components/AppShell";
 import LibraryView from "@/components/education/LibraryView";
 import { lessonStates, myProgress, outline, publishedVideos } from "@/lib/education";
 import { requireMember } from "@/lib/membership";
@@ -17,8 +16,8 @@ export default async function EducationPage() {
   const { supabase, user, profile } = await requireMember("/education");
   const [{ modules, lessons }, videos, progress] = await Promise.all([outline(supabase), publishedVideos(supabase), myProgress(supabase, user.id)]);
   return (
-    <AppShell email={user.email ?? ""} isAdmin={Boolean(profile?.is_admin)} active="education" displayName={profile?.name} avatarUrl={profile?.avatar_url}>
+    <>
       <LibraryView modules={modules} lessons={lessons} states={lessonStates(lessons, videos, progress)} />
-    </AppShell>
+    </>
   );
 }

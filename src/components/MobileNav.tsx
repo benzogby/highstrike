@@ -1,26 +1,25 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-
-type Item = { label: string; href?: string; key?: string; soon?: boolean };
+import { NAV, activeKey } from "@/components/appNav";
 
 export default function MobileNav({
-  items,
-  active,
   isAdmin,
   email,
   firstName,
   avatarUrl,
 }: {
-  items: Item[];
-  active: string;
   isAdmin: boolean;
   email: string;
   firstName: string;
   avatarUrl?: string | null;
 }) {
+  // The frame stays mounted while pages change, so the current page comes from the URL.
+  const active = activeKey(usePathname());
+  const items = NAV;
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 

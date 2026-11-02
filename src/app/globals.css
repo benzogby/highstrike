@@ -29,7 +29,8 @@
   --color-warn: #f2b84b;
   --color-warn-soft: rgb(242 184 75 / 0.12);
 
-  --font-display: var(--font-cal-sans), var(--font-space-grotesk), system-ui, sans-serif;
+  /* Space Grotesk was only a fallback here, downloaded on every page for nothing; dropped 2026-11-02. */
+  --font-display: var(--font-cal-sans), system-ui, sans-serif;
   --font-body: var(--font-inter), system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;
 }
@@ -106,15 +107,21 @@ body {
   );
 }
 
+/* A loading placeholder's bone: a flat step-up fill, shimmering where motion is welcome (below). */
+.skeleton {
+  background: var(--color-panel-2);
+}
+
 /* ————— Motion system (all entrance/feedback motion is gated on
    prefers-reduced-motion; without it, content renders instantly) ————— */
 
 @media (prefers-reduced-motion: no-preference) {
+  /* Quick on purpose (Ben, 2026-11-02: "lightning fast"): a short rise, half the stagger. */
   .anim-rise {
     opacity: 0;
-    transform: translateY(14px);
-    animation: hs-rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-    animation-delay: var(--rise-delay, 0ms);
+    transform: translateY(6px);
+    animation: hs-rise 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    animation-delay: calc(var(--rise-delay, 0ms) * 0.5);
   }
 
   .flash-up {
@@ -129,11 +136,21 @@ body {
     background: linear-gradient(
       90deg,
       var(--color-panel-2) 25%,
-      var(--color-line) 50%,
+      var(--color-panel-3) 50%,
       var(--color-panel-2) 75%
     );
     background-size: 200% 100%;
     animation: hs-shimmer 1.4s linear infinite;
+  }
+
+  /* Page changes (Ben, 2026-11-02: "lazy loading animations... make it lightning fast"): a page fades up 4px over
+     180ms as it lands in the frame; a loading skeleton fades in only once the wait passes 120ms, so a page that's
+     ready at once never flashes one. */
+  .route-in > :not(.skeleton-in) {
+    animation: hs-route-in 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .skeleton-in {
+    animation: hs-appear 160ms ease-out 120ms both;
   }
 
   .card-lift {
@@ -221,6 +238,26 @@ body {
     animation: none;
   }
   .toast-out {
+    transform: none;
+  }
+}
+
+@keyframes hs-appear {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes hs-route-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
     transform: none;
   }
 }

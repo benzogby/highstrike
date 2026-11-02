@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireMember } from "@/lib/membership";
-import AppShell from "@/components/AppShell";
 import { fetchQuotes } from "@/lib/quotes";
 import { fetchCompanyNews, newsTime } from "@/lib/news";
 import PriceChart from "./PriceChart";
@@ -36,7 +35,8 @@ export default async function SymbolPage({
 
   const { supabase, user, profile } = await requireMember(`/symbol/${ticker}`);
 
-  const [{ data: symbol }, quoteArr, { data: history }] =
+  // Everything the page shows, asked for at once rather than one after another.
+  const [{ data: symbol }, quoteArr, { data: history }, news, { data: insiders }] =
     await Promise.all([
       supabase
         .from("symbols")
@@ -52,29 +52,21 @@ export default async function SymbolPage({
         .eq("ticker", ticker)
         .order("report_date", { ascending: false })
         .limit(10),
+      fetchCompanyNews(ticker),
+      supabase
+        .from("insider_trades")
+        .select("accession, filed_at, owner_name, owner_title, transaction_code, shares, value")
+        .eq("ticker", ticker)
+        .order("filed_at", { ascending: false })
+        .limit(8),
     ]);
-
-  const news = await fetchCompanyNews(ticker);
-
-  const { data: insiders } = await supabase
-    .from("insider_trades")
-    .select("accession, filed_at, owner_name, owner_title, transaction_code, shares, value")
-    .eq("ticker", ticker)
-    .order("filed_at", { ascending: false })
-    .limit(8);
 
   if (!symbol) notFound();
   const quote = quoteArr[0];
   const up = (quote?.changePct ?? 0) >= 0;
 
   return (
-    <AppShell
-      email={user.email ?? ""}
-      isAdmin={Boolean(profile?.is_admin)}
-      active="none"
-      displayName={profile?.name}
-      avatarUrl={profile?.avatar_url}
-    >
+    <>
       {/* Header */}
       <PageHeader
         className="anim-rise"
@@ -261,6 +253,6 @@ export default async function SymbolPage({
         Market commentary, not investment advice. History from end-of-day closes;
         insider data from SEC EDGAR Form 4 filings.
       </p>
-    </AppShell>
+    </>
   );
 }

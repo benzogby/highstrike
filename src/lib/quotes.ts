@@ -1,3 +1,4 @@
+import { within } from "@/lib/within";
 // Shared quote fetching: live via Finnhub when FINNHUB_API_KEY is set,
 // deterministic samples otherwise. Server-side only.
 
@@ -38,37 +39,37 @@ export async function fetchQuotes(symbols: string[]): Promise<Quote[]> {
   const token = process.env.FINNHUB_API_KEY;
   if (!token) return symbols.map(sampleQuote);
 
-  return Promise.all(
-    symbols.map(async (symbol) => {
-      try {
-        const res = await fetch(
-          `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${token}`,
-          { next: { revalidate: 60 } }
-        );
-        if (!res.ok) throw new Error(String(res.status));
-        const q = (await res.json()) as {
-          c: number;
-          d: number;
-          dp: number;
-          h: number;
-          l: number;
-          o: number;
-          pc: number;
-        };
-        if (!q.c) throw new Error("no price");
-        return {
-          symbol,
-          price: q.c,
-          changePct: q.dp ?? 0,
-          live: true,
-          high: q.h || undefined,
-          low: q.l || undefined,
-          open: q.o || undefined,
-          prevClose: q.pc || undefined,
-        };
-      } catch {
-        return sampleQuote(symbol);
-      }
-    })
-  );
+  return Promise.all(symbols.map((symbol) => within(liveQuote(token, symbol), 2500, sampleQuote(symbol))));
+}
+
+async function liveQuote(token: string, symbol: string): Promise<Quote> {
+  try {
+    const res = await fetch(
+      `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${token}`,
+      { next: { revalidate: 60 } }
+    );
+    if (!res.ok) throw new Error(String(res.status));
+    const q = (await res.json()) as {
+      c: number;
+      d: number;
+      dp: number;
+      h: number;
+      l: number;
+      o: number;
+      pc: number;
+    };
+    if (!q.c) throw new Error("no price");
+    return {
+      symbol,
+      price: q.c,
+      changePct: q.dp ?? 0,
+      live: true,
+      high: q.h || undefined,
+      low: q.l || undefined,
+      open: q.o || undefined,
+      prevClose: q.pc || undefined,
+    };
+  } catch {
+    return sampleQuote(symbol);
+  }
 }

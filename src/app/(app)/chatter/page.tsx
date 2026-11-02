@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireMember } from "@/lib/membership";
-import AppShell from "@/components/AppShell";
 import { PageHeader } from "@/components/ui";
 
 export const metadata: Metadata = {
@@ -35,13 +34,7 @@ export default async function ChatterPage() {
     : null;
 
   return (
-    <AppShell
-      email={user.email ?? ""}
-      isAdmin={Boolean(profile?.is_admin)}
-      active="chatter"
-      displayName={profile?.name}
-      avatarUrl={profile?.avatar_url}
-    >
+    <>
       <PageHeader
         className="anim-rise"
         title="Chatter"
@@ -130,6 +123,6 @@ export default async function ChatterPage() {
         shown only with 5+ labeled posts), and watcher totals. Aggregates only —
         crowd noise is a sentiment signal, not investment advice.
       </p>
-    </AppShell>
+    </>
   );
 }

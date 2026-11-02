@@ -1,16 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Space_Grotesk, IBM_Plex_Mono, Cal_Sans } from "next/font/google";
+import { Inter, IBM_Plex_Mono, Cal_Sans } from "next/font/google";
 import TrackPageview from "./TrackPageview";
 import CookieBanner from "./CookieBanner";
 import "./globals.css";
 
 const inter = Inter({
   variable: "--font-inter",
-  subsets: ["latin"],
-});
-
-const spaceGrotesk = Space_Grotesk({
-  variable: "--font-space-grotesk",
   subsets: ["latin"],
 });
 
@@ -59,7 +54,7 @@ export default function RootLayout({
       suppressHydrationWarning
       // The font variables live on <html> so the theme's --font-* tokens, which are
       // resolved on :root, can see them (on <body> they resolved to nothing).
-      className={`${inter.variable} ${spaceGrotesk.variable} ${calSans.variable} ${plexMono.variable}`}
+      className={`${inter.variable} ${calSans.variable} ${plexMono.variable}`}
     >
       <head>
         <script

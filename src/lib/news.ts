@@ -2,6 +2,8 @@
 // construction: with no FINNHUB_API_KEY (or on any failure) we return an
 // empty list — headlines are never fabricated or sampled.
 
+import { within } from "@/lib/within";
+
 export type NewsItem = {
   headline: string;
   source: string;
@@ -45,6 +47,10 @@ export async function fetchCompanyNews(
 ): Promise<{ live: boolean; items: NewsItem[] }> {
   const token = process.env.FINNHUB_API_KEY;
   if (!token) return { live: false, items: [] };
+  return within(companyNews(token, symbol, days, limit), 2500, { live: false, items: [] });
+}
+
+async function companyNews(token: string, symbol: string, days: number, limit: number): Promise<{ live: boolean; items: NewsItem[] }> {
   try {
     const to = new Date().toISOString().slice(0, 10);
     const from = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
@@ -65,6 +71,10 @@ export async function fetchMarketNews(
 ): Promise<{ live: boolean; items: NewsItem[] }> {
   const token = process.env.FINNHUB_API_KEY;
   if (!token) return { live: false, items: [] };
+  return within(marketNews(token, limit), 2500, { live: false, items: [] });
+}
+
+async function marketNews(token: string, limit: number): Promise<{ live: boolean; items: NewsItem[] }> {
   try {
     const res = await fetch(
       `https://finnhub.io/api/v1/news?category=general&token=${token}`,

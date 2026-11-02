@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import AppShell from "@/components/AppShell";
 import { requireMember } from "@/lib/membership";
 import SettingsForm from "./SettingsForm";
 import AlertsManager from "./AlertsManager";
@@ -19,13 +18,7 @@ export default async function SettingsPage() {
       : [];
 
   return (
-    <AppShell
-      email={user.email ?? ""}
-      isAdmin={Boolean(profile?.is_admin)}
-      active="settings"
-      displayName={profile?.name}
-      avatarUrl={profile?.avatar_url}
-    >
+    <>
       <PageHeader title="Settings" subtitle="Your profile, sign-in, price alerts and membership." />
       <div className="mt-8 max-w-3xl space-y-10">
         <AlertsManager />
@@ -41,6 +34,6 @@ export default async function SettingsPage() {
           }}
         />
       </div>
-    </AppShell>
+    </>
   );
 }

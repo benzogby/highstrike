@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import AppShell from "@/components/AppShell";
 import MemberGate from "@/components/join/MemberGate";
 import { librarySummary } from "@/lib/education";
 import { billingReady, healMembership, publishableKey } from "@/lib/lifetime";
@@ -8,7 +7,8 @@ import { memberContext } from "@/lib/membership";
 import { agreedToTerms } from "@/lib/terms";
 import { Gauge } from "@/components/TerminalMockup";
 import { NowDateLong, NowGreeting, UpcomingFriday } from "@/components/Now";
-import { fetchMarketNews, newsTime } from "@/lib/news";
+import { Suspense } from "react";
+import MarketNews, { MarketNewsBones } from "./MarketNews";
 import WatchlistPanel from "./WatchlistPanel";
 import ActivityFeed from "./ActivityFeed";
 import FirstRunTour from "./FirstRunTour";
@@ -26,41 +26,38 @@ export default async function DashboardPage() {
   // went through without its browser coming back to /welcome turns access on here first.
   const unlocked = member || (billingReady() && (await healMembership(user).catch(() => false)));
   if (!unlocked) {
+    // The Terms check needs the account as it is now, not as the sign-in token saw it, so this rare path asks Supabase.
+    const fresh = (await supabase.auth.getUser()).data.user;
     return (
-      <>
-        <AppShell email={user.email ?? ""} isAdmin={false} active="home" displayName={profile?.name} avatarUrl={profile?.avatar_url}>
-          {null}
-        </AppShell>
-        <MemberGate
-          email={user.email ?? ""}
-          termsOnRecord={agreedToTerms(user)}
-          publishableKey={publishableKey()}
-          library={await librarySummary(supabase)}
-        />
-      </>
+      <MemberGate
+        email={user.email ?? ""}
+        termsOnRecord={agreedToTerms(fresh ?? user)}
+        publishableKey={publishableKey()}
+        library={await librarySummary(supabase)}
+      />
     );
   }
-  const isAdmin = Boolean(profile?.is_admin);
 
   const firstName = profile?.name || (user.email ?? "trader").split("@")[0];
 
-  // Latest published weather report + its setup cards.
-  const { data: weather } = await supabase
-    .from("weather_reports")
-    .select("report_date, volatility, opportunity, direction, summary, model")
-    .order("report_date", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  const { data: setupRows } = weather
-    ? await supabase
-        .from("setups")
-        .select(
-          "ticker, direction, justification, entry_criteria, price_target, time_frame, flow_score, status, current_pct, result_pct, symbols(name)"
-        )
-        .eq("report_date", weather.report_date)
-        .order("flow_score", { ascending: false })
-    : { data: null };
+  // The latest weather report and the latest setups, asked for together; the report's own day picks its setups.
+  const [{ data: weather }, { data: recentSetups }] = await Promise.all([
+    supabase
+      .from("weather_reports")
+      .select("report_date, volatility, opportunity, direction, summary, model")
+      .order("report_date", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("setups")
+      .select(
+        "report_date, ticker, direction, justification, entry_criteria, price_target, time_frame, flow_score, status, current_pct, result_pct, symbols(name)"
+      )
+      .order("report_date", { ascending: false })
+      .order("flow_score", { ascending: false })
+      .limit(100),
+  ]);
+  const setupRows = weather ? (recentSetups ?? []).filter((s) => s.report_date === weather.report_date) : [];
 
   const setups = (setupRows ?? []).map((s) => {
     const pct = s.status === "open" ? s.current_pct : s.result_pct;
@@ -78,8 +75,6 @@ export default async function DashboardPage() {
     };
   });
 
-  const marketNews = await fetchMarketNews();
-
   const reportLabel = weather
     ? new Date(`${weather.report_date}T12:00:00Z`).toLocaleDateString("en-US", {
         month: "short",
@@ -89,13 +84,7 @@ export default async function DashboardPage() {
     : null;
 
   return (
-    <AppShell
-      email={user.email ?? ""}
-      isAdmin={isAdmin}
-      active="home"
-      displayName={profile?.name}
-      avatarUrl={profile?.avatar_url}
-    >
+    <>
       
           {/* Greeting */}
           <PageHeader
@@ -248,35 +237,9 @@ export default async function DashboardPage() {
               </div>
               <ActivityFeed />
 
-              {marketNews.items.length > 0 && (
-                <>
-                  <div className="mt-8 flex items-baseline justify-between">
-                    <h2 className="font-display text-[15px] text-ink">
-                      Market news
-                    </h2>
-                    <span className="text-xs text-ink-3 font-medium">
-                      Live headlines
-                    </span>
-                  </div>
-                  <ul className="mt-3 divide-y divide-line rounded-xl border border-line bg-panel">
-                    {marketNews.items.map((n) => (
-                      <li key={n.url}>
-                        <a
-                          href={n.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="block px-5 py-3 transition hover:bg-panel-2"
-                        >
-                          <p className="text-sm text-ink">{n.headline}</p>
-                          <p className="mt-0.5 text-xs text-ink-3">
-                            {n.source} · {newsTime(n.datetime)}
-                          </p>
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                </>
-              )}
+              <Suspense fallback={<MarketNewsBones />}>
+                <MarketNews />
+              </Suspense>
 
               <div className="mt-6 rounded-xl border border-line bg-panel p-6">
                 <h3 className="font-display text-sm font-semibold">
@@ -303,6 +266,6 @@ export default async function DashboardPage() {
               </div>
             </section>
           </div>
-    </AppShell>
+    </>
   );
 }

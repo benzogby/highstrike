@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "@/lib/supabaseConfig";
+import { supabaseServer } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -29,9 +30,13 @@ export async function POST(req: NextRequest) {
       : "desktop";
 
     const db = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
-    // Only a plausible UUID is accepted; anything else records as anonymous.
-    const uid =
-      typeof body.userId === "string" && /^[0-9a-f-]{36}$/i.test(body.userId) ? body.userId : null;
+    // The signed-in account from its sign-in cookie, verified on the server (getClaims checks the token against the
+    // project's signing keys here, no trip to the auth server); nobody signed in records as anonymous. The browser no
+    // longer sends an id, so a view can't be credited to someone else.
+    const uid = await supabaseServer()
+      .then((s) => s.auth.getClaims())
+      .then(({ data }) => data?.claims?.sub ?? null)
+      .catch(() => null);
 
     await db.from("page_views").insert({
       user_id: uid,

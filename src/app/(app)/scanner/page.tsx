@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { requireMember } from "@/lib/membership";
-import AppShell from "@/components/AppShell";
 import ScannerTable from "./ScannerTable";
 import { PageHeader } from "@/components/ui";
 
@@ -12,13 +11,7 @@ export default async function ScannerPage() {
   const { user, profile } = await requireMember("/scanner");
 
   return (
-    <AppShell
-      email={user.email ?? ""}
-      isAdmin={Boolean(profile?.is_admin)}
-      active="scanner"
-      displayName={profile?.name}
-      avatarUrl={profile?.avatar_url}
-    >
+    <>
       <PageHeader
         className="anim-rise"
         title="Scanner"
@@ -27,6 +20,6 @@ export default async function ScannerPage() {
       <div className="anim-rise mt-6" style={{ "--rise-delay": "90ms" } as React.CSSProperties}>
         <ScannerTable />
       </div>
-    </AppShell>
+    </>
   );
 }

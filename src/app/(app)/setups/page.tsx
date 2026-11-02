@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireMember } from "@/lib/membership";
-import AppShell from "@/components/AppShell";
 import { PageHeader } from "@/components/ui";
 
 export const metadata: Metadata = {
@@ -82,13 +81,7 @@ export default async function SetupsPage() {
   ];
 
   return (
-    <AppShell
-      email={user.email ?? ""}
-      isAdmin={Boolean(profile?.is_admin)}
-      active="setups"
-      displayName={profile?.name}
-      avatarUrl={profile?.avatar_url}
-    >
+    <>
       <PageHeader
         className="anim-rise"
         title="Setups"
@@ -182,6 +175,6 @@ export default async function SetupsPage() {
         advice. Results are measured from the recorded entry price to target,
         stop (−8% adverse move), or expiry, using end-of-interval prices.
       </p>
-    </AppShell>
+    </>
   );
 }

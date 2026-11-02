@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import AppShell from "@/components/AppShell";
 import AuthShell from "@/components/AuthShell";
 import { supabaseServer } from "@/lib/supabase/server";
 import { getStripe } from "@/lib/stripe";
@@ -72,7 +71,7 @@ export default async function WelcomePage({ searchParams }: Props) {
   }
   const mine = purchase?.user_id === user.id ? purchase : null;
   return (
-    <AppShell email={user.email ?? ""} isAdmin={Boolean(profile?.is_admin)} active="none" displayName={profile?.name} avatarUrl={profile?.avatar_url}>
+    <>
       <div className="anim-rise mx-auto flex max-w-xl flex-col items-center py-10 text-center sm:py-16">
         <span className="grid size-14 place-items-center rounded-full bg-accent-soft text-accent">
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-7">
@@ -105,7 +104,7 @@ export default async function WelcomePage({ searchParams }: Props) {
         </div>
         {mine && <p className="mt-6 text-sm text-ink-3">Stripe emails your receipt to {mine.email}.</p>}
       </div>
-    </AppShell>
+    </>
   );
 }
 

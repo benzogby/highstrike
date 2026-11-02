@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
-import { supabaseBrowser } from "@/lib/supabase/client";
 import { readConsent } from "@/lib/consent";
 
 // Fire-and-forget pageview beacon, mounted once in the root layout. Sends one
@@ -67,18 +66,13 @@ export default function TrackPageview() {
         sessionStorage.setItem("hs_sid_t", String(now));
       }
 
-      const send = async (path: string, ref: string, v: string, s: string) => {
-        let uid: string | null = null;
-        try {
-          const { data } = await supabaseBrowser().auth.getSession();
-          uid = data.session?.user?.id || null;
-        } catch {
-          /* anonymous */
-        }
+      // Who's signed in is read by /api/track from the sign-in cookie, so this beacon doesn't load Supabase's library
+      // into every page just to ask (2026-11-02, "compress the app": 65 KB on every page).
+      const send = (path: string, ref: string, v: string, s: string) => {
         fetch("/api/track", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ path, referrer: ref, visitorId: v, sessionId: s, userId: uid }),
+          body: JSON.stringify({ path, referrer: ref, visitorId: v, sessionId: s }),
           keepalive: true,
         }).catch(() => {});
       };

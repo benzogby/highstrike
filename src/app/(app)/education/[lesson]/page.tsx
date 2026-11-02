@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import AppShell from "@/components/AppShell";
 import LessonView from "@/components/education/LessonView";
 import { supabaseServer } from "@/lib/supabase/server";
 import { isLessonId, lessonDetail, lessonHref, lessonStates, myProgress, outline, posterUrl, publishedVideos } from "@/lib/education";
@@ -27,12 +26,6 @@ export default async function LessonPage({ params }: Props) {
   const { lesson: id } = await params;
   if (!isLessonId(id)) notFound();
   const { supabase, user, profile } = await requireMember(lessonHref(id));
-  const shell = (children: React.ReactNode) => (
-    <AppShell email={user.email ?? ""} isAdmin={Boolean(profile?.is_admin)} active="education" displayName={profile?.name} avatarUrl={profile?.avatar_url}>
-      {children}
-    </AppShell>
-  );
-
   const [{ modules, lessons }, videos, progress, detail] = await Promise.all([outline(supabase), publishedVideos(supabase), myProgress(supabase, user.id), lessonDetail(supabase, id)]);
   const index = lessons.findIndex((l) => l.id === id);
   if (index < 0) notFound();
@@ -41,7 +34,7 @@ export default async function LessonPage({ params }: Props) {
   if (!mod) notFound();
   const video = videos.get(id) ?? null;
   const poster = video ? await posterUrl(supabase, video).catch(() => null) : null;
-  return shell(
+  return (
     <LessonView
       lesson={lesson}
       module={mod}

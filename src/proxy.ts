@@ -24,9 +24,10 @@ export default async function proxy(request: NextRequest) {
     },
   });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getClaims refreshes a token about to expire (writing the new cookies above) and verifies it against the project's
+  // signing keys locally, so this runs on every request without a trip to Supabase's auth server (getUser made one).
+  const { data } = await supabase.auth.getClaims();
+  const user = data?.claims?.sub ? data.claims : null;
 
   const path = request.nextUrl.pathname;
 

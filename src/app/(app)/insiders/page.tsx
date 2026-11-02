@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireMember } from "@/lib/membership";
-import AppShell from "@/components/AppShell";
 import { PageHeader } from "@/components/ui";
 
 export const metadata: Metadata = {
@@ -46,13 +45,7 @@ export default async function InsidersPage() {
     .sort((a, b) => b[1].size - a[1].size);
 
   return (
-    <AppShell
-      email={user.email ?? ""}
-      isAdmin={Boolean(profile?.is_admin)}
-      active="insiders"
-      displayName={profile?.name}
-      avatarUrl={profile?.avatar_url}
-    >
+    <>
       <PageHeader
         className="anim-rise"
         title="Insider feed"
@@ -144,6 +137,6 @@ export default async function InsidersPage() {
         aggregated per filing. Clusters flag two or more distinct open-market
         buyers within 14 days. Market commentary, not investment advice.
       </p>
-    </AppShell>
+    </>
   );
 }
