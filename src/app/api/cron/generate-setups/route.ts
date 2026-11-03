@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
+import { morningToken } from "@/lib/morning";
 import { supabaseServer } from "@/lib/supabase/server";
 import { generateDaily, gradeSetups, snapshotPrices } from "@/lib/setupEngine";
 import { checkAlerts } from "@/lib/alerts";
@@ -43,6 +44,17 @@ async function handle(request: Request) {
     const grading = await gradeSetups();
     const alerts = await checkAlerts();
     const result = await generateDaily(wantsForce);
+    // The day's ideas are in: start the morning email and watchlist scans in a run of their own (once a day; a forced
+    // regeneration from Admin doesn't email anyone).
+    if (result.status === "generated" && !wantsForce) {
+      const origin = new URL(request.url).origin;
+      after(() =>
+        fetch(`${origin}/api/cron/morning-digest`, { headers: { "x-morning-token": morningToken(result.date) } })
+          .then((r) => r.json())
+          .then((j) => console.log("morning-digest:", JSON.stringify(j)))
+          .catch((e) => console.error("morning-digest start failed:", e))
+      );
+    }
     return NextResponse.json({ ...result, grading, snapshot, alerts });
   } catch (e) {
     console.error("generate-setups failed:", e);

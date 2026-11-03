@@ -81,7 +81,7 @@ export default async function IdeaPage({ params }: { params: Promise<{ id: strin
         </div>
         <p className="mt-3 max-w-3xl font-display text-xl leading-snug text-ink">{headlineOf(idea)}</p>
         <p className="mt-1 text-[13px] text-ink-3">
-          {idea.owner_id ? `You pasted this on ${DAY.format(new Date(`${idea.report_date}T12:00:00Z`))}. Only you can see it.` : `Published ${DAY.format(new Date(`${idea.report_date}T12:00:00Z`))}, before the open`}
+          {idea.owner_id ? `${idea.source === "watchlist" ? "Found on your watchlist" : idea.source === "builder" ? "You built this" : "You pasted this"} on ${DAY.format(new Date(`${idea.report_date}T12:00:00Z`))}. Only you can see it.` : `Published ${DAY.format(new Date(`${idea.report_date}T12:00:00Z`))}, before the open`}
         </p>
       </header>
 

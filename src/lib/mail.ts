@@ -10,7 +10,7 @@ export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.highst
 export const MAIL_FROM = process.env.MAIL_FROM || "HighStrike <hello@highstrike.com>";
 
 /** `kind`: what sent it, for Admin → Emails ("sale_alert", "payment", "price_alert"). */
-export type Mail = { to: string; subject: string; html: string; text: string; from?: string; kind?: string };
+export type Mail = { to: string; subject: string; html: string; text: string; from?: string; kind?: string; headers?: Record<string, string> };
 
 /** A sign-in link or a code in it: Admin → Emails keeps the subject but not the words (as getripping.com's does). */
 const SECRET_LINK = /token_hash=|[?&]token=|access_token|[?&]code=|one-time code/i;
@@ -62,7 +62,7 @@ async function deliver(mail: Mail, from: string): Promise<{ ok: true; id: string
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from, to: [mail.to], subject: mail.subject, ...(mail.html ? { html: mail.html } : {}), text: mail.text }),
+      body: JSON.stringify({ from, to: [mail.to], subject: mail.subject, ...(mail.html ? { html: mail.html } : {}), text: mail.text, ...(mail.headers ? { headers: mail.headers } : {}) }),
     });
     const body = (await res.json().catch(() => ({}))) as { id?: string; message?: string; error?: string };
     if (res.ok) return { ok: true, id: body.id ?? null };

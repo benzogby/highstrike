@@ -2,7 +2,7 @@ import { supabaseService } from "@/lib/stripe";
 import { etToday } from "@/lib/setupEngine";
 import type { Source, Style } from "@/lib/ideas";
 
-// A member's own ideas, pasted (piece 3) or built (piece 4): saved with their owner_id so only they see them, their own
+// A member's own ideas, pasted (piece 3), built (piece 4) or found on their watchlist each morning (piece 5): saved with their owner_id so only they see them, their own
 // stop, and graded like every idea. One limit across both: ideas a member can save in a day.
 export const OWN_PER_DAY = 20;
 
@@ -10,7 +10,7 @@ const money = (n: number) => `$${n.toFixed(2)}`;
 
 export type OwnIdea = {
   ownerId: string;
-  source: Extract<Source, "pasted" | "builder">;
+  source: Extract<Source, "pasted" | "builder" | "watchlist">;
   ticker: string;
   direction: "long" | "short";
   style: Style;
@@ -30,7 +30,8 @@ export type OwnIdea = {
 export async function saveOwnIdea(i: OwnIdea): Promise<{ id: string } | { error: string }> {
   const db = supabaseService();
   const since = new Date(Date.now() - 86_400_000).toISOString();
-  const { count } = await db.from("setups").select("id", { count: "exact", head: true }).eq("owner_id", i.ownerId).gte("created_at", since);
+  // The limit is on what members save themselves; the morning's watchlist ideas don't count against it.
+  const { count } = i.source === "watchlist" ? { count: 0 } : await db.from("setups").select("id", { count: "exact", head: true }).eq("owner_id", i.ownerId).in("source", ["pasted", "builder"]).gte("created_at", since);
   if ((count ?? 0) >= OWN_PER_DAY) return { error: `That's ${OWN_PER_DAY} of your own ideas in a day. Save more tomorrow.` };
   const long = i.direction === "long";
   if (long ? i.target <= i.entry : i.target >= i.entry) return { error: `For a ${i.direction}, the target should be ${long ? "above" : "below"} the entry.` };
