@@ -7,7 +7,14 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Emails — Admin — HighStrike" };
 
 const PER_PAGE = 20;
-const KIND: Record<string, string> = { sale_alert: "Sale alert", payment: "Payment", price_alert: "Price alert" };
+const KIND: Record<string, string> = {
+  sale_alert: "Trial alert",
+  payment: "Welcome",
+  payment_failed: "Payment failed",
+  price_alert: "Price alert",
+  trade_alert: "Trade alert",
+  digest: "Morning email",
+};
 
 /**
  * Admin → Emails (from getripping.com's): every email the site hands to Resend, newest first, twenty a page, logged by
