@@ -126,8 +126,10 @@ export async function gradeSetups(): Promise<{ graded: number; closed: number }>
     .eq("status", "open");
   if (!open || open.length === 0) return { graded: 0, closed: 0 };
 
+  // Live prices only: a quote that fell back to its made-up sample (Finnhub down or slow) must never close a real idea
+  // as a win or a loss; that idea waits for tomorrow's run.
   const quotes = await fetchQuotes([...new Set(open.map((s) => s.ticker))]);
-  const priceOf = new Map(quotes.map((q) => [q.symbol, q.price]));
+  const priceOf = new Map(quotes.filter((q) => q.live).map((q) => [q.symbol, q.price]));
   const today = etToday();
   let closed = 0;
 
@@ -397,6 +399,9 @@ export async function enrichedScan(): Promise<EnrichedRow[]> {
   return quotes;
 }
 
+/** The fewest live prices the morning run will make ideas from. */
+const MIN_LIVE = 10;
+
 export async function generateDaily(force = false): Promise<{
   status: "generated" | "exists" | "skipped_weekend";
   date: string;
@@ -416,7 +421,13 @@ export async function generateDaily(force = false): Promise<{
   const dow = new Date(`${date}T12:00:00Z`).getUTCDay();
   if ((dow === 0 || dow === 6) && !force) return { status: "skipped_weekend", date };
 
-  const quotes = await enrichedScan();
+  // The day's ideas come from live prices only. A quote that fell back to its made-up sample (Finnhub down or slow)
+  // is left out, and with fewer than MIN_LIVE live names there's no report at all rather than one built on samples;
+  // nothing is written, so Admin's Generate now can run it again once prices are back.
+  const quotes = (await enrichedScan()).filter((q) => q.live);
+  if (quotes.length < MIN_LIVE) {
+    throw new Error(`Only ${quotes.length} live prices came back (need ${MIN_LIVE}), so no ideas were made. Try Generate now in a few minutes.`);
+  }
 
   let generated: Generated;
   if (process.env.ANTHROPIC_API_KEY) {
