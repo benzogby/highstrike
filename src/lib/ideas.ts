@@ -3,7 +3,7 @@
 // The AI's morning picks are the first source; the others arrive one by one, so the feed only offers the ones with ideas.
 
 export const SOURCES = {
-  ai: "AI picks",
+  ai: "Scanner picks",
   flow: "Options flow",
   catalyst: "Catalysts",
   watchlist: "Your watchlist",
