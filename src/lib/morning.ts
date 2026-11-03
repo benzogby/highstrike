@@ -6,6 +6,7 @@ import { buildIdeas } from "@/lib/buildIdeas";
 import { saveOwnIdea } from "@/lib/ownIdeas";
 import { MEMBER_PLANS } from "@/lib/offer";
 import { STYLES, type Style } from "@/lib/ideas";
+import { asOption, contractShort, usd as optionUsd } from "@/lib/optionIdea";
 
 // The morning, after the engine has written the day's ideas (piece 5 of the trade-ideas plan, Ben 2026-11-02; no AI):
 // each member's watchlist is scanned with the idea builder's rules and its best fits become their own private ideas,
@@ -95,7 +96,13 @@ export function validUnsubscribe(userId: string, token: string) {
   return want.length === got.length && timingSafeEqual(want, got);
 }
 
-type Row = { id: string; ticker: string; direction: string; style: Style; headline: string | null; justification: string; entry_price: number | null; target_price: number | null; time_frame: string };
+type Row = { id: string; ticker: string; direction: string; style: Style; headline: string | null; justification: string; entry_price: number | null; target_price: number | null; time_frame: string; option?: unknown };
+
+/** The idea's option in one short line: "Option: Nov 20 $340 call · est. $8.40 a share". */
+const optionText = (r: Row) => {
+  const o = asOption(r.option);
+  return o ? `Option: ${contractShort(o)} · est. ${optionUsd(o.premium)} a share` : null;
+};
 
 const C = { page: "#F6F7F5", card: "#FFFFFF", line: "#E6E8E5", soft: "#EEF0ED", ink: "#0A0D0B", ink2: "#4F5652", ink3: "#7A817D", green: "#009F6F", up: "#0F7B4F", down: "#C2362B" };
 const DISPLAY = "'Cal Sans','Inter',Helvetica,Arial,sans-serif";
@@ -108,11 +115,15 @@ export function digestEmail(day: string, house: Row[], mine: Row[], unsubscribe:
   const line = (r: Row) => {
     const head = r.headline?.trim() || r.justification.split(/(?<=\.)\s/)[0];
     const side = r.direction === "long" ? `<span style="color:${C.up}">Long</span>` : `<span style="color:${C.down}">Short</span>`;
+    const option = optionText(r);
     return `<tr><td style="padding:12px 0;border-bottom:1px solid ${C.soft}">
 <a href="${SITE_URL}/ideas/${r.id}" style="text-decoration:none;color:${C.ink}"><span style="font-family:${MONO};font-size:14px;font-weight:600">${esc(r.ticker)}</span> <span style="font-family:${BODY};font-size:12px;font-weight:500">${side} · ${esc(STYLES[r.style] ?? r.style)}</span><br>
 <span style="font-family:${BODY};font-size:14px;line-height:1.45;color:${C.ink2}">${esc(head)}</span><br>
-<span style="font-family:${MONO};font-size:12px;color:${C.ink3}">${r.entry_price != null ? money(r.entry_price) : "—"} → ${r.target_price != null ? money(r.target_price) : "—"} · ${esc(r.time_frame)}</span></a></td></tr>`;
+<span style="font-family:${MONO};font-size:12px;color:${C.ink3}">${r.entry_price != null ? money(r.entry_price) : "—"} → ${r.target_price != null ? money(r.target_price) : "—"} · ${esc(r.time_frame)}</span>${
+      option ? `<br>\n<span style="font-family:${MONO};font-size:12px;color:${C.ink2}">${esc(option)}</span>` : ""
+    }</a></td></tr>`;
   };
+  const anyOption = [...house, ...mine].some((r) => optionText(r));
   const block = (title: string, rows: Row[]) =>
     rows.length
       ? `<tr><td style="padding:20px 24px 0"><p style="margin:0;font-family:${DISPLAY};font-size:17px;color:${C.ink}">${title}</p>
@@ -130,16 +141,18 @@ export function digestEmail(day: string, house: Row[], mine: Row[], unsubscribe:
 ${block("Your watchlist", mine)}${block("Today&#39;s ideas", house)}
 <tr><td style="padding:20px 24px 24px"><a href="${SITE_URL}/ideas" style="display:inline-block;padding:10px 16px;border-radius:8px;background:${C.green};color:#FFFFFF;font-family:${BODY};font-size:14px;font-weight:600;text-decoration:none">Open all ideas</a></td></tr>
 </table>
-<p style="max-width:560px;margin:14px auto 0;text-align:center;font-family:${BODY};font-size:12px;line-height:1.5;color:${C.ink3}">Market commentary and education, not investment advice.<br>
+<p style="max-width:560px;margin:14px auto 0;text-align:center;font-family:${BODY};font-size:12px;line-height:1.5;color:${C.ink3}">Market commentary and education, not investment advice.${anyOption ? " Option prices are estimates (est.) from each stock's own past moves, not live quotes." : ""}<br>
 <a href="${unsubscribe}" style="color:${C.ink3}">Stop these emails</a> · you can switch them back on in Settings.</p>
 </td></tr></table></body></html>`;
+  const withOption = (r: Row, text: string) => (optionText(r) ? `${text}\n  ${optionText(r)}` : text);
   const text = [
     `HighStrike: this morning's trade ideas (${date})`,
-    ...(mine.length ? ["", "Your watchlist:", ...mine.map((r) => `- ${r.ticker} ${r.direction}: ${r.headline ?? ""} ${SITE_URL}/ideas/${r.id}`)] : []),
+    ...(mine.length ? ["", "Your watchlist:", ...mine.map((r) => withOption(r, `- ${r.ticker} ${r.direction}: ${r.headline ?? ""} ${SITE_URL}/ideas/${r.id}`))] : []),
     "",
     "Today's ideas:",
-    ...house.map((r) => `- ${r.ticker} ${r.direction}: ${r.headline ?? r.justification.split(". ")[0]} ${SITE_URL}/ideas/${r.id}`),
+    ...house.map((r) => withOption(r, `- ${r.ticker} ${r.direction}: ${r.headline ?? r.justification.split(". ")[0]} ${SITE_URL}/ideas/${r.id}`)),
     "",
+    ...(anyOption ? ["Option prices are estimates (est.) from each stock's own past moves, not live quotes."] : []),
     `All ideas: ${SITE_URL}/ideas`,
     `Stop these emails: ${unsubscribe}`,
   ].join("\n");
@@ -147,7 +160,7 @@ ${block("Your watchlist", mine)}${block("Today&#39;s ideas", house)}
 }
 
 const FROM = process.env.DIGEST_FROM || "HighStrike Ideas <ideas@mail.highstrike.com>";
-const COLUMNS = "id, ticker, direction, style, headline, justification, entry_price, target_price, time_frame";
+const COLUMNS = "id, ticker, direction, style, headline, justification, entry_price, target_price, time_frame, option";
 
 /** One email per member who wants it: today's house ideas (the best ten) and their own watchlist ideas from today. */
 export async function sendDigests() {
