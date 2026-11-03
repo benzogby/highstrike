@@ -19,8 +19,12 @@ export default function SwipeDeck({
   initial,
   save,
   more,
+  streak = 0,
+  swipedToday = false,
 }: {
   initial: DeckCard[];
+  streak?: number;
+  swipedToday?: boolean;
   save: (id: string, action: "right" | "left") => Promise<{ ok: true } | { error: string }>;
   more: (skip: string[]) => Promise<DeckCard[]>;
 }) {
@@ -29,6 +33,7 @@ export default function SwipeDeck({
   const [fly, setFly] = useState<Fly | null>(null);
   const [open, setOpen] = useState(false);
   const [saved, setSaved] = useState(0);
+  const [swiped, setSwiped] = useState(0);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const start = useRef<{ x: number; y: number } | null>(null);
@@ -55,6 +60,7 @@ export default function SwipeDeck({
       setOpen(false);
       setError("");
       if (action === "right") setSaved((n) => n + 1);
+      setSwiped((n) => n + 1);
       void save(top.id, action).then((r) => {
         if ("error" in r) setError(r.error);
       });
@@ -111,11 +117,23 @@ export default function SwipeDeck({
 
   return (
     <div className="mx-auto flex w-full max-w-[420px] flex-col">
-      <div className="mb-3 flex items-center justify-between text-[13px] text-ink-3">
-        <span>{saved > 0 ? `${saved} saved this session` : "Right to save, left to pass, up for details"}</span>
-        <Link href="/swipe/saved" className="font-medium text-ink-2 hover:text-ink">
-          Saved →
-        </Link>
+      <div className="mb-3 flex items-center justify-between gap-3 text-[13px] text-ink-3">
+        <span>
+          {(() => {
+            // The streak counts today once the first swipe of the day is in.
+            const days = streak + (swiped > 0 && !swipedToday ? 1 : 0);
+            return days > 0 ? <span className="mr-2 font-medium text-ink">🔥 {days}-day streak</span> : null;
+          })()}
+          {saved > 0 ? `${saved} saved` : "Right to save, left to pass, up for details"}
+        </span>
+        <span className="flex shrink-0 gap-3">
+          <Link href="/swipe/board" className="font-medium text-ink-2 hover:text-ink">
+            Board
+          </Link>
+          <Link href="/swipe/saved" className="font-medium text-ink-2 hover:text-ink">
+            Saved
+          </Link>
+        </span>
       </div>
 
       <div className="relative h-[min(640px,calc(100svh-200px))] min-h-[520px] select-none">

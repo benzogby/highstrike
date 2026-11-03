@@ -13,7 +13,7 @@ export async function recordSwipe(cardId: string, action: "right" | "left"): Pro
   const { data: card } = await db.from("swipe_cards").select("*").eq("id", cardId).maybeSingle();
   if (!card) return { error: "That card has been refreshed. Swipe the next one." };
   const { error } = await db.from("swipes").upsert(
-    { user_id: v.user.id, card_id: cardId, ticker: card.ticker, structure: card.structure, action, card },
+    { user_id: v.user.id, card_id: cardId, ticker: card.ticker, structure: card.structure, action, card, status: action === "right" ? "open" : null },
     { onConflict: "user_id,card_id" }
   );
   return error ? { error: error.message } : { ok: true };

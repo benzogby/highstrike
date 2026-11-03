@@ -4,6 +4,7 @@ import { etToday } from "@/lib/setupEngine";
 import { volatility } from "./pricing";
 import { cardsFor } from "./cards";
 import { CARDS_PER_TIER, UNIVERSE } from "./universe";
+import { check, type Saved } from "./track";
 
 // Keeps the swipe deck fresh (step 1 of the swipe app): quotes the stocks that were priced longest ago, at a pace the free
 // quote service allows (about 60 a minute), records each day's close, re-estimates volatility, and rebuilds that stock's
@@ -105,6 +106,36 @@ export async function refreshBatch(budgetMs = 240_000) {
       priced++;
     }
   }
+  const tracked = await trackSaved();
   const { count: left } = await db.from("option_underlyings").select("ticker", { count: "exact", head: true }).or(`quoted_at.is.null,quoted_at.lt.${staleBefore}`);
-  return { priced, cards, missed, left: left ?? 0, seconds: Math.round((Date.now() - started) / 1000) };
+  return { priced, cards, missed, tracked, left: left ?? 0, seconds: Math.round((Date.now() - started) / 1000) };
+}
+
+/**
+ * Every open saved setup against its stock's latest price (step 3 of the swipe app): its estimated profit or loss now,
+ * and closed as a win or a loss once it reaches its take profit, its stop or its expiry.
+ */
+export async function trackSaved() {
+  const db = supabaseService();
+  const { data: open } = await db.from("swipes").select("id, ticker, card").eq("status", "open").limit(5000);
+  const rows = (open ?? []) as { id: number; ticker: string; card: Saved }[];
+  if (!rows.length) return { open: 0, closed: 0 };
+  const { data: spots } = await db.from("option_underlyings").select("ticker, spot").in("ticker", [...new Set(rows.map((r) => r.ticker))]);
+  const spotOf = new Map(((spots ?? []) as { ticker: string; spot: number | null }[]).map((s) => [s.ticker, s.spot != null ? Number(s.spot) : null]));
+  const day = etToday();
+  let closed = 0;
+  for (const r of rows) {
+    const spot = spotOf.get(r.ticker);
+    if (spot == null) continue;
+    const c = check(r.card, spot, day);
+    const update: Record<string, unknown> = { pnl: c.pnl, checked_at: new Date().toISOString() };
+    if (c.status !== "open") {
+      update.status = c.status;
+      update.close_reason = c.reason;
+      update.closed_at = new Date().toISOString();
+      closed++;
+    }
+    await db.from("swipes").update(update).eq("id", r.id);
+  }
+  return { open: rows.length - closed, closed };
 }
