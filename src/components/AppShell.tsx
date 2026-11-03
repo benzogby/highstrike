@@ -39,7 +39,7 @@ export default function AppShell({
     <div data-app-shell="" className="min-h-screen bg-bg">
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-60 flex-col border-r border-line bg-sidebar lg:flex">
         <div className="flex h-14 flex-none items-center border-b border-line px-4">
-          <Link href="/swipe" className="flex items-center gap-2.5" aria-label="HighStrike, home">
+          <Link href="/dashboard" className="flex items-center gap-2.5" aria-label="HighStrike, home">
             <BrandMark size={22} withName logos={logos} />
           </Link>
         </div>
@@ -70,7 +70,7 @@ export default function AppShell({
           <div className="flex h-14 items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
             <div className="flex items-center gap-2.5 lg:hidden">
               <MobileNav isAdmin={isAdmin} email={email} firstName={firstName} avatarUrl={avatarUrl} />
-              <Link href="/swipe" className="flex items-center" aria-label="HighStrike, home">
+              <Link href="/dashboard" className="flex items-center" aria-label="HighStrike, home">
                 <BrandMark size={20} logos={logos} />
               </Link>
             </div>

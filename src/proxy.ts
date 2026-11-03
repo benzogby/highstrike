@@ -31,7 +31,7 @@ export default async function proxy(request: NextRequest) {
 
   const path = request.nextUrl.pathname;
 
-  if (!user && (path.startsWith("/dashboard") || path.startsWith("/swipe"))) {
+  if (!user && path.startsWith("/dashboard")) {
     const url = request.nextUrl.clone();
     url.pathname = "/signin";
     url.searchParams.set("next", path);
@@ -40,7 +40,7 @@ export default async function proxy(request: NextRequest) {
 
   if (user && (path === "/signin" || path === "/signup")) {
     const url = request.nextUrl.clone();
-    url.pathname = "/swipe";
+    url.pathname = "/dashboard";
     url.search = "";
     return NextResponse.redirect(url);
   }

@@ -1,14 +1,17 @@
 import Link from "next/link";
+import JoinButton from "@/components/join/JoinButton";
 import LandingMotion from "@/components/landing/LandingMotion";
 import { Bull } from "@/components/landing/Pieces";
 import CookieSettings from "@/components/landing/CookieSettings";
+import LandingDock from "@/components/landing/LandingDock";
 import { LEGAL } from "@/lib/legal";
+import { LIFETIME_PRICE } from "@/lib/offer";
 import "./landing.css";
 
-// The homepage's own frame: a black bar with the bull and the word, fixed over
-// the page as it scrolls; the footer with every link, the legal pages and who
-// runs HighStrike. Swiping is the only product, free for now (2026-11-02), so
-// there's no price and no floating buy bar. See landing.css.
+// The homepage's own frame in the HighStrike reels system: a black bar with the
+// bull and the word, fixed over the page as it scrolls; the footer with every
+// link, the legal pages and who runs HighStrike; and the floating bar at the
+// foot once the hero's button has gone (LandingDock). See landing.css.
 
 /** The footer's columns: this page, the rest of the site, and the legal pages (with Cookie settings under them). */
 const FOOT = [
@@ -16,14 +19,15 @@ const FOOT = [
     title: "HighStrike",
     links: [
       { href: "/#how", label: "How it works" },
-      { href: "/#cards", label: "On a card" },
-      { href: "/#faq", label: "Questions" },
-      { href: "/signup", label: "Start free" },
+      { href: "/#desk", label: "The desk" },
+      { href: "/#trading-school", label: "Trading School" },
+      { href: "/#pricing", label: "Pricing" },
     ],
   },
   {
     title: "Company",
     links: [
+      { href: "/results", label: "Results" },
       { href: "/blog", label: "Blog" },
       { href: "/about", label: "About" },
       { href: "/company", label: "Company" },
@@ -54,15 +58,14 @@ export default function LandingLayout({ children }: Readonly<{ children: React.R
           </Link>
           <nav className="hs-bar__links" aria-label="Main">
             <a href="#how">How it works</a>
-            <a href="#cards">On a card</a>
-            <a href="#faq">Questions</a>
+            <a href="#desk">The desk</a>
+            <a href="#trading-school">Trading School</a>
+            <a href="#pricing">Pricing</a>
           </nav>
           <Link href="/signin" className="hs-bar__signin">
             Sign in
           </Link>
-          <Link href="/signup" className="hs-btn hs-btn--sm">
-            Start free
-          </Link>
+          <JoinButton className="hs-btn hs-btn--sm">Get HighStrike</JoinButton>
         </div>
       </header>
 
@@ -77,7 +80,7 @@ export default function LandingLayout({ children }: Readonly<{ children: React.R
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img className="hs-brand__word" src="/brand/wordmark.png" alt="" width={85} height={17} />
               </Link>
-              <p>Options setups you swipe: calls, puts, spreads and iron condors on 350+ stocks. Free while we build.</p>
+              <p>AI options research and the HighStrike Trading School, since 2018. {LIFETIME_PRICE} once for lifetime access.</p>
               <p>
                 HighStrike is owned and operated by ZERO DTE HOLDINGS LLC, a Wyoming limited liability company.
                 <br />
@@ -113,6 +116,7 @@ export default function LandingLayout({ children }: Readonly<{ children: React.R
           </div>
         </div>
       </footer>
+      <LandingDock price={LIFETIME_PRICE} />
       <LandingMotion />
     </div>
   );

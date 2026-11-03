@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { requireAccount } from "@/lib/membership";
+import { requireMember } from "@/lib/membership";
 import SettingsForm from "./SettingsForm";
 import AlertsManager from "./AlertsManager";
 import DigestSwitch from "./DigestSwitch";
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 };
 
 export default async function SettingsPage() {
-  const { user, profile } = await requireAccount("/settings");
+  const { user, profile } = await requireMember("/settings");
 
   const { data: prefs } = await supabaseService().from("profiles").select("digest_email").eq("id", user.id).maybeSingle();
 
@@ -31,7 +31,7 @@ export default async function SettingsPage() {
           userId={user.id}
           email={user.email ?? ""}
           hasPassword={providers.includes("email")}
-          membership={profile?.is_admin ? "admin" : profile?.plan === "lifetime" ? "lifetime" : "free"}
+          membership={profile?.plan === "lifetime" ? "lifetime" : "admin"}
           initial={{
             name: profile?.name ?? "",
             bio: profile?.bio ?? "",

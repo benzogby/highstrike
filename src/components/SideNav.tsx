@@ -71,8 +71,11 @@ export function TopAction() {
     return <span className="rounded-md bg-panel-2 px-2 py-1 text-xs font-medium text-ink-2 ring-1 ring-inset ring-line-strong">Admin</span>;
   }
   return (
-    <Link href="/swipe" className={`hidden sm:inline-flex ${BUTTON_PRIMARY_SM}`}>
-      Swipe setups
+    <Link href="/dashboard#watchlist" className={`hidden sm:inline-flex ${BUTTON_PRIMARY_SM}`}>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+        <path d="M12 5v14M5 12h14" />
+      </svg>
+      New watchlist
     </Link>
   );
 }

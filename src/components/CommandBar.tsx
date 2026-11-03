@@ -8,14 +8,6 @@ type PageCmd = { kind: "page"; label: string; hint: string; href: string };
 type SymbolCmd = { kind: "symbol"; ticker: string; name: string };
 type Cmd = PageCmd | SymbolCmd;
 
-/** Every account's pages while swiping is the only product (Ben, 2026-11-02); the rest are admins' only. */
-const EVERYONE: Omit<PageCmd, "kind">[] = [
-  { label: "Swipe", hint: "Options setups, one card at a time", href: "/swipe" },
-  { label: "Saved", hint: "The setups you swiped right on", href: "/swipe/saved" },
-  { label: "Scoreboard", hint: "This week's contest and all time", href: "/swipe/board" },
-  { label: "Settings", hint: "Profile, email, sign-in", href: "/settings" },
-];
-
 const PAGES: Omit<PageCmd, "kind">[] = [
   { label: "Dashboard", hint: "Home — weather, setups, watchlist", href: "/dashboard" },
   { label: "Ideas", hint: "Every trade idea, filtered your way", href: "/ideas" },
@@ -39,7 +31,7 @@ export default function CommandBar({ isAdmin }: { isAdmin: boolean }) {
   useEffect(() => setMounted(true), []);
 
   const pages: PageCmd[] = [
-    ...(isAdmin ? [...EVERYONE.slice(0, 3), ...PAGES] : EVERYONE).map((p) => ({ ...p, kind: "page" as const })),
+    ...PAGES.map((p) => ({ ...p, kind: "page" as const })),
     ...(isAdmin
       ? [{ kind: "page" as const, label: "Admin panel", hint: "Members, traffic, content, site", href: "/admin" }]
       : []),
@@ -49,8 +41,7 @@ export default function CommandBar({ isAdmin }: { isAdmin: boolean }) {
   const pageMatches = q
     ? pages.filter((p) => p.label.toLowerCase().includes(q))
     : pages;
-  // Ticker pages are admins' only while swiping is the only product.
-  const results: Cmd[] = [...(q && isAdmin ? symbols : []), ...pageMatches];
+  const results: Cmd[] = [...(q ? symbols : []), ...pageMatches];
 
   // Open on "/" or Cmd/Ctrl+K anywhere (outside editable fields).
   useEffect(() => {
@@ -87,7 +78,7 @@ export default function CommandBar({ isAdmin }: { isAdmin: boolean }) {
   // Debounced ticker search.
   useEffect(() => {
     if (timer.current) clearTimeout(timer.current);
-    if (!open || q.length < 1 || !isAdmin) {
+    if (!open || q.length < 1) {
       setSymbols([]);
       return;
     }

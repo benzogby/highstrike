@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { requireAccount } from "@/lib/membership";
+import { requireAdminPage } from "@/lib/membership";
 import { supabaseService } from "@/lib/stripe";
 import { etToday } from "@/lib/setupEngine";
 import { CARD, PageHeader } from "@/components/ui";
@@ -18,7 +18,7 @@ const MEDAL = ["🥇", "🥈", "🥉"];
  * winners, frozen when the week ended. Names, never emails.
  */
 export default async function BoardPage({ searchParams }: { searchParams: Promise<{ view?: string }> }) {
-  const { user } = await requireAccount("/swipe/board");
+  const { user } = await requireAdminPage("/swipe/board");
   const view = (await searchParams).view === "all" ? "all" : "week";
   const db = supabaseService();
   const start = weekStart(etToday());

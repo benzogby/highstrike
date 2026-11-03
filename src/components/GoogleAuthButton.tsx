@@ -9,7 +9,7 @@ import { supabaseBrowser } from "@/lib/supabase/client";
  */
 export default function GoogleAuthButton({
   label,
-  next = "/swipe",
+  next = "/dashboard",
   agreed = false,
   disabled = false,
 }: {

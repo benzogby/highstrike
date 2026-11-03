@@ -28,7 +28,7 @@ export default function SettingsForm({
   email: string;
   hasPassword: boolean;
   /** What the account has: the $397 lifetime membership, or an admin's access. */
-  membership: "lifetime" | "admin" | "free";
+  membership: "lifetime" | "admin";
   initial: Initial;
 }) {
   const router = useRouter();
@@ -308,14 +308,12 @@ export default function SettingsForm({
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-panel-2 px-4 py-3.5">
           <div>
             <p className="text-sm font-medium text-ink">
-              {membership === "admin" ? "Admin access" : membership === "free" ? "Free account" : "Lifetime access"}
+              {membership === "admin" ? "Admin access" : "Lifetime access"}
             </p>
             <p className="mt-0.5 text-sm text-ink-2">
               {membership === "admin"
                 ? "Everything in HighStrike is open to this account."
-                : membership === "free"
-                  ? "Swiping, saving, the scoreboard and contests are free while HighStrike is being built."
-                  : "Paid once, for life, with nothing to renew."}
+                : "Paid once. The daily trades, the tools and HighStrike Trading School are yours, with nothing to renew."}
             </p>
           </div>
           <span className="rounded-md bg-accent-soft px-1.5 py-0.5 text-xs font-medium text-accent-ink ring-1 ring-inset ring-accent/25">

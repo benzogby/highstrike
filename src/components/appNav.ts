@@ -1,9 +1,9 @@
 // The app's pages as the sidebar and the phone menu list them, and which one a URL belongs to. The frame lives in the
 // (app) layout and stays mounted while pages change, so the current page is read from the URL rather than passed in.
 
-export type NavKey = "home" | "swipe" | "saved" | "board" | "ideas" | "setups" | "scanner" | "insiders" | "chatter" | "education" | "admin" | "settings" | "none";
-/** `everyone`: shown to every account; the rest are admins' only while swiping is the only product. */
-export type NavLink = { label: string; key: NavKey; href?: string; icon: string; everyone?: boolean };
+export type NavKey = "home" | "swipe" | "ideas" | "setups" | "scanner" | "insiders" | "chatter" | "education" | "admin" | "settings" | "none";
+/** `adminOnly`: shown to admins only (the swipe app while it's being built). */
+export type NavLink = { label: string; key: NavKey; href?: string; icon: string; adminOnly?: boolean };
 
 export const NAV: NavLink[] = [
   {
@@ -12,27 +12,13 @@ export const NAV: NavLink[] = [
     href: "/dashboard",
     icon: "M3 12l9-9 9 9M5 10v10a1 1 0 001 1h3a1 1 0 001-1v-6h4v6a1 1 0 001 1h3a1 1 0 001-1V10",
   },
-  // The swipe app (Ben, 2026-11-02: "Hide the rest for now, make this the only product"): what every account sees.
+  // Swipe, the options-setup deck (Ben, 2026-11-02: the swipe app, step 2), first under Home while it's built.
   {
     label: "Swipe",
     key: "swipe",
     href: "/swipe",
     icon: "M7 4h10a2 2 0 012 2v12a2 2 0 01-2 2H7a2 2 0 01-2-2V6a2 2 0 012-2zm3 6l2 2 4-4",
-    everyone: true,
-  },
-  {
-    label: "Saved",
-    key: "saved",
-    href: "/swipe/saved",
-    icon: "M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z",
-    everyone: true,
-  },
-  {
-    label: "Scoreboard",
-    key: "board",
-    href: "/swipe/board",
-    icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z",
-    everyone: true,
+    adminOnly: true,
   },
   // Ideas, the product's hero (Ben, 2026-11-02: "make this all about TRADE IDEAS"), right under Home. Setups keeps its
   // page for the scoreboard and history, one step down.
@@ -79,6 +65,9 @@ export const NAV: NavLink[] = [
   },
 ];
 
+/** The sidebar's pages for this account (the swipe app is admins' only until it's ready). */
+export const visibleNav = (isAdmin: boolean) => NAV.filter((l) => isAdmin || !l.adminOnly);
+
 export const ADMIN_LINK: NavLink = {
   label: "Admin",
   key: "admin",
@@ -95,15 +84,10 @@ export const SETTINGS_LINK: NavLink = {
 
 export const SIGN_OUT_ICON = "M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1";
 
-/** The sidebar's pages for this account: the swipe app for everyone, the rest for admins. */
-export const visibleNav = (isAdmin: boolean) => NAV.filter((l) => isAdmin || l.everyone);
-
-/** The section a URL belongs to (the longest matching page, so Saved isn't Swipe): a lesson is Trading School, every
- * Admin tab is Admin, a symbol's page is none. */
+/** The section a URL belongs to: a lesson is Trading School, every Admin tab is Admin, a symbol's page is none. */
 export function activeKey(path: string): NavKey {
-  let best: NavLink | null = null;
   for (const link of [...NAV, ADMIN_LINK, SETTINGS_LINK]) {
-    if (link.href && (path === link.href || path.startsWith(`${link.href}/`)) && (!best || link.href.length > (best.href?.length ?? 0))) best = link;
+    if (link.href && (path === link.href || path.startsWith(`${link.href}/`))) return link.key;
   }
-  return best?.key ?? "none";
+  return "none";
 }

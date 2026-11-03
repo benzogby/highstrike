@@ -11,8 +11,8 @@ export const metadata: Metadata = {
 const providers = [
   { name: "Supabase", does: "stores accounts and app data, handles sign-in and sends sign-in emails" },
   { name: "Google", does: "signs you in, if you choose Continue with Google" },
-  { name: "Stripe", does: "takes payments, if you make one, and keeps the payment record" },
-  { name: "Resend", does: "sends HighStrike's emails, like the morning email and alerts" },
+  { name: "Stripe", does: "takes the payment and keeps the payment record" },
+  { name: "Resend", does: "sends the price-alert emails you set up" },
   { name: "Vercel", does: "hosts the site and app, and sees each request as it serves it" },
 ];
 
@@ -42,11 +42,10 @@ const sections: LegalSection[] = [
           <strong>Your profile:</strong> the name, bio and picture you choose to add.
         </li>
         <li>
-          <strong>What you do in the app:</strong> each setup you swipe right or left on, the setups you save and their
-          estimated results, your streak and scoreboard standing, and any watchlists or price alerts you set up.
+          <strong>What you set up in the app:</strong> your watchlists, price alerts and app activity.
         </li>
         <li>
-          <strong>Payments, if you make one:</strong> Stripe takes your card details. We keep a Stripe customer ID and a record that
+          <strong>Your payment:</strong> Stripe takes your card details. We keep a Stripe customer ID and a record that
           you paid; we never see or store your full card number.
         </li>
         <li>
@@ -67,9 +66,8 @@ const sections: LegalSection[] = [
     title: "How we use it",
     body: (
       <ul>
-        <li>To run your account, show you setups, and learn which kinds you save so you see more of them</li>
-        <li>To follow the setups you save, and run your streak, the scoreboard and the weekly contests</li>
-        <li>To take payment, if you make one, and keep records the law requires</li>
+        <li>To run your account and give you the access you paid for</li>
+        <li>To take payment and keep records the law requires</li>
         <li>To send the alert emails you ask for, and important emails about your account or these policies</li>
         <li>To see which pages people use, so we can improve the site</li>
         <li>To keep HighStrike secure and stop abuse, like shared or stolen accounts</li>
@@ -91,25 +89,6 @@ const sections: LegalSection[] = [
         </ul>
         <p>We may also share information if the law requires it, or with a buyer if HighStrike is ever sold.</p>
       </>
-    ),
-  },
-  {
-    id: "visible",
-    title: "What other traders can see",
-    body: (
-      <ul>
-        <li>
-          <strong>The scoreboard and contests</strong> show your profile name (or &ldquo;Trader&rdquo; and four characters
-          if you haven&apos;t set one) with your results and streak. Never your email.
-        </li>
-        <li>
-          <strong>Setups you share</strong> can be seen by anyone with the link, without your name.
-        </li>
-        <li>
-          <strong>The crowd&apos;s verdict</strong> on a card counts everyone&apos;s swipes together; nobody&apos;s
-          single swipe is shown.
-        </li>
-      </ul>
     ),
   },
   {
