@@ -1,13 +1,18 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui";
 import { SOURCES, STATUS, STYLES, headlineOf, type Idea } from "@/lib/ideas";
+import { asOption, optionLine } from "@/lib/optionIdea";
 
 const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-/** One idea in the feed: its line (ticker, side, headline, source, entry to target, how it's doing), opening to the why and the entry rules. */
+/**
+ * One idea in the feed: its line (ticker, side, headline and its option, source, entry to target, how it's doing),
+ * opening to the why and the entry rules.
+ */
 export default function IdeaRow({ idea: i }: { idea: Idea }) {
   const st = STATUS[i.status] ?? STATUS.open;
   const pct = i.status === "open" ? i.current_pct : i.result_pct;
+  const o = asOption(i.option);
   return (
     <li>
       <details className="group">
@@ -16,9 +21,12 @@ export default function IdeaRow({ idea: i }: { idea: Idea }) {
             <span className="font-mono-nums text-[15px] font-semibold text-ink">{i.ticker}</span>
             <Badge tone={i.direction === "long" ? "up" : "down"}>{i.direction === "long" ? "Long" : "Short"}</Badge>
           </span>
-          <Link href={`/ideas/${i.id}`} className="min-w-0 flex-1 basis-full text-sm text-ink hover:text-accent hover:underline sm:basis-auto">
-            {headlineOf(i)}
-          </Link>
+          <span className="min-w-0 flex-1 basis-full sm:basis-auto">
+            <Link href={`/ideas/${i.id}`} className="text-sm text-ink hover:text-accent hover:underline">
+              {headlineOf(i)}
+            </Link>
+            {o && <span className="mt-0.5 block font-mono-nums text-xs text-ink-3">{optionLine(o)}</span>}
+          </span>
           <span className="flex shrink-0 items-center gap-1.5">
             <Badge>{STYLES[i.style] ?? i.style}</Badge>
             <Badge tone="accent">{SOURCES[i.source] ?? i.source}</Badge>
@@ -47,7 +55,7 @@ export default function IdeaRow({ idea: i }: { idea: Idea }) {
               Target {i.price_target} · {i.time_frame}
             </p>
             <Link href={`/ideas/${i.id}`} className="mt-3 inline-block text-[13px] font-medium text-accent hover:underline">
-              Open the idea: bull vs bear, quick answers, sizing →
+              {o ? "Open the idea: the option, bull vs bear, sizing →" : "Open the idea: bull vs bear, quick answers, sizing →"}
             </Link>
           </div>
         </div>

@@ -3,6 +3,7 @@ import Link from "next/link";
 import MemberGate, { type Gate } from "@/components/join/MemberGate";
 import { lessonHref, librarySummary, moduleLabel, myProgress, outline } from "@/lib/education";
 import { IDEA_COLUMNS, SOURCES, STYLES, headlineOf, type Idea } from "@/lib/ideas";
+import { asOption, optionLine } from "@/lib/optionIdea";
 import { billingReady, billingState, healMembership, publishableKey, weekUsedFor } from "@/lib/billing";
 import { memberContext } from "@/lib/membership";
 import { Gauge } from "@/components/TerminalMockup";
@@ -145,6 +146,7 @@ export default async function DashboardPage() {
               <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {ideas.map((i) => {
                   const pct = i.status === "open" ? i.current_pct : i.result_pct;
+                  const o = asOption(i.option);
                   return (
                     <Link key={i.id} href={`/ideas/${i.id}`} className="flex flex-col rounded-xl border border-line bg-panel p-4 transition hover:border-line-strong hover:bg-panel-2">
                       <div className="flex items-center gap-2">
@@ -153,6 +155,7 @@ export default async function DashboardPage() {
                         <span className="ml-auto text-xs text-ink-3">{STYLES[i.style] ?? i.style}</span>
                       </div>
                       <p className="mt-2 flex-1 text-sm leading-snug text-ink-2">{headlineOf(i)}</p>
+                      {o && <p className="mt-2 font-mono-nums text-xs text-ink-2">{optionLine(o)}</p>}
                       <div className="mt-3 flex items-center justify-between border-t border-line pt-2 font-mono-nums text-xs">
                         <span className="text-ink-3">
                           {i.entry_price != null ? `$${i.entry_price.toFixed(2)}` : "—"} → {i.target_price != null ? `$${Number(i.target_price).toFixed(2)}` : i.price_target}
@@ -168,17 +171,21 @@ export default async function DashboardPage() {
                 <div className="mt-6">
                   <h3 className="text-sm font-medium text-ink">Your open ideas</h3>
                   <ul className="mt-2 divide-y divide-line rounded-xl border border-line bg-panel">
-                    {own.map((i) => (
-                      <li key={i.id}>
-                        <Link href={`/ideas/${i.id}`} className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-panel-2">
-                          <span className="w-14 font-mono-nums font-semibold text-ink">{i.ticker}</span>
-                          <Badge tone={i.direction === "long" ? "up" : "down"}>{i.direction === "long" ? "Long" : "Short"}</Badge>
-                          <span className="min-w-0 flex-1 truncate text-ink-2">{headlineOf(i)}</span>
-                          <span className="hidden text-xs text-ink-3 sm:inline">{SOURCES[i.source] ?? i.source}</span>
-                          {i.current_pct != null && <span className={`font-mono-nums text-xs ${i.current_pct >= 0 ? "text-up" : "text-down"}`}>{`${i.current_pct >= 0 ? "+" : ""}${Number(i.current_pct).toFixed(1)}%`}</span>}
-                        </Link>
-                      </li>
-                    ))}
+                    {own.map((i) => {
+                      const o = asOption(i.option);
+                      return (
+                        <li key={i.id}>
+                          <Link href={`/ideas/${i.id}`} className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-panel-2">
+                            <span className="w-14 font-mono-nums font-semibold text-ink">{i.ticker}</span>
+                            <Badge tone={i.direction === "long" ? "up" : "down"}>{i.direction === "long" ? "Long" : "Short"}</Badge>
+                            <span className="min-w-0 flex-1 truncate text-ink-2">{headlineOf(i)}</span>
+                            {o && <span className="hidden shrink-0 font-mono-nums text-xs text-ink-3 lg:inline">{optionLine(o)}</span>}
+                            <span className="hidden text-xs text-ink-3 sm:inline">{SOURCES[i.source] ?? i.source}</span>
+                            {i.current_pct != null && <span className={`font-mono-nums text-xs ${i.current_pct >= 0 ? "text-up" : "text-down"}`}>{`${i.current_pct >= 0 ? "+" : ""}${Number(i.current_pct).toFixed(1)}%`}</span>}
+                          </Link>
+                        </li>
+                      );
+                    })}
                   </ul>
                 </div>
               )}
