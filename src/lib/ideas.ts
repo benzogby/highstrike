@@ -43,6 +43,9 @@ export type Idea = {
   result_pct: number | null;
 };
 
+/** The AI's bull and bear case on an idea (setups.cases), written once. */
+export type Cases = { bull: string[]; bear: string[]; verdict: string; at: string };
+
 export const IDEA_COLUMNS =
   "id, report_date, ticker, direction, source, style, headline, justification, entry_criteria, price_target, time_frame, status, entry_price, target_price, current_pct, result_pct";
 

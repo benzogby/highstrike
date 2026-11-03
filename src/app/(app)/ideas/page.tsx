@@ -49,7 +49,7 @@ export default async function IdeasPage({ searchParams }: { searchParams: Promis
 
   return (
     <>
-      <PageHeader className="anim-rise" title="Ideas" subtitle="Every trade idea in one place, the newest first. Open one to see why, the entry and the target." />
+      <PageHeader className="anim-rise" title="Ideas" subtitle="Every trade idea in one place, the newest first. Open one for the bull and bear case, sizing and Ask the AI." />
 
       <div className="anim-rise mt-6 flex flex-col gap-3" style={{ "--rise-delay": "60ms" } as React.CSSProperties}>
         <div className="flex flex-wrap items-center gap-3">
@@ -113,7 +113,9 @@ export default async function IdeasPage({ searchParams }: { searchParams: Promis
                         <span className="font-mono-nums text-[15px] font-semibold text-ink">{i.ticker}</span>
                         <Badge tone={i.direction === "long" ? "up" : "down"}>{i.direction === "long" ? "Long" : "Short"}</Badge>
                       </span>
-                      <span className="min-w-0 flex-1 basis-full text-sm text-ink sm:basis-auto">{headlineOf(i)}</span>
+                      <Link href={`/ideas/${i.id}`} className="min-w-0 flex-1 basis-full text-sm text-ink hover:text-accent hover:underline sm:basis-auto">
+                        {headlineOf(i)}
+                      </Link>
                       <span className="flex shrink-0 items-center gap-1.5">
                         <Badge>{STYLES[i.style] ?? i.style}</Badge>
                         <Badge tone="accent">{SOURCES[i.source] ?? i.source}</Badge>
@@ -141,8 +143,8 @@ export default async function IdeasPage({ searchParams }: { searchParams: Promis
                         <p className="mt-3 text-ink-3">
                           Target {i.price_target} · {i.time_frame}
                         </p>
-                        <Link href={`/symbol/${i.ticker}`} className="mt-3 inline-block text-[13px] font-medium text-accent hover:underline">
-                          {i.ticker} chart and alerts →
+                        <Link href={`/ideas/${i.id}`} className="mt-3 inline-block text-[13px] font-medium text-accent hover:underline">
+                          Open the idea: bull vs bear, sizing, Ask the AI →
                         </Link>
                       </div>
                     </div>
