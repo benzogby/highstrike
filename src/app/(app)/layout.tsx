@@ -1,6 +1,15 @@
+import type { Viewport } from "next";
 import AppShell from "@/components/AppShell";
 import { brandLogos } from "@/lib/brand";
 import { viewer } from "@/lib/membership";
+
+/**
+ * The app reaches under a phone's notch and home indicator (viewport-fit=cover), so its bottom bar can pad itself clear
+ * of the indicator with env(safe-area-inset-bottom), which is 0 without it (Ben, 2026-11-03: members keep HighStrike on
+ * their home screen as an app). Merged with the root layout's dark colour scheme and theme colour; the homepage and the
+ * site's pages keep the default.
+ */
+export const viewport: Viewport = { viewportFit: "cover" };
 
 // The app's frame, drawn once and kept while pages change (Ben, 2026-11-02: "tab change clicks to work much quicker"):
 // a click swaps only the page beside the sidebar, showing that route's loading skeleton at once. Each page still checks

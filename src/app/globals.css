@@ -208,6 +208,28 @@ body {
   }
 }
 
+/* A sheet (src/components/Sheet.tsx) rises a little as it fades in; as a menu from sm up it drops in like a popover. */
+@media (prefers-reduced-motion: no-preference) {
+  .anim-sheet {
+    opacity: 0;
+    transform: translateY(24px);
+    animation: hs-pop 0.22s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+}
+@media (prefers-reduced-motion: no-preference) and (min-width: 640px) {
+  .anim-sheet.anim-menu {
+    transform: scale(0.97) translateY(-6px);
+    animation-duration: 0.18s;
+  }
+}
+
+/* In the app on a phone, the cookie banner sits above the bottom bar (MobileNav) instead of over it. */
+@media (max-width: 1023.98px) {
+  body:has([data-app-shell]) [data-cookie-banner] {
+    bottom: calc(4.25rem + env(safe-area-inset-bottom));
+  }
+}
+
 /* Toasts keep a (fast) transition even under reduced motion so dismissal
    state stays visible; only the slide distance is motion-gated. */
 .toast-in {

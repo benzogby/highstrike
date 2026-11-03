@@ -20,6 +20,7 @@ export default function CookieBanner() {
     <div
       role="region"
       aria-label="Cookies"
+      data-cookie-banner=""
       className="hs-join fixed inset-x-3 bottom-3 z-50 mx-auto max-w-md rounded-xl border border-line-strong bg-panel p-4 text-ink shadow-2xl sm:inset-x-auto sm:right-4 sm:bottom-4"
     >
       <p className="text-sm leading-relaxed text-ink-2">

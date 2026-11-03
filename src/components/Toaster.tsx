@@ -46,7 +46,8 @@ export default function Toaster() {
   return createPortal(
     <div
       aria-live="polite"
-      className="pointer-events-none fixed bottom-5 right-5 z-[60] flex w-[min(92vw,22rem)] flex-col gap-2"
+      // Above the phone's bottom bar (MobileNav) below lg; the corner as before on a wide screen.
+      className="pointer-events-none fixed bottom-[calc(4.5rem_+_env(safe-area-inset-bottom))] right-4 z-[60] flex w-[min(92vw,22rem)] flex-col gap-2 lg:bottom-5 lg:right-5"
     >
       {items.map((t) => (
         <div
