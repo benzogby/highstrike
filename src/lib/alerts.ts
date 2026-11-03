@@ -1,11 +1,13 @@
 import { fetchQuotes } from "@/lib/quotes";
 import { supabaseService } from "@/lib/stripe";
 import { sendMail } from "@/lib/mail";
+import { notify } from "@/lib/notify";
 
 // Price-alert sweep: evaluates active alerts against quotes, fires matches
-// into the activity feed, and emails the owner when RESEND_API_KEY is set.
-// Runs from the daily cron and piggybacks (throttled) on member traffic so
-// alerts fire within minutes whenever anyone is using the terminal.
+// into the activity feed and the owner's bell (notify), and emails the owner
+// when RESEND_API_KEY is set. Runs from the daily cron and piggybacks
+// (throttled) on member traffic so alerts fire within minutes whenever anyone
+// is using the terminal.
 
 const SWEEP_THROTTLE_SECONDS = 120;
 
@@ -109,8 +111,17 @@ export async function checkAlerts(opts: { throttled?: boolean } = {}): Promise<{
 
     fired++;
     const message = `$${a.ticker} crossed ${a.condition} $${threshold} — now $${price.toFixed(2)}`;
-    await recordActivity("alert_fired", message, { userId: a.user_id, ticker: a.ticker });
-    await sendAlertEmail(a.user_id, `⚡ Alert: ${message}`, message);
+    // None of the three throws; each failure is only logged.
+    await Promise.all([
+      recordActivity("alert_fired", message, { userId: a.user_id, ticker: a.ticker }),
+      notify(a.user_id, {
+        kind: "price_alert",
+        title: `$${a.ticker} crossed ${a.condition} $${threshold}`,
+        body: `It's at $${price.toFixed(2)} now.`,
+        href: `/symbol/${a.ticker}`,
+      }),
+      sendAlertEmail(a.user_id, `⚡ Alert: ${message}`, message),
+    ]);
   }
 
   return { checked: alerts.length, fired };

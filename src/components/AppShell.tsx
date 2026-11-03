@@ -4,6 +4,7 @@ import BrandMark from "@/components/BrandMark";
 import CommandBar from "@/components/CommandBar";
 import MobileNav from "@/components/MobileNav";
 import NavIcon from "@/components/NavIcon";
+import NotificationBell from "@/components/NotificationBell";
 import SideNav, { TopAction } from "@/components/SideNav";
 import Toaster from "@/components/Toaster";
 import { MarketClock } from "@/components/Now";
@@ -14,7 +15,7 @@ import type { Logos } from "@/lib/brand";
 // mode"): one dark ground for the sidebar, the top bar and the page, split by hairlines, with cards raised a step above
 // it. The sidebar names the product, lists the pages (SideNav: the current one lifted onto the next step, its icon in
 // green), keeps Admin and Settings at its foot, then the account. The top bar holds search, whether the market is open
-// with the time in New York, and one green action. Below lg the sidebar hides and a bar along the bottom takes its place
+// with the time in New York, the notifications bell, and one green action. Below lg the sidebar hides and a bar along the bottom takes its place
 // (MobileNav, Ben 2026-11-03), so the page leaves room for it; the frame keeps clear of a phone's notch and home
 // indicator (the (app) layout sets viewport-fit=cover).
 //
@@ -79,6 +80,7 @@ export default function AppShell({
             </div>
             <div className="flex items-center gap-2 sm:gap-2.5">
               <MarketClock />
+              <NotificationBell />
               <TopAction />
             </div>
           </div>
