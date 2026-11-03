@@ -6,6 +6,7 @@ import { STRUCTURES } from "@/lib/options/cards";
 import type { DeckCard } from "@/lib/options/deck";
 import { myRecord } from "@/lib/options/stats";
 import { MiniChart } from "../SetupCard";
+import ShareButton from "./ShareButton";
 
 export const metadata: Metadata = { title: "Saved setups — HighStrike" };
 
@@ -14,7 +15,7 @@ const signed = (n: number) => `${n >= 0 ? "+" : "−"}$${Math.abs(Math.round(n))
 const DATE = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 const REASON = { take_profit: "hit its take profit", stop: "hit its stop", expiry: "expired" } as const;
 
-type Row = { id: number; created_at: string; card: DeckCard; status: "open" | "win" | "loss" | null; pnl: number | null; close_reason: keyof typeof REASON | null };
+type Row = { id: number; created_at: string; share_token: string; card: DeckCard; status: "open" | "win" | "loss" | null; pnl: number | null; close_reason: keyof typeof REASON | null };
 
 /**
  * The setups a member swiped right on, followed to their take profit, stop or expiry (step 3 of the swipe app): the
@@ -23,7 +24,7 @@ type Row = { id: number; created_at: string; card: DeckCard; status: "open" | "w
 export default async function SavedPage() {
   const { supabase, user } = await requireMember("/swipe/saved");
   const [{ data }, rec] = await Promise.all([
-    supabase.from("swipes").select("id, created_at, card, status, pnl, close_reason").eq("user_id", user.id).eq("action", "right").order("created_at", { ascending: false }).limit(200),
+    supabase.from("swipes").select("id, created_at, share_token, card, status, pnl, close_reason").eq("user_id", user.id).eq("action", "right").order("created_at", { ascending: false }).limit(200),
     myRecord(supabase, user.id),
   ]);
   const rows = (data ?? []) as Row[];
@@ -49,7 +50,7 @@ export default async function SavedPage() {
       </div>
       {rows.length === 0 && <p className={`${CARD} px-5 py-10 text-center text-sm text-ink-3`}>Nothing saved yet. Swipe right on a setup to keep it here.</p>}
       <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {rows.map(({ id, created_at, card: c, status, pnl, close_reason }) => (
+        {rows.map(({ id, created_at, share_token, card: c, status, pnl, close_reason }) => (
           <li key={id} className={`${CARD} p-4`}>
             <div className="flex items-center gap-2">
               <span className="font-mono-nums text-[17px] font-semibold text-ink">{c.ticker}</span>
@@ -68,7 +69,10 @@ export default async function SavedPage() {
             <p className="mt-1 font-mono-nums text-xs text-ink-3">
               {c.net < 0 ? "Credit" : "Cost"} {usd(Math.abs(Number(c.net)) * 100)} · max loss {usd(Number(c.max_loss))} · expires {DATE.format(new Date(`${c.expiry}T12:00:00Z`))}
             </p>
-            <p className="mt-0.5 text-xs text-ink-3">Saved {DATE.format(new Date(created_at))} at {usd(Number(c.spot))}</p>
+            <div className="mt-1 flex items-center justify-between">
+              <p className="text-xs text-ink-3">Saved {DATE.format(new Date(created_at))} at {usd(Number(c.spot))}</p>
+              <ShareButton token={share_token} title={`${c.ticker} ${STRUCTURES[c.structure]?.label ?? "setup"} on HighStrike`} />
+            </div>
           </li>
         ))}
       </ul>

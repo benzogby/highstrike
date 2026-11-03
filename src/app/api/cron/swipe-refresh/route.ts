@@ -3,6 +3,8 @@ import { supabaseServer } from "@/lib/supabase/server";
 import { etToday } from "@/lib/setupEngine";
 import { jobToken, validJobToken } from "@/lib/jobToken";
 import { refreshBatch } from "@/lib/options/refresh";
+import { freezeLastWeek } from "@/lib/options/stats";
+import { supabaseService } from "@/lib/stripe";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -31,12 +33,14 @@ async function handle(request: Request) {
   const hop = Number(new URL(request.url).searchParams.get("hop") ?? 0) || 0;
   try {
     const result = await refreshBatch();
+    // The first run after a week ends freezes its contest.
+    const contest = hop === 0 ? await freezeLastWeek(supabaseService()).catch((e) => ({ error: String(e) })) : null;
     if (result.left > 0 && result.priced > 0 && hop < 10) {
       const next = new URL(request.url);
       next.searchParams.set("hop", String(hop + 1));
       after(() => fetch(next, { method: "POST", headers: { "x-job-token": jobToken(JOB, day) } }).catch((e) => console.error("swipe-refresh hand-on failed:", e)));
     }
-    return NextResponse.json({ ...result, hop });
+    return NextResponse.json({ ...result, hop, contest });
   } catch (e) {
     console.error("swipe-refresh failed:", e);
     return NextResponse.json({ error: e instanceof Error ? e.message : "failed" }, { status: 500 });
