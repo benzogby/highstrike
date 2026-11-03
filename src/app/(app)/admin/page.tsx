@@ -7,6 +7,7 @@ import { LIFETIME } from "@/lib/offer";
 import { SALE_ALERT_TO } from "@/lib/saleAlert";
 import GenerateNowButton from "./GenerateNowButton";
 import TestSaleAlertButton from "./TestSaleAlertButton";
+import SwipeRefreshButton from "./SwipeRefreshButton";
 
 export const dynamic = "force-dynamic";
 
@@ -20,11 +21,14 @@ const DAY = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", weekday: "short"
 export default async function AdminOverviewPage() {
   await requireAdmin();
   const db = supabaseService();
-  const [g, accounts7d, errors24h, latest] = await Promise.all([
+  const [g, accounts7d, errors24h, latest, deckCards, deckFresh, deckNames] = await Promise.all([
     growth(14).catch(() => null),
     db.from("profiles").select("id", { count: "exact", head: true }).gte("created_at", daysAgo(7)),
     db.from("error_reports").select("id", { count: "exact", head: true }).gte("created_at", daysAgo(1)),
     db.from("profiles").select("id, email, plan, is_admin, created_at").order("created_at", { ascending: false }).limit(8),
+    db.from("swipe_cards").select("id", { count: "exact", head: true }).eq("active", true),
+    db.from("option_underlyings").select("ticker", { count: "exact", head: true }).gte("quoted_at", daysAgo(0.25)),
+    db.from("option_underlyings").select("ticker", { count: "exact", head: true }),
   ]);
   const days = [...(g?.days ?? [])].reverse();
   const revenue14 = days.reduce((s, d) => s + d.revenue, 0);
@@ -97,6 +101,15 @@ export default async function AdminOverviewPage() {
             </ul>
           </section>
 
+          <section className={`${CARD} flex flex-wrap items-center justify-between gap-3 px-4 py-3.5`}>
+            <div>
+              <p className="text-sm font-medium text-ink">Swipe deck</p>
+              <p className="mt-0.5 text-[13px] text-ink-3">
+                {(deckCards.count ?? 0).toLocaleString("en-US")} option cards on {(deckFresh.count ?? 0).toLocaleString("en-US")} of {(deckNames.count ?? 0).toLocaleString("en-US")} stocks priced in the last 6 hours. Refreshes on weekday mornings, after the open.
+              </p>
+            </div>
+            <SwipeRefreshButton />
+          </section>
           <section className={`${CARD} flex flex-wrap items-center justify-between gap-3 px-4 py-3.5`}>
             <div>
               <p className="text-sm font-medium text-ink">Setup engine</p>
