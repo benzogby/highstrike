@@ -22,33 +22,34 @@ export default function WatchlistCompact({ lists, names, trends }: { lists: Watc
 
   return (
     <section id="watchlist" aria-labelledby="watchlist-title" className="mt-8 scroll-mt-24">
-      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-          <h2 id="watchlist-title" className="mr-1 font-display text-[15px] text-ink">
-            Watchlist
-          </h2>
-          {lists.length > 1 &&
-            lists.map((l) => (
-              <button
-                key={l.id}
-                type="button"
-                aria-pressed={l.id === list?.id}
-                onClick={() => setPick(l.id)}
-                className={`max-w-40 truncate rounded-md px-2.5 py-1 text-[13px] font-medium transition ${
-                  l.id === list?.id ? "bg-accent-soft text-accent-ink" : "text-ink-2 hover:bg-panel-2 hover:text-ink"
-                }`}
-              >
-                {l.name}
-              </button>
-            ))}
-        </div>
-        <span className="flex items-center gap-3">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 id="watchlist-title" className="font-display text-[15px] text-ink">
+          Watchlist
+        </h2>
+        <span className="flex items-baseline gap-3">
           {shown.length > 0 && live !== null && <span className="hidden text-xs font-medium text-ink-3 sm:inline">{live ? "Live · every 45 s" : "Sample prices"}</span>}
           <Link href="/watchlists" className="text-[13px] font-medium text-accent hover:underline">
             All watchlists →
           </Link>
         </span>
       </div>
+      {lists.length > 1 && (
+        <div className="-mx-1 mt-2 flex gap-1 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none]">
+          {lists.map((l) => (
+            <button
+              key={l.id}
+              type="button"
+              aria-pressed={l.id === list?.id}
+              onClick={() => setPick(l.id)}
+              className={`max-w-48 flex-none truncate rounded-md px-2.5 py-1 text-[13px] font-medium transition ${
+                l.id === list?.id ? "bg-accent-soft text-accent-ink ring-1 ring-inset ring-accent/25" : "text-ink-2 hover:bg-panel-2 hover:text-ink"
+              }`}
+            >
+              {l.name}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="mt-3 overflow-hidden rounded-xl border border-line bg-panel">
         {shown.length === 0 ? (

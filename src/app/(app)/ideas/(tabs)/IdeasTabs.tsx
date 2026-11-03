@@ -14,7 +14,8 @@ export default function IdeasTabs() {
   return (
     <nav aria-label="Ideas" className="mt-5 flex gap-5 border-b border-line">
       {TABS.map((t) => {
-        const on = path === t.href;
+        // The feed is /ideas itself (an idea's own page has no tabs); the record owns anything under it.
+        const on = path === t.href || (t.href !== "/ideas" && path.startsWith(`${t.href}/`));
         return (
           <Link
             key={t.href}

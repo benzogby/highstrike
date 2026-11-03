@@ -5,7 +5,7 @@ import { useEffect, useId, useOptimistic, useRef, useState, useTransition } from
 import Sparkline from "@/components/Sparkline";
 import { useQuotes, type LiveQuote } from "@/components/useQuotes";
 import { BELL_ICON } from "@/components/appNav";
-import { BUTTON_GHOST, BUTTON_PRIMARY, BUTTON_PRIMARY_SM, CARD, INPUT, PageHeader } from "@/components/ui";
+import { BUTTON_GHOST, BUTTON_PRIMARY, CARD, INPUT, PageHeader } from "@/components/ui";
 import { toastError, toastSuccess } from "@/lib/toastBus";
 import { NAME_MAX, STARTERS, type Watchlist } from "@/lib/watchlists";
 import { addStarters, addSymbol, createList, deleteList, removeSymbol, renameList, type Done } from "./actions";
@@ -143,7 +143,7 @@ function NewList({ onMade }: { onMade: (id: string) => void }) {
   }
   return (
     <form
-      className="flex flex-wrap items-center gap-2"
+      className="flex w-full flex-wrap items-center gap-2 sm:w-auto"
       onSubmit={(e) => {
         e.preventDefault();
         const name = String(new FormData(e.currentTarget).get("name") ?? "").trim();
@@ -157,15 +157,17 @@ function NewList({ onMade }: { onMade: (id: string) => void }) {
         });
       }}
     >
-      <input
-        name="name"
-        autoFocus
-        maxLength={NAME_MAX}
-        placeholder="Name the list, like Earnings week"
-        aria-label="New list's name"
-        onKeyDown={(e) => e.key === "Escape" && close()}
-        className={`${INPUT} w-64 max-w-full`}
-      />
+      <div className="w-full sm:w-64">
+        <input
+          name="name"
+          autoFocus
+          maxLength={NAME_MAX}
+          placeholder="Name the list, like Earnings week"
+          aria-label="New list's name"
+          onKeyDown={(e) => e.key === "Escape" && close()}
+          className={INPUT}
+        />
+      </div>
       <button type="submit" disabled={pending} className={BUTTON_PRIMARY}>
         {pending ? "Making…" : "Make list"}
       </button>
@@ -225,16 +227,18 @@ function ListCard({ list, names, trends, quotes, flash, alerted, canDelete, onAd
             <h2 id={titleId} className="sr-only">
               {list.name}
             </h2>
-            <input
-              name="name"
-              defaultValue={list.name}
-              autoFocus
-              maxLength={NAME_MAX}
-              aria-label="List name"
-              onKeyDown={(e) => e.key === "Escape" && stopEditing()}
-              className={`${INPUT} w-64 max-w-full`}
-            />
-            <button type="submit" className={`inline-flex ${BUTTON_PRIMARY_SM}`}>
+            <div className="w-full sm:w-72">
+              <input
+                name="name"
+                defaultValue={list.name}
+                autoFocus
+                maxLength={NAME_MAX}
+                aria-label="List name"
+                onKeyDown={(e) => e.key === "Escape" && stopEditing()}
+                className={INPUT}
+              />
+            </div>
+            <button type="submit" className={BUTTON_PRIMARY}>
               Save
             </button>
             <button type="button" onClick={stopEditing} className={BUTTON_GHOST}>
@@ -412,7 +416,7 @@ function AddSymbol({ list, onAdd }: { list: Watchlist; onAdd: (ticker: string) =
       try {
         const r = await fetch(`/api/symbols/search?q=${encodeURIComponent(term)}`);
         const d = (await r.json()) as { results?: Hit[] };
-        if (mine === asked.current) setHits((d.results ?? []).filter((h) => !list.tickers.includes(h.ticker)).slice(0, 6));
+        if (mine === asked.current) setHits((d.results ?? []).slice(0, 6));
       } catch {
         if (mine === asked.current) setHits([]);
       }
@@ -483,21 +487,26 @@ function AddSymbol({ list, onAdd }: { list: Watchlist; onAdd: (ticker: string) =
       />
       {hits.length > 0 && (
         <ul id={box} role="listbox" aria-label="Matches" className="absolute z-20 mt-1 w-full overflow-hidden rounded-lg border border-line-strong bg-panel-2 py-1 shadow-2xl shadow-black/50">
-          {hits.map((h, i) => (
-            <li
-              key={h.ticker}
-              id={`${box}-${i}`}
-              role="option"
-              aria-selected={i === active}
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => void add(h.ticker)}
-              onMouseEnter={() => setActive(i)}
-              className={`flex cursor-pointer items-center gap-3 px-3.5 py-2 text-sm ${i === active ? "bg-panel-3" : ""}`}
-            >
-              <span className="w-16 flex-none font-mono-nums font-semibold text-ink">{h.ticker}</span>
-              <span className="truncate text-[13px] text-ink-3">{h.name}</span>
-            </li>
-          ))}
+          {hits.map((h, i) => {
+            const have = list.tickers.includes(h.ticker);
+            return (
+              <li
+                key={h.ticker}
+                id={`${box}-${i}`}
+                role="option"
+                aria-selected={i === active}
+                aria-disabled={have || undefined}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => void add(h.ticker)}
+                onMouseEnter={() => setActive(i)}
+                className={`flex items-center gap-3 px-3.5 py-2 text-sm ${i === active ? "bg-panel-3" : ""} ${have ? "cursor-default" : "cursor-pointer"}`}
+              >
+                <span className={`w-16 flex-none font-mono-nums font-semibold ${have ? "text-ink-3" : "text-ink"}`}>{h.ticker}</span>
+                <span className="min-w-0 flex-1 truncate text-[13px] text-ink-3">{h.name}</span>
+                {have && <span className="flex-none text-xs text-ink-3">On this list</span>}
+              </li>
+            );
+          })}
         </ul>
       )}
       {error && (
