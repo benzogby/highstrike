@@ -14,7 +14,7 @@ const PAGES: Omit<PageCmd, "kind">[] = [
   { label: "Track record", hint: "Every idea graded: wins and losses", href: "/ideas/record" },
   { label: "Scanner", hint: "Universe ranked by flow score", href: "/scanner" },
   { label: "Insider Feed", hint: "Form 4 buys, sells, clusters", href: "/insiders" },
-  { label: "Watchlist", hint: "Jump to your watchlist", href: "/dashboard#watchlist" },
+  { label: "Watchlists", hint: "Your lists with live prices", href: "/watchlists" },
   { label: "Settings", hint: "Profile, security, plan", href: "/settings" },
 ];
 

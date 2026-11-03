@@ -10,7 +10,7 @@ import { Gauge } from "@/components/TerminalMockup";
 import { NowDateLong, NowGreeting } from "@/components/Now";
 import { Suspense } from "react";
 import MarketNews, { MarketNewsBones } from "./MarketNews";
-import WatchlistPanel from "./WatchlistPanel";
+import WatchlistPanel, { WatchlistPanelBones } from "./WatchlistPanel";
 import ActivityFeed from "./ActivityFeed";
 import FirstRunTour from "./FirstRunTour";
 import { Badge, PageHeader } from "@/components/ui";
@@ -190,8 +190,10 @@ export default async function DashboardPage() {
                 </div>
               )}
 
-              {/* Watchlist — live */}
-              <WatchlistPanel userId={user.id} />
+              {/* Watchlist, compact: the whole thing is on /watchlists */}
+              <Suspense fallback={<WatchlistPanelBones />}>
+                <WatchlistPanel />
+              </Suspense>
             </section>
 
             {/* Right rail */}
