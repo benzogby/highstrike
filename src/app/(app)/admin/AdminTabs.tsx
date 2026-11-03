@@ -14,6 +14,7 @@ const GROUPS = [
     items: [
       { href: "/admin", label: "Overview" },
       { href: "/admin/accounts", label: "Accounts" },
+      { href: "/admin/subscriptions", label: "Subscriptions" },
       { href: "/admin/payments", label: "Payments" },
       { href: "/admin/growth", label: "Growth" },
       { href: "/admin/traffic", label: "Traffic" },
