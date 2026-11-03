@@ -61,7 +61,7 @@ export const posts: Post[] = [
       },
       {
         type: "p",
-        text: "Ten trades tell you almost nothing. A 64% win rate measured over ten trades is statistically indistinguishable from a coin flip. Over hundreds of trades, the confidence interval tightens and the number starts to mean something. This is one reason we train and evaluate on a large historical trade base rather than cherry-picking a hot quarter.",
+        text: "Ten trades tell you almost nothing. A 64% win rate measured over ten trades is statistically indistinguishable from a coin flip. Over hundreds of trades, the confidence interval tightens and the number starts to mean something. This is one reason the terminal grades every idea it publishes, wins and losses alike, rather than cherry-picking a hot quarter.",
       },
       {
         type: "p",
@@ -70,8 +70,11 @@ export const posts: Post[] = [
     ],
   },
   {
-    slug: "how-the-ai-reads-the-market-every-morning",
-    title: "How HighStrike AI Reads the Market Every Morning",
+    // Until 2026-11-03 this was "How HighStrike AI Reads the Market Every Morning" at
+    // /blog/how-the-ai-reads-the-market-every-morning (next.config.ts redirects it here). The scanner runs on rules,
+    // not AI (src/lib/setupEngine.ts heuristic, src/lib/scanner.ts), so the post now says what it really reads.
+    slug: "how-the-smart-scanner-reads-the-market-every-morning",
+    title: "How the Smart Scanner Reads the Market Every Morning",
     excerpt:
       "Volatility, opportunity, direction — a look inside the daily market weather report and why we lead with conditions, not predictions.",
     category: "Product",
@@ -80,7 +83,7 @@ export const posts: Post[] = [
     blocks: [
       {
         type: "p",
-        text: "Every trading day starts the same way inside the terminal: with a weather report, not a forecast. Before the AI proposes a single trade, it scores the day's conditions on three axes — volatility, opportunity, and direction. The distinction matters. A forecast tells you what should happen. A weather report tells you what you're walking into.",
+        text: "Every trading day starts the same way inside the terminal: with a weather report, not a forecast. Before the smart scanner proposes a single trade, it scores the day's conditions on three axes — volatility, opportunity, and direction — by the same clear rules every morning. The distinction matters. A forecast tells you what should happen. A weather report tells you what you're walking into.",
       },
       {
         type: "h2",
@@ -88,7 +91,7 @@ export const posts: Post[] = [
       },
       {
         type: "p",
-        text: "The volatility score blends realized movement over recent sessions with what the options market is pricing for the days ahead. High readings don't mean 'stay out' — they mean position smaller, expect wider stops, and favor setups that are paid for movement. Low readings favor patience and defined-risk structures that don't bleed while you wait.",
+        text: "The volatility score measures how hard the market is moving: the average size of the day's moves across every stock on the scanner's list. High readings don't mean 'stay out' — they mean position smaller, expect wider stops, and favor setups that are paid for movement. Low readings favor patience and defined-risk structures that don't bleed while you wait.",
       },
       {
         type: "h2",
@@ -96,7 +99,7 @@ export const posts: Post[] = [
       },
       {
         type: "p",
-        text: "Opportunity measures the density of qualifying setups across the scan universe — how many names are near actionable levels with confirming flow. Some of the most expensive days in a trader's year are the ones where nothing is happening and they trade anyway. A low opportunity score is the system's way of saying that cash is a position.",
+        text: "Opportunity rises when stocks are moving and the market leans clearly one way, and it falls on quiet, mixed days when nothing is pulling away. Some of the most expensive days in a trader's year are the ones where nothing is happening and they trade anyway. A low opportunity score is the system's way of saying that cash is a position.",
       },
       {
         type: "h2",
@@ -104,15 +107,15 @@ export const posts: Post[] = [
       },
       {
         type: "p",
-        text: "Direction aggregates trend and breadth into a single lean — how strongly conditions favor longs or shorts. It is deliberately the last of the three, because direction without volatility and opportunity context is how traders end up fighting the tape or overtrading a drifting market.",
+        text: "Direction is breadth turned into a single lean: the share of stocks on the list that are up on the day. Above 50, more names are rising than falling; below 50, the report calls the tape defensive and says to size down. It is deliberately the last of the three, because direction without volatility and opportunity context is how traders end up fighting the tape or overtrading a drifting market.",
       },
       {
         type: "callout",
-        text: "Conditions first, setups second. Every trade idea the AI generates inherits the day's weather — sizing guidance, time frame, and structure all flow from it.",
+        text: "Conditions first, setups second. Every morning idea carries the day's weather — its reasoning names the day's breadth, and one of its entry rules is that the market's direction score holds or improves.",
       },
       {
         type: "p",
-        text: "After the weather report, the pipeline narrows: the scan universe is filtered to names with confirming signals across price action, unusual options activity, insider filings, and social chatter, and each survivor is written up as a full setup — entry criteria, target, time frame, and the reasoning, in plain English. You see the finished card; the weather report is why the card says what it says.",
+        text: "After the weather report, the list narrows. Every stock gets a flow score from the day's move, where it closed in its range, any opening gap, and its five-day trend, and fresh insider buying adds to a long idea's score. The strongest names become long ideas and the weakest become short ones, and each is written up as a full setup — entry criteria, target, time frame, and the reasoning, in plain English. You see the finished card; the weather report is why the card says what it says.",
       },
     ],
   },
