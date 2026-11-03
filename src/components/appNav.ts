@@ -1,7 +1,7 @@
 // The app's pages as the sidebar and the phone menu list them, and which one a URL belongs to. The frame lives in the
 // (app) layout and stays mounted while pages change, so the current page is read from the URL rather than passed in.
 
-export type NavKey = "home" | "ideas" | "setups" | "scanner" | "insiders" | "chatter" | "education" | "admin" | "settings" | "none";
+export type NavKey = "home" | "swipe" | "ideas" | "setups" | "scanner" | "insiders" | "chatter" | "education" | "admin" | "settings" | "none";
 export type NavLink = { label: string; key: NavKey; href?: string; icon: string };
 
 export const NAV: NavLink[] = [
@@ -10,6 +10,13 @@ export const NAV: NavLink[] = [
     key: "home",
     href: "/dashboard",
     icon: "M3 12l9-9 9 9M5 10v10a1 1 0 001 1h3a1 1 0 001-1v-6h4v6a1 1 0 001 1h3a1 1 0 001-1V10",
+  },
+  // Swipe, the options-setup deck (Ben, 2026-11-02: the swipe app, step 2), first under Home while it's built.
+  {
+    label: "Swipe",
+    key: "swipe",
+    href: "/swipe",
+    icon: "M7 4h10a2 2 0 012 2v12a2 2 0 01-2 2H7a2 2 0 01-2-2V6a2 2 0 012-2zm3 6l2 2 4-4",
   },
   // Ideas, the product's hero (Ben, 2026-11-02: "make this all about TRADE IDEAS"), right under Home. Setups keeps its
   // page for the scoreboard and history, one step down.
