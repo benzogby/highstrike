@@ -1,4 +1,5 @@
 import type { Idea } from "@/lib/ideas";
+import { asOption, contractShort, costOf, dayLabel, dollars } from "@/lib/optionIdea";
 
 // The idea page's read on an idea, worked out from HighStrike's own data with plain rules, no AI service (Ben,
 // 2026-11-02: "We're not adding an anthropic key, or any key for now. Do this all without AI APIs"): the bull case and
@@ -108,6 +109,16 @@ export function quickAnswers(i: Idea, s: Signals, today = new Date()) {
   const exp = expiry.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
   const kind = L.long ? "calls" : "puts";
   const strike = L.now != null ? usd(L.now) : "the current price";
+  const o = asOption(i.option);
+  const fits = o
+    ? `${o.pick === "yours" ? "The contract you named" : "The suggested option above"}: the ${contractShort(o)} (est. ${usd(o.premium)} a share, ${dollars(costOf(o))} a contract). ${
+        o.short != null
+          ? `It's a spread because the ${L.long ? "call" : "put"} alone would cost over 5% of the stock's price; it gains up to the target for less. `
+          : o.pick === "rules"
+            ? "At or just in the money, it needs less of a move to pay than a cheaper out-of-the-money one. "
+            : ""
+      }${o.pick === "rules" ? `It expires ${dayLabel(o.expiry, o.asOf)}, a week or more after the idea's window, so time decay doesn't eat the trade while it works. ` : ""}Avoid cheap far-out-of-the-money ${kind}: they need a bigger move than the target.`
+    : `${L.long ? "Calls" : "Puts"} at or one strike ${L.long ? "below" : "above"} ${strike} (at or slightly in the money), expiring around ${exp} or later. That's at least twice the idea's ${i.time_frame.toLowerCase()} window, so time decay doesn't eat the trade while it works. Avoid cheap far-out-of-the-money ${kind}: they need a bigger move than the target.`;
   return [
     {
       q: "What would make this idea wrong?",
@@ -115,7 +126,7 @@ export function quickAnswers(i: Idea, s: Signals, today = new Date()) {
     },
     {
       q: "Which strike and expiry fit this?",
-      a: `${L.long ? "Calls" : "Puts"} at or one strike ${L.long ? "below" : "above"} ${strike} (at or slightly in the money), expiring around ${exp} or later. That's at least twice the idea's ${i.time_frame.toLowerCase()} window, so time decay doesn't eat the trade while it works. Avoid cheap far-out-of-the-money ${kind}: they need a bigger move than the target.`,
+      a: fits,
     },
     {
       q: "What if it gaps against me at the open?",

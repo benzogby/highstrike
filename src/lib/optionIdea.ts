@@ -300,8 +300,10 @@ const strikesOf = (o: OptionIdea) => (o.short != null ? `${strikeLabel(o.strike)
 const KIND: Record<OptionKind, string> = { call: "call", put: "put", call_spread: "call spread", put_spread: "put spread" };
 /** "Call", "Put spread". */
 export const kindLabel = (o: OptionIdea) => KIND[o.kind].charAt(0).toUpperCase() + KIND[o.kind].slice(1);
-/** "AAPL Nov 20 $340 call", "TSLA Nov 20 $390/$410 call spread". */
-export const contractName = (ticker: string, o: OptionIdea) => `${ticker} ${dayLabel(o.expiry, o.asOf)} ${strikesOf(o)} ${KIND[o.kind]}`;
+/** "Nov 20 $340 call", "Nov 20 $390/$410 call spread". */
+export const contractShort = (o: OptionIdea) => `${dayLabel(o.expiry, o.asOf)} ${strikesOf(o)} ${KIND[o.kind]}`;
+/** "AAPL Nov 20 $340 call". */
+export const contractName = (ticker: string, o: OptionIdea) => `${ticker} ${contractShort(o)}`;
 /** The compact line on a card: "Call · Nov 20 $340 · est. $8.40". */
 export const optionLine = (o: OptionIdea) => `${kindLabel(o)} · ${dayLabel(o.expiry, o.asOf)} ${strikesOf(o)} · est. ${usd(o.premium)}`;
 /** What one contract costs, in dollars: the most it can lose. */

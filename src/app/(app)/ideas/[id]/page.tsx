@@ -6,10 +6,12 @@ import { fetchQuotes } from "@/lib/quotes";
 import { Badge, CARD } from "@/components/ui";
 import { IDEA_COLUMNS, SOURCES, STATUS, STYLES, headlineOf, type Idea } from "@/lib/ideas";
 import { caseFor, quickAnswers, type Signals } from "@/lib/ideaCase";
+import { asOption } from "@/lib/optionIdea";
 import PriceChart from "../../symbol/[ticker]/PriceChart";
 import BullBear from "./BullBear";
 import PositionSizer from "./PositionSizer";
 import QuickAnswers from "./QuickAnswers";
+import SuggestedOption from "./SuggestedOption";
 
 export const metadata: Metadata = { title: "Idea — HighStrike" };
 
@@ -17,9 +19,9 @@ const DAY = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", weekday: "long",
 const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 /**
- * One trade idea, to evaluate it (piece 2 of the trade-ideas plan, Ben 2026-11-02): what it is, the chart, the bull and
- * bear case and quick answers worked out by rules from HighStrike's own data (no AI service: "Do this all without AI
- * APIs"), and a position sizer. The market's odds and the contract picker join when options data is in.
+ * One trade idea, to evaluate it (piece 2 of the trade-ideas plan, Ben 2026-11-02): what it is, its option (estimated by
+ * rules from the stock's own closes, src/lib/optionIdea.ts), the chart, the bull and bear case and quick answers worked
+ * out by rules from HighStrike's own data (no AI service: "Do this all without AI APIs"), and a position sizer.
  */
 export default async function IdeaPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -52,7 +54,8 @@ export default async function IdeaPage({ params }: { params: Promise<{ id: strin
     crowd: c ? { bullishPct: c.bullish + c.bearish >= 5 ? Math.round((c.bullish / (c.bullish + c.bearish)) * 100) : null, watchers: c.watchers } : null,
   };
   const read = caseFor(idea, signals);
-  
+  const option = asOption(idea.option);
+
   const st = STATUS[idea.status] ?? STATUS.open;
   const pct = idea.status === "open" ? idea.current_pct : idea.result_pct;
   const facts: [string, string][] = [
@@ -94,6 +97,8 @@ export default async function IdeaPage({ params }: { params: Promise<{ id: strin
         ))}
       </dl>
 
+      {option && <SuggestedOption ticker={idea.ticker} option={option} />}
+
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <div className="flex min-w-0 flex-col gap-6">
           <section className={`${CARD} p-4`}>
@@ -117,12 +122,13 @@ export default async function IdeaPage({ params }: { params: Promise<{ id: strin
         </div>
         <div className="flex min-w-0 flex-col gap-6">
           <QuickAnswers items={quickAnswers(idea, signals)} />
-          <PositionSizer entry={live ? live.price : idea.entry_price} side={idea.direction} />
+          <PositionSizer entry={live ? live.price : idea.entry_price} side={idea.direction} optionPrice={option?.premium ?? null} />
         </div>
       </div>
 
       <p className="text-xs leading-relaxed text-ink-3">
-        Market commentary and education, not investment advice. You make every decision. The bull and bear case and the quick answers are worked out from the price, insider filings and the crowd; the market&apos;s odds and a contract picker arrive with live options data.
+        Market commentary and education, not investment advice. You make every decision. The bull and bear case and the quick answers are worked out from the price, insider filings and the crowd.
+        {option && " The option's prices are estimates from the stock's own past moves, not live quotes, and real prices can differ."}
       </p>
     </div>
   );

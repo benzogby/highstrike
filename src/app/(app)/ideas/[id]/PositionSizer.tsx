@@ -12,15 +12,16 @@ const num = (s: string) => {
 /**
  * How big to go (Ben's plan, 2026-11-02: "Enter your account size and risk per trade; it says how many contracts or
  * shares"). Shares: the risk divided by the distance to the stop. Options: the risk divided by what one contract costs,
- * since a bought option can lose its whole premium. Kept in this browser only; nothing is saved.
+ * since a bought option can lose its whole premium. The option's price starts at the idea's option's estimate, when it
+ * has one. Kept in this browser only; nothing is saved.
  */
-export default function PositionSizer({ entry, side }: { entry: number | null; side: "long" | "short" }) {
+export default function PositionSizer({ entry, side, optionPrice = null }: { entry: number | null; side: "long" | "short"; optionPrice?: number | null }) {
   const defaultStop = entry ? +(side === "long" ? entry * 0.92 : entry * 1.08).toFixed(2) : 0;
   const [account, setAccount] = useState("10000");
   const [risk, setRisk] = useState("1");
   const [price, setPrice] = useState(entry ? String(entry) : "");
   const [stop, setStop] = useState(defaultStop ? String(defaultStop) : "");
-  const [premium, setPremium] = useState("");
+  const [premium, setPremium] = useState(optionPrice ? optionPrice.toFixed(2) : "");
 
   const acct = num(account);
   const pct = num(risk);
@@ -74,7 +75,7 @@ export default function PositionSizer({ entry, side }: { entry: number | null; s
         )}
       </div>
       <div className="mt-4">
-        {field("Or, an option's price ($ per share)", premium, setPremium, "The ask on the contract you're looking at")}
+        {field("Or, an option's price ($ per share)", premium, setPremium, optionPrice ? "Starts at the option's est. price; use the ask in your broker" : "The ask on the contract you're looking at")}
         <p className="mt-2 flex justify-between text-sm text-ink-2">
           <span>Contracts</span>
           <span className="font-mono-nums text-ink">{contracts >= 0 ? contracts.toLocaleString("en-US") : "—"}</span>
