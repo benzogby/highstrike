@@ -116,6 +116,24 @@ export default function SetupCard({ c, open }: { c: DeckCard; open: boolean }) {
 
       <p className="mt-3 text-[13px] leading-relaxed text-ink-2">{c.why}</p>
 
+      <div className="mt-3">
+        {c.crowd ? (
+          <>
+            <div className="flex items-baseline justify-between text-[12px]">
+              <span className="text-ink-2">
+                <span className="font-medium text-ink">{Math.round((c.crowd.right / c.crowd.total) * 100)}%</span> saved this kind of {c.ticker} setup
+              </span>
+              <span className="text-ink-3">{c.crowd.total} swipes</span>
+            </div>
+            <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-down/25" aria-hidden>
+              <div className="h-full rounded-full bg-up" style={{ width: `${(c.crowd.right / c.crowd.total) * 100}%` }} />
+            </div>
+          </>
+        ) : (
+          <p className="text-[12px] text-ink-3">Too few swipes on this kind of {c.ticker} setup yet to show the crowd&apos;s verdict.</p>
+        )}
+      </div>
+
       {open && (
         <div className="mt-3 border-t border-line pt-3 text-[13px]">
           <p className="font-medium text-ink">The legs</p>

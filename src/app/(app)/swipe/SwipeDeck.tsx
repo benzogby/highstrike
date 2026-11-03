@@ -21,8 +21,10 @@ export default function SwipeDeck({
   more,
   streak = 0,
   swipedToday = false,
+  favorites = [],
 }: {
   initial: DeckCard[];
+  favorites?: string[];
   streak?: number;
   swipedToday?: boolean;
   save: (id: string, action: "right" | "left") => Promise<{ ok: true } | { error: string }>;
@@ -185,6 +187,7 @@ export default function SwipeDeck({
         })}
       </div>
 
+      {favorites.length > 0 && <p className="mt-2 text-center text-[12px] text-ink-3">Showing you more {favorites.join(" and ")}, from what you save.</p>}
       {error && <p className="mt-2 text-center text-sm text-down">{error}</p>}
 
       <div className="mt-4 flex items-center justify-center gap-5">
