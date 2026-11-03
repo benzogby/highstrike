@@ -42,11 +42,14 @@ const sections: LegalSection[] = [
           <strong>Your profile:</strong> the name, bio and picture you choose to add.
         </li>
         <li>
-          <strong>What you set up in the app:</strong> your watchlists, price alerts and app activity.
+          <strong>What you set up in the app:</strong> your watchlists, price alerts, the ideas you paste or build, the
+          trades you record in My trades with their notes (only you can see these), and app activity.
         </li>
         <li>
-          <strong>Your payment:</strong> Stripe takes your card details. We keep a Stripe customer ID and a record that
-          you paid; we never see or store your full card number.
+          <strong>Your payment:</strong> Stripe takes your card details. We keep a Stripe customer ID, your membership&apos;s
+          status and a record of what you paid; we never see or store your full card number. To keep the {"$"}14 first week
+          to one per person, we also keep the fingerprint Stripe gives the card that paid for it (a code that recognizes
+          the same card again, not its number).
         </li>
         <li>
           <strong>Site visits:</strong> for each page view, the page, the site you came from, your device type (phone,
@@ -67,7 +70,7 @@ const sections: LegalSection[] = [
     body: (
       <ul>
         <li>To run your account and give you the access you paid for</li>
-        <li>To take payment and keep records the law requires</li>
+        <li>To take payment, run your membership (its first week, renewals and cancelling) and keep records the law requires</li>
         <li>To send the alert emails you ask for, and important emails about your account or these policies</li>
         <li>To see which pages people use, so we can improve the site</li>
         <li>To keep HighStrike secure and stop abuse, like shared or stolen accounts</li>
