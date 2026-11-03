@@ -344,25 +344,12 @@ async function claudeGenerate(quotes: EnrichedRow[]): Promise<Generated> {
   };
 }
 
-export async function generateDaily(force = false): Promise<{
-  status: "generated" | "exists" | "skipped_weekend";
-  date: string;
-  model?: string;
-  setups?: number;
-}> {
-  const date = etToday();
+/**
+ * The scanner's ranked universe with each name's last 14 days of insider buying and selling and the crowd's latest
+ * lean: what the morning engine and the idea builder (src/lib/buildIdeas.ts) read.
+ */
+export async function enrichedScan(): Promise<EnrichedRow[]> {
   const service = supabaseService();
-
-  const { data: existing } = await service
-    .from("weather_reports")
-    .select("report_date")
-    .eq("report_date", date)
-    .maybeSingle();
-  if (existing && !force) return { status: "exists", date };
-
-  const dow = new Date(`${date}T12:00:00Z`).getUTCDay();
-  if ((dow === 0 || dow === 6) && !force) return { status: "skipped_weekend", date };
-
   // Cross-system inputs: the scanner's ranked universe + 14-day insider flow.
   const { rows: scan } = await computeScan();
   const since14 = new Date(Date.now() - 14 * 86400000).toISOString().slice(0, 10);
@@ -405,6 +392,30 @@ export async function generateDaily(force = false): Promise<{
       chatterBullishPct: ch?.bullishPct ?? null,
     };
   });
+
+  return quotes;
+}
+
+export async function generateDaily(force = false): Promise<{
+  status: "generated" | "exists" | "skipped_weekend";
+  date: string;
+  model?: string;
+  setups?: number;
+}> {
+  const date = etToday();
+  const service = supabaseService();
+
+  const { data: existing } = await service
+    .from("weather_reports")
+    .select("report_date")
+    .eq("report_date", date)
+    .maybeSingle();
+  if (existing && !force) return { status: "exists", date };
+
+  const dow = new Date(`${date}T12:00:00Z`).getUTCDay();
+  if ((dow === 0 || dow === 6) && !force) return { status: "skipped_weekend", date };
+
+  const quotes = await enrichedScan();
 
   let generated: Generated;
   if (process.env.ANTHROPIC_API_KEY) {
