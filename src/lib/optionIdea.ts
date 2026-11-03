@@ -30,7 +30,7 @@ import { addDays, isSession, sessionBefore } from "./marketCalendar";
 // 5. No option at all, rather than a bad number, when the stock has fewer than 21 daily closes in a row up to the last
 //    week, when the entry is more than 20% from the latest close, or when the option would cost under $0.10.
 // A pasted idea that names its own contract (strike, call or put, expiry) gets that contract priced the same way
-// instead, when it matches the idea's direction and hasn't expired.
+// instead, when it matches the idea's direction, hasn't expired and its strike is within 50% of the entry.
 
 export type OptionKind = "call" | "put" | "call_spread" | "put_spread";
 
@@ -114,10 +114,12 @@ export function windowEnd(timeFrame: string, from: string, fallback?: string | n
   } else {
     const nums = (f.match(/\d+(?:\.\d+)?/g) ?? []).map(Number).filter((n) => n > 0);
     const top = nums.length ? Math.max(...nums) : 1;
-    if (/week/.test(f)) end = addDays(from, Math.round(top * 7));
-    else if (/month/.test(f)) end = addDays(from, Math.round(top * 30));
-    else if (/year/.test(f)) end = addDays(from, Math.round(top * 365));
-    else if (nums.length && /day|session/.test(f)) end = addSessions(from, Math.round(top));
+    // A member types their own time frame: anything past a year is a year.
+    const days = (n: number) => addDays(from, Math.min(366, Math.round(n)));
+    if (/week/.test(f)) end = days(top * 7);
+    else if (/month/.test(f)) end = days(top * 30);
+    else if (/year/.test(f)) end = days(top * 365);
+    else if (nums.length && /day|session/.test(f)) end = addSessions(from, Math.min(260, Math.round(top)));
   }
   if (!end) end = fallback && fallback >= from ? fallback : addSessions(from, 5);
   const cap = addDays(from, 365);
@@ -200,8 +202,16 @@ export type OptionInput = {
   named?: Named | null;
 };
 
-/** The idea's option by the rules above, or null when there isn't enough to estimate it well. Pure. */
+/** The idea's option by the rules above, or null when there isn't enough to estimate it well. Pure; never throws. */
 export function suggestOption(i: OptionInput): OptionIdea | null {
+  try {
+    return estimate(i);
+  } catch {
+    return null;
+  }
+}
+
+function estimate(i: OptionInput): OptionIdea | null {
   const S = Number(i.entry);
   if (!(S > 0) || i.closes.length < MIN_CLOSES) return null;
   if (Math.abs(S / i.closes[i.closes.length - 1] - 1) > MAX_ENTRY_GAP) return null;
@@ -212,14 +222,16 @@ export function suggestOption(i: OptionInput): OptionIdea | null {
   const target = i.target != null && (long ? Number(i.target) > S : Number(i.target) < S) ? Number(i.target) : null;
   const value = (K: number, stock: number, from: string, expiry: string) => bs(type, stock, K, Math.max(0, daysBetween(from, expiry)) / 365, vol);
 
+  // A named contract counts when it's this idea's kind, hasn't expired, and its strike is near the stock (not a count of
+  // contracts or a typo).
   const n = i.named;
-  const named = n && n.type === type && n.strike > 0 && n.expiry > i.asOf ? n : null;
+  const named = n && n.type === type && n.expiry > i.asOf && n.strike > S * 0.5 && n.strike < S * 1.5 ? n : null;
   const step = strikeGap(S);
   const strike = named ? cents(named.strike) : long ? strikeAtOrBelow(S, step) : strikeAtOrAbove(S, step);
   const expiry = named ? named.expiry : expiryFor(end, listsWeeklies(i.ticker));
 
   const single = nickel(value(strike, S, i.asOf, expiry));
-  if (single < MIN_PREMIUM) return named ? suggestOption({ ...i, named: null }) : null;
+  if (single < MIN_PREMIUM) return named ? estimate({ ...i, named: null }) : null;
 
   let kind: OptionKind = type;
   let short: number | null = null;
@@ -278,7 +290,8 @@ export function asOption(x: unknown): OptionIdea | null {
   const num = (n: unknown) => typeof n === "number" && Number.isFinite(n);
   const day = (d: unknown) => typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d);
   const kinds: OptionKind[] = ["call", "put", "call_spread", "put_spread"];
-  if (o.v !== 1 || !kinds.includes(o.kind as OptionKind) || !num(o.strike) || !num(o.premium) || !num(o.breakeven) || !num(o.spot) || !num(o.vol)) return null;
+  if (o.v !== 1 || !kinds.includes(o.kind as OptionKind) || (o.pick !== "rules" && o.pick !== "yours")) return null;
+  if (!num(o.strike) || !num(o.premium) || !num(o.breakeven) || !num(o.spot) || !num(o.vol) || !num(o.closes)) return null;
   if (!day(o.expiry) || !day(o.asOf) || !day(o.windowEnd)) return null;
   return o as OptionIdea;
 }
