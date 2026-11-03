@@ -7,6 +7,7 @@
  *                                           Resend, put its DNS records on Cloudflare (scripts/cloudflare.mjs), and
  *                                           have Resend verify it
  *   node scripts/resend.mjs status [name]   where that domain stands on Resend
+ *   node scripts/resend.mjs smtp            Supabase's own emails (password resets, sign-in links) through Resend
  *
  * Why (2026-11-02): the server's Resend account (newhighstrike@gmail.com) had no verified domain, so Resend delivered
  * only to that address, and the sale alert to ben.zogby@gmail.com came back 403. With highstrike.com verified, the site
@@ -15,7 +16,7 @@
  * wins over the Keychain. Nothing here prints the key.
  */
 import { spawnSync } from "node:child_process";
-import { askSecret, fail, keychainSet, notify, ROOT, savedKey } from "./lib/mac.mjs";
+import { askSecret, envFile, fail, keychainSet, notify, ROOT, savedKey } from "./lib/mac.mjs";
 
 const API = "https://api.resend.com";
 const ACCOUNT = "RESEND_API_KEY";
@@ -119,8 +120,61 @@ async function status() {
   printDomain(await ourDomain(savedResendKey(), { add: false }));
 }
 
+const SMTP_KEY_NAME = "Supabase auth emails";
+/** What Supabase's auth settings say about its mailer, without the password. */
+const SMTP_FIELDS = ["smtp_host", "smtp_port", "smtp_user", "smtp_admin_email", "smtp_sender_name", "rate_limit_email_sent"];
+
+/**
+ * Supabase's own emails (password resets, sign-in links) through Resend, from hello@highstrike.com (Ben, 2026-11-03:
+ * "Yes, send through Resend"). Supabase's built-in mailer delivers only to the project's team, so a member who forgot
+ * their password got nothing. Makes a Resend key that can only send from highstrike.com, named "Supabase auth emails"
+ * (an earlier one of that name is deleted first), and puts it in Supabase's SMTP settings through the Management API,
+ * with the Supabase token from the Keychain. Neither key is printed.
+ */
+async function supabaseSmtp() {
+  const key = savedResendKey();
+  const token = savedKey("SUPABASE_ACCESS_TOKEN");
+  if (!token) fail("There's no Supabase token yet. Run `npm run supabase:token` first.");
+  const env = { ...envFile(), ...process.env };
+  const ref = env.SUPABASE_PROJECT_REF || (env.NEXT_PUBLIC_SUPABASE_URL ? new URL(env.NEXT_PUBLIC_SUPABASE_URL).hostname.split(".")[0] : "");
+  if (!ref) fail("No Supabase project: set NEXT_PUBLIC_SUPABASE_URL in .env.local.");
+  const supabase = async (method, body) => {
+    const res = await fetch(`https://api.supabase.com/v1/projects/${ref}/config/auth`, {
+      method,
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      ...(body ? { body: JSON.stringify(body) } : {}),
+    });
+    const out = await res.json().catch(() => ({}));
+    if (!res.ok) fail(`Supabase refused ${method} config/auth (${res.status}): ${out.message ?? "no reason given"}`);
+    return out;
+  };
+  const domain = await ourDomain(key, { add: false });
+  if (domain.status !== "verified") fail(`${DOMAIN} isn't verified on Resend yet, so Supabase couldn't send from it.`);
+  const { data: keys } = await resend(key, "/api-keys");
+  for (const k of keys ?? []) if (k.name === SMTP_KEY_NAME) await resend(key, `/api-keys/${k.id}`, { method: "DELETE" });
+  const made = await resend(key, "/api-keys", {
+    method: "POST",
+    body: JSON.stringify({ name: SMTP_KEY_NAME, permission: "sending_access", domain_id: domain.id }),
+  });
+  if (!made.token) fail("Resend didn't return the new key.");
+  await supabase("PATCH", {
+    smtp_host: "smtp.resend.com",
+    smtp_port: "465",
+    smtp_user: "resend",
+    smtp_pass: made.token,
+    smtp_admin_email: `hello@${ZONE}`,
+    smtp_sender_name: "HighStrike",
+    rate_limit_email_sent: 100,
+  });
+  const now = await supabase("GET");
+  for (const f of SMTP_FIELDS) console.log(`${f}: ${now[f]}`);
+  console.log(`smtp_pass: set (Resend key "${SMTP_KEY_NAME}", sending from ${DOMAIN} only)`);
+  notify("Supabase now sends its emails through Resend.");
+}
+
 const [cmd] = process.argv.slice(2);
 if (cmd === "token") await saveToken();
 else if (cmd === "domain") await setupDomain();
 else if (cmd === "status") await status();
-else fail("Use: node scripts/resend.mjs token | domain | status");
+else if (cmd === "smtp") await supabaseSmtp();
+else fail("Use: node scripts/resend.mjs token | domain | status | smtp");

@@ -7,15 +7,24 @@ import { checkAlerts } from "@/lib/alerts";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
+/** The hour in New York now (0-23). */
+function newYorkHour() {
+  return Number(new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric", hourCycle: "h23" }).format(new Date()));
+}
+
 // Daily generation trigger. Called by Vercel Cron (pre-market) and by admins
 // ("Generate now"). Idempotent per ET date, so an unauthenticated hit can at
 // most cause the one scheduled generation to happen early — `force`
 // (regenerate) requires an admin session or the CRON_SECRET bearer.
+// The day's ideas come out at 8:30 AM New York time all year (Ben, 2026-11-03), so Vercel calls at both 12:30 and
+// 13:30 UTC (vercel.json) and only the call that lands in New York's 8 o'clock hour runs; the other, an hour off as the
+// clocks change, answers "skipped". An admin's Generate now runs whenever.
 async function handle(request: Request) {
   const url = new URL(request.url);
   const wantsForce = url.searchParams.get("force") === "1";
 
   let authorized = false;
+  let admin = false;
   const secret = process.env.CRON_SECRET;
   const auth = request.headers.get("authorization");
   if (secret && auth === `Bearer ${secret}`) authorized = true;
@@ -31,12 +40,15 @@ async function handle(request: Request) {
         .select("is_admin")
         .eq("id", user.id)
         .single();
-      if (me?.is_admin) authorized = true;
+      if (me?.is_admin) authorized = admin = true;
     }
   }
 
   if (wantsForce && !authorized) {
     return NextResponse.json({ error: "force requires admin" }, { status: 403 });
+  }
+  if (!admin && !wantsForce && newYorkHour() !== 8) {
+    return NextResponse.json({ skipped: "The morning run is at 8:30 AM New York time." });
   }
 
   try {
