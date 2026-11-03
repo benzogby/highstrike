@@ -113,7 +113,7 @@ export function quickAnswers(i: Idea, s: Signals, today = new Date()) {
   const fits = o
     ? `${o.pick === "yours" ? "The contract you named" : "The suggested option above"}: the ${contractShort(o)} (est. ${usd(o.premium)} a share, ${dollars(costOf(o))} a contract). ${
         o.short != null
-          ? `It's a spread because the ${L.long ? "call" : "put"} alone would cost over 5% of the stock's price; it gains up to the target for less. `
+          ? `It's a spread because the ${L.long ? "call" : "put"} alone would cost over 5% of the stock's price: its gain tops out at the target, and it costs less. `
           : o.pick === "rules"
             ? "At or just in the money, it needs less of a move to pay than a cheaper out-of-the-money one. "
             : ""

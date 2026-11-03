@@ -50,8 +50,8 @@ export default function SuggestedOption({ ticker, option: o }: { ticker: string;
         ))}
       </dl>
       <p className="mt-3 text-xs leading-relaxed text-ink-3">
-        est. means estimated from {ticker}&apos;s own moves over its last {o.closes - 1} trading days ({Math.round(o.vol * 100)}% a year) at {usd(o.spot)} on{" "}
-        {dayLabel(o.asOf)}, not a live quote. Check the price in your broker before you trade.
+        est. means estimated from {ticker}&apos;s own moves over its last {o.closes - 1} trading days (a volatility of {Math.round(o.vol * 100)}% a year), at the{" "}
+        {usd(o.spot)} entry on {dayLabel(o.asOf)}. It&apos;s not a live quote: check the price in your broker before you trade.
       </p>
     </section>
   );
