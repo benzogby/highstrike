@@ -1,6 +1,7 @@
 import { supabaseService } from "@/lib/stripe";
 import { fetchQuotes } from "@/lib/quotes";
 import { SITE_URL, esc, sendMail } from "@/lib/mail";
+import { notify } from "@/lib/notify";
 import { TRADE_COLUMNS, levelHit, money, tradeName, type Trade } from "@/lib/trades";
 
 // A tracked trade reached its target or its stop (Ben, 2026-11-03: alerts by email and the in-app bell; trades from
@@ -51,9 +52,9 @@ function alertEmail({ trade, level, price }: Hit) {
 
 /**
  * Checks every open trade that watches a level and hasn't alerted yet, against live prices, and alerts each one that
- * got there, once (`alerted` is claimed before sending). `onHit` lets the caller add the in-app notice.
+ * got there, once (`alerted` is claimed before sending): an email and a notice in the member's bell (src/lib/notify.ts).
  */
-export async function checkTrades(opts: { throttled?: boolean; onHit?: (hit: Hit, words: { subject: string; lead: string }) => Promise<void> } = {}) {
+export async function checkTrades(opts: { throttled?: boolean } = {}) {
   if (opts.throttled && (await sweptRecently())) return { checked: 0, alerted: 0 };
   const db = supabaseService();
   const { data } = await db
@@ -88,7 +89,7 @@ export async function checkTrades(opts: { throttled?: boolean; onHit?: (hit: Hit
       const sent = await sendMail({ to, from: FROM, subject: words.subject, html: words.html, text: words.text, kind: "trade_alert" });
       if (!sent.ok) console.error(`trade alert ${hit.trade.id} didn't go out:`, sent.error);
     }
-    await opts.onHit?.(hit, words).catch((e) => console.error("trade alert notice:", e instanceof Error ? e.message : e));
+    await notify(hit.trade.user_id, { kind: "trade_alert", title: words.subject, body: words.lead, href: "/journal" });
   }
   return { checked: trades.length, alerted };
 }

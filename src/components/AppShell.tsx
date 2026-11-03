@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Avatar from "@/components/Avatar";
+import InstallBanner from "@/components/InstallBanner";
 import BrandMark from "@/components/BrandMark";
 import CommandBar from "@/components/CommandBar";
 import MobileNav from "@/components/MobileNav";
@@ -86,7 +87,11 @@ export default function AppShell({
           </div>
         </header>
 
-        <main className="route-in mx-auto w-full max-w-[1280px] px-4 pb-[calc(5rem_+_env(safe-area-inset-bottom))] pt-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
+        <main className="route-in mx-auto w-full max-w-[1280px] px-4 pb-[calc(5rem_+_env(safe-area-inset-bottom))] pt-6 sm:px-6 lg:px-8 lg:py-8">
+          {/* Phones only, once: add HighStrike to the home screen (Ben, 2026-11-03). */}
+          <InstallBanner />
+          {children}
+        </main>
       </div>
       <MobileNav isAdmin={isAdmin} email={email} firstName={firstName} avatarUrl={avatarUrl} />
       <Toaster />

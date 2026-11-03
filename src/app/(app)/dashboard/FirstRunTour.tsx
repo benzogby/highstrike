@@ -19,7 +19,7 @@ const STEPS: { target: string | null; title: string; body: string }[] = [
   {
     target: "tour-setups",
     title: "Daily setups, graded automatically",
-    body: "Curated trade setups with entries, targets, and written reasoning. Every card is tracked to target, stop, or expiry — wins and losses land together on the Setups page.",
+    body: "Curated trade setups with entries, targets, and written reasoning. Every card is tracked to target, stop, or expiry — wins and losses land together on Ideas' Track record.",
   },
   {
     target: "watchlist",
