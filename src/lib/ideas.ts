@@ -41,10 +41,16 @@ export type Idea = {
   target_price: number | null;
   current_pct: number | null;
   result_pct: number | null;
+  /** The idea's own stop, when it has one (pasted ideas); else the grading's 8%. */
+  stop_price: number | null;
+  /** The option contract it names, like "190C 11/15 @ 2.4". */
+  contract: string | null;
+  /** The member it belongs to (pasted ideas); null for the house's shared ideas. */
+  owner_id: string | null;
 };
 
 export const IDEA_COLUMNS =
-  "id, report_date, ticker, direction, source, style, headline, justification, entry_criteria, price_target, time_frame, status, entry_price, target_price, current_pct, result_pct";
+  "id, report_date, ticker, direction, source, style, headline, justification, entry_criteria, price_target, time_frame, status, entry_price, target_price, current_pct, result_pct, stop_price, contract, owner_id";
 
 /** The idea's one line: its headline, else the first sentence of its reasoning (ideas from before headlines). */
 export const headlineOf = (i: Pick<Idea, "headline" | "justification">) => i.headline?.trim() || i.justification.split(/(?<=\.)\s/)[0];

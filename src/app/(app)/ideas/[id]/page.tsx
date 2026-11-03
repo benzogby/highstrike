@@ -58,6 +58,7 @@ export default async function IdeaPage({ params }: { params: Promise<{ id: strin
   const facts: [string, string][] = [
     ["Entry", idea.entry_price != null ? money(idea.entry_price) : "—"],
     ["Target", idea.target_price != null ? money(idea.target_price) : idea.price_target],
+    ["Stop", idea.stop_price != null ? money(Number(idea.stop_price)) : idea.entry_price != null ? `${money(idea.entry_price * (idea.direction === "long" ? 0.92 : 1.08))} (8%)` : "8% against"],
     ["Time", idea.time_frame],
     ["Now", live ? `${money(live.price)} (${live.changePct >= 0 ? "+" : ""}${live.changePct.toFixed(2)}% today)` : "—"],
   ];
@@ -75,13 +76,16 @@ export default async function IdeaPage({ params }: { params: Promise<{ id: strin
           <Badge>{STYLES[idea.style] ?? idea.style}</Badge>
           <Badge tone="accent">{SOURCES[idea.source] ?? idea.source}</Badge>
           <Badge tone={st.tone}>{st.label}</Badge>
+          {idea.contract && <Badge>{idea.contract}</Badge>}
           {pct != null && <span className={`font-mono-nums text-sm ${pct >= 0 ? "text-up" : "text-down"}`}>{`${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%${idea.status === "open" ? " so far" : ""}`}</span>}
         </div>
         <p className="mt-3 max-w-3xl font-display text-xl leading-snug text-ink">{headlineOf(idea)}</p>
-        <p className="mt-1 text-[13px] text-ink-3">Published {DAY.format(new Date(`${idea.report_date}T12:00:00Z`))}, before the open</p>
+        <p className="mt-1 text-[13px] text-ink-3">
+          {idea.owner_id ? `You pasted this on ${DAY.format(new Date(`${idea.report_date}T12:00:00Z`))}. Only you can see it.` : `Published ${DAY.format(new Date(`${idea.report_date}T12:00:00Z`))}, before the open`}
+        </p>
       </header>
 
-      <dl className={`${CARD} grid grid-cols-2 divide-line sm:grid-cols-4 sm:divide-x`}>
+      <dl className={`${CARD} grid grid-cols-2 divide-line sm:grid-cols-5 sm:divide-x`}>
         {facts.map(([k, v]) => (
           <div key={k} className="px-4 py-3">
             <dt className="text-xs text-ink-3">{k}</dt>

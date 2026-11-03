@@ -121,7 +121,7 @@ export async function gradeSetups(): Promise<{ graded: number; closed: number }>
   const service = supabaseService();
   const { data: open } = await service
     .from("setups")
-    .select("id, ticker, direction, report_date, price_target, entry_price, target_price, expires_on")
+    .select("id, ticker, direction, report_date, price_target, entry_price, target_price, expires_on, stop_price, owner_id")
     .eq("status", "open");
   if (!open || open.length === 0) return { graded: 0, closed: 0 };
 
@@ -150,7 +150,9 @@ export async function gradeSetups(): Promise<{ graded: number; closed: number }>
       if (s.direction === "long" && price >= target) status = "target_hit";
       if (s.direction === "short" && price <= target) status = "target_hit";
     }
-    if (status === "open" && movePct <= -STOP_PCT) status = "stopped";
+    // An idea with its own stop (a pasted one) is stopped there; the rest at the standard 8% against.
+    const stop = s.stop_price != null ? Number(s.stop_price) : null;
+    if (status === "open" && (stop != null ? (s.direction === "long" ? price <= stop : price >= stop) : movePct <= -STOP_PCT)) status = "stopped";
     if (status === "open" && today > expires) status = "expired";
 
     const update: Record<string, unknown> = {
@@ -166,7 +168,8 @@ export async function gradeSetups(): Promise<{ graded: number; closed: number }>
       closed++;
     }
     await service.from("setups").update(update).eq("id", s.id);
-    if (status !== "open") {
+    // A member's own pasted idea isn't news for the shared activity feed.
+    if (status !== "open" && !s.owner_id) {
       const label =
         status === "target_hit" ? "hit its target" : status === "stopped" ? "stopped out" : "expired";
       await recordActivity(

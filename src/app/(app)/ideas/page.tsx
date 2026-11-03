@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireMember } from "@/lib/membership";
-import { Badge, CARD, INPUT, PageHeader } from "@/components/ui";
+import { BUTTON_PRIMARY, Badge, CARD, INPUT, PageHeader } from "@/components/ui";
 import { IDEA_COLUMNS, SOURCES, STATUS, STYLES, headlineOf, ideasSince, type Idea, type Source, type Style } from "@/lib/ideas";
 
 export const metadata: Metadata = { title: "Ideas — HighStrike" };
@@ -49,7 +49,16 @@ export default async function IdeasPage({ searchParams }: { searchParams: Promis
 
   return (
     <>
-      <PageHeader className="anim-rise" title="Ideas" subtitle="Every trade idea in one place, the newest first. Open one for the bull and bear case, quick answers and sizing." />
+      <PageHeader
+        className="anim-rise"
+        title="Ideas"
+        subtitle="Every trade idea in one place, the newest first. Open one for the bull and bear case, quick answers and sizing."
+        actions={
+          <Link href="/ideas/paste" className={BUTTON_PRIMARY}>
+            Paste an idea
+          </Link>
+        }
+      />
 
       <div className="anim-rise mt-6 flex flex-col gap-3" style={{ "--rise-delay": "60ms" } as React.CSSProperties}>
         <div className="flex flex-wrap items-center gap-3">

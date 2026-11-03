@@ -30,7 +30,7 @@ export function levels(i: Idea, s: Signals) {
   const long = i.direction === "long";
   const entry = i.entry_price ?? s.price;
   const target = i.target_price;
-  const stop = entry != null ? +(entry * (long ? 1 - STOP_PCT / 100 : 1 + STOP_PCT / 100)).toFixed(2) : null;
+  const stop = i.stop_price != null ? Number(i.stop_price) : entry != null ? +(entry * (long ? 1 - STOP_PCT / 100 : 1 + STOP_PCT / 100)).toFixed(2) : null;
   const now = s.price ?? entry;
   const toTarget = now != null && target != null ? ((target - now) / now) * 100 * (long ? 1 : -1) : null;
   const toStop = now != null && stop != null ? ((now - stop) / now) * 100 * (long ? 1 : -1) : null;
@@ -111,7 +111,7 @@ export function quickAnswers(i: Idea, s: Signals, today = new Date()) {
   return [
     {
       q: "What would make this idea wrong?",
-      a: `A close ${L.long ? "below" : "above"} ${L.stop != null ? usd(L.stop) : "the stop"} (${STOP_PCT}% against the entry) ends it. So does the entry rule failing: "${i.entry_criteria[0] ?? "the trigger"}". If it hasn't reached ${L.target != null ? usd(L.target) : i.price_target} within ${i.time_frame.toLowerCase()}, the idea has run out of time.`,
+      a: `A close ${L.long ? "below" : "above"} ${L.stop != null ? usd(L.stop) : "the stop"} (${i.stop_price != null ? "its stop" : `${STOP_PCT}% against the entry`}) ends it. So does the entry rule failing: "${i.entry_criteria[0] ?? "the trigger"}". If it hasn't reached ${L.target != null ? usd(L.target) : i.price_target} within ${i.time_frame.toLowerCase()}, the idea has run out of time.`,
     },
     {
       q: "Which strike and expiry fit this?",
