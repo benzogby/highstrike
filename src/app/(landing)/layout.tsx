@@ -18,8 +18,9 @@ const FOOT = [
   {
     title: "HighStrike",
     links: [
-      { href: "/#scanner", label: "Smart scanner" },
-      { href: "/#tools", label: "Tools" },
+      { href: "/#find", label: "Find trades" },
+      { href: "/#check", label: "Check trades" },
+      { href: "/#track", label: "Track trades" },
       { href: "/#trading-school", label: "Trading School" },
       { href: "/#app", label: "Mobile app" },
       { href: "/#pricing", label: "Pricing" },
@@ -57,16 +58,16 @@ export default function LandingLayout({ children }: Readonly<{ children: React.R
             <img className="hs-brand__word" src="/brand/wordmark.png" alt="" width={85} height={17} />
           </Link>
           <nav className="hs-bar__links" aria-label="Main">
-            <a href="#scanner">Scanner</a>
-            <a href="#tools">Tools</a>
-            <a href="#trading-school">Trading School</a>
-            <a href="#app">App</a>
+            <a href="#find">Find</a>
+            <a href="#check">Check</a>
+            <a href="#track">Track</a>
+            <a href="#trading-school">School</a>
             <a href="#pricing">Pricing</a>
           </nav>
           <Link href="/signin" className="hs-bar__signin">
             Sign in
           </Link>
-          <JoinButton className="hs-btn hs-btn--sm">Get HighStrike</JoinButton>
+          <JoinButton className="hs-btn hs-btn--sm">Try it for {TRIAL_PRICE}</JoinButton>
         </div>
       </header>
 
@@ -82,7 +83,7 @@ export default function LandingLayout({ children }: Readonly<{ children: React.R
                 <img className="hs-brand__word" src="/brand/wordmark.png" alt="" width={85} height={17} />
               </Link>
               <p>
-                Options education, tools and smart scanning, since 2018. {TRIAL_PRICE} for your first week, then {MONTHLY_PRICE}/month.
+                The options trading platform: ideas from the smart scanner, 12 pro tools and Trading School, since 2018. {TRIAL_PRICE} for your first week, then {MONTHLY_PRICE}/month.
               </p>
               <p>
                 HighStrike is owned and operated by ZERO DTE HOLDINGS LLC, a Wyoming limited liability company.

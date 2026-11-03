@@ -3165,10 +3165,6 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .hs-tools li:not(.is-on) p {
-    display: none;
-  }
-
   .hs-term__bar {
     flex-wrap: wrap;
   }
@@ -4052,53 +4048,241 @@
   color: var(--red);
 }
 
-/* ── The three pillars ─────────────────────────────────────────────────────────────────────────────────────── */
-.hs-pillars__grid {
-  list-style: none;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 20px;
+/* ── Why options trades lose: five mistakes beside their fixes (Ben, 2026-11-03), a two-column table ──────────── */
+.hs-ledger {
+  padding: 6px 32px 10px;
 }
 
-.hs-pillar {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  height: 100%;
-  padding: 32px 30px 30px;
-  transition: translate 0.3s var(--ease-out);
+.hs-ledger table {
+  width: 100%;
+  border-collapse: collapse;
 }
 
-.hs-pillar:hover {
-  translate: 0 -4px;
+.hs-ledger :is(th, td) {
+  text-align: left;
+  vertical-align: baseline;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
 }
 
-.hs-pillar__n {
-  font: 400 15px/1 var(--cal);
-  color: var(--ink-3);
-}
-
-.hs-pillar__k {
-  margin-top: 26px;
+.hs-ledger thead th {
+  padding: 22px 0 16px;
   font: 650 13px/1 var(--ui);
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.hs-ledger thead th + th {
   color: var(--green);
 }
 
-.hs-pillar .hs-h3 {
-  font-size: 40px;
+.hs-ledger tbody :is(th, td) {
+  padding: 26px 0;
 }
 
-.hs-pillar p {
-  flex: 1;
-  font-size: 17px;
+.hs-ledger tbody tr:last-child :is(th, td) {
+  border-bottom: 0;
+}
+
+.hs-ledger__usual {
+  width: 38%;
+  font-size: 20px;
+  font-weight: 400;
   color: var(--ink-2);
 }
 
-.hs-pillar__go {
-  font-size: 22px;
+.hs-ledger tbody .hs-ledger__usual {
+  padding-right: 28px;
+}
+
+/* The mistake's red cross */
+.hs-ledger__usual::before {
+  content: "";
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  margin-right: 12px;
+  background: linear-gradient(45deg, transparent 43%, var(--red) 43% 57%, transparent 57%), linear-gradient(-45deg, transparent 43%, var(--red) 43% 57%, transparent 57%);
+}
+
+.hs-ledger__fix b {
+  display: block;
+  font: 400 28px/1.15 var(--cal);
+  color: var(--ink);
+}
+
+.hs-ledger__fix span {
+  display: block;
+  margin-top: 8px;
+  max-width: 34em;
+  font-size: 16px;
+  color: var(--ink-2);
+}
+
+.hs-why__next {
+  margin-top: 40px;
+  font-size: 18px;
+  color: var(--ink-2);
+}
+
+.hs-why__next a {
   color: var(--green);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-thickness: 1px;
+}
+
+/* Each tool's number, 01 to 12, counted by its list (each step's list resets the count where the last one stopped);
+   the morning ideas, in a lit block over Find's list, carry their time instead */
+.hs-tools li {
+  counter-increment: tool;
+}
+
+.hs-tools__n,
+.hs-tools .hs-tools__name::before {
+  display: inline-block;
+  min-width: 2.6em;
+  margin-right: 8px;
+  font: 600 14px/1 var(--ui);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  vertical-align: 0.3em;
+  color: var(--ink-3);
+}
+
+.hs-tools .hs-tools__name::before {
+  content: counter(tool, decimal-leading-zero);
+}
+
+.hs-tools li.is-on .hs-tools__name::before,
+.hs-tools__lead .hs-tools__n {
+  color: var(--green);
+}
+
+.hs-tools__lead {
+  margin-bottom: 4px;
+  padding: 13px 20px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+}
+
+.hs-tools__lead .hs-tools__name {
+  color: var(--ink);
+}
+
+.hs-tools__lead p {
+  margin-top: 8px;
+  font-size: 16px;
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+
+/* An idea's plan with its stop: four figures */
+.hs-plan--4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+/* Track: a recent idea followed to its exit, with the alert landing over it */
+.hs-track .hs-stage {
+  padding-bottom: 72px;
+}
+
+.hs-track .hs-stage__alert {
+  top: auto;
+  bottom: 0;
+}
+
+.hs-track__log {
+  list-style: none;
+  margin: 18px 24px 0;
+}
+
+.hs-track__log li {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 14px;
+  align-items: baseline;
+  padding: 14px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 16px;
+  color: var(--ink-2);
+}
+
+.hs-track__log time {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3);
+}
+
+.hs-track__log b {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+@media (max-width: 640px) {
+  .hs-ledger {
+    padding: 2px 18px 6px;
+  }
+
+  .hs-ledger thead {
+    display: none;
+  }
+
+  .hs-ledger tbody tr {
+    display: block;
+    padding: 20px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  }
+
+  .hs-ledger tbody tr:last-child {
+    border-bottom: 0;
+  }
+
+  .hs-ledger tbody :is(th, td) {
+    display: block;
+    width: auto;
+    padding: 0;
+    border: 0;
+  }
+
+  .hs-ledger tbody .hs-ledger__usual {
+    padding: 0;
+    font-size: 16px;
+  }
+
+  .hs-ledger__fix {
+    margin-top: 8px;
+  }
+
+  .hs-ledger__fix b {
+    font-size: 22px;
+  }
+
+  .hs-ledger__fix span {
+    font-size: 15px;
+  }
+
+  .hs-plan--4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .hs-plan--4 div:nth-child(3) {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+
+  .hs-plan--4 div:nth-child(4) {
+    box-shadow: inset 1px 0 0 rgba(255, 255, 255, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+
+  .hs-track__log {
+    margin: 14px 16px 0;
+  }
+
+  .hs-track__log li {
+    grid-template-columns: 56px minmax(0, 1fr);
+    font-size: 15px;
+  }
 }
 
 /* Trading School's modules, each with its key image. */
@@ -4383,7 +4567,6 @@
     margin: 0;
   }
 
-  .hs-pillars__grid,
   .hs-quotes__grid {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -4436,18 +4619,6 @@
 
   .hs-trio__tk {
     font-size: 28px;
-  }
-
-  .hs-pillar {
-    padding: 24px 22px;
-  }
-
-  .hs-pillar__k {
-    margin-top: 12px;
-  }
-
-  .hs-pillar .hs-h3 {
-    font-size: 32px;
   }
 
   .hs-app__head {

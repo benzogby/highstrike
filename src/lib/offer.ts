@@ -41,8 +41,8 @@ export type Library = { modules: number; lessons: number };
 /** What the membership includes, in the popup's and the paywall's words (`full`: starting at $99, with no week). */
 export function membershipIncludes(library: Library | null, full = false) {
   return [
-    "The smart scanner's trade ideas every morning, each with its entry, target and reasoning, out before the bell",
-    "The tools: the terminal, the scanner, alerts, insider filings, the crowd and the app on your phone",
+    "The smart scanner's trade ideas at 8:30 AM ET every trading day, each with an entry, a target, a stop and a suggested option",
+    "12 pro tools to find, check, size and track trades, with alerts at your target and stop and the app on your phone",
     library && library.lessons > 0
       ? `HighStrike Trading School: ${library.modules} modules and ${library.lessons} lessons, the live recordings included`
       : "HighStrike Trading School, every module and the live recordings",
