@@ -35,7 +35,7 @@ export default async function SharedSetup({ params }: Props) {
         HighStrike
       </Link>
       <article className="rounded-2xl border border-line-strong bg-panel p-4">
-        <SetupCard c={{ ...s.card, closes: s.card.closes ?? [], crowd: null }} open />
+        <SetupCard c={{ ...s.card, closes: s.card.closes ?? [], crowd: null }} open crowd={false} />
       </article>
       {(s.status === "win" || s.status === "loss") && (
         <p className={`text-center text-sm font-medium ${s.status === "win" ? "text-up" : "text-down"}`}>

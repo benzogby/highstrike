@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { NAV, activeKey } from "@/components/appNav";
+import { activeKey, visibleNav } from "@/components/appNav";
 
 export default function MobileNav({
   isAdmin,
@@ -19,7 +19,7 @@ export default function MobileNav({
 }) {
   // The frame stays mounted while pages change, so the current page comes from the URL.
   const active = activeKey(usePathname());
-  const items = NAV;
+  const items = visibleNav(isAdmin);
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 

@@ -4,11 +4,10 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import BrandMark from "@/components/BrandMark";
-import { JOIN_LINK } from "@/components/join/events";
-
+// The site pages' bar. Swiping is the only product for now (Ben, 2026-11-02), free: no pricing, and the buttons lead to
+// the swipe deck or a free account.
 const nav = [
-  { href: "/results", label: "Results" },
-  { href: "/#pricing", label: "Pricing" },
+  { href: "/#how", label: "How it works" },
   { href: "/blog", label: "Blog" },
   { href: "/about", label: "About" },
   { href: "/company", label: "Company" },
@@ -48,10 +47,10 @@ export default function Header() {
         <div className="flex items-center gap-3">
           {signedIn ? (
             <Link
-              href="/dashboard"
+              href="/swipe"
               className="rounded-lg bg-accent px-4 py-2 font-display text-sm font-semibold text-bg transition hover:bg-accent-2"
             >
-              Dashboard
+              Swipe
             </Link>
           ) : (
             <>
@@ -62,10 +61,10 @@ export default function Header() {
                 Sign in
               </Link>
               <Link
-                href={JOIN_LINK}
+                href="/signup"
                 className="rounded-lg bg-accent px-4 py-2 font-display text-sm font-semibold text-bg transition hover:bg-accent-2"
               >
-                Get access
+                Start free
               </Link>
             </>
           )}

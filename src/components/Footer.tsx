@@ -2,8 +2,7 @@ import Link from "next/link";
 import { LegalParagraphs } from "@/components/SiteContentBits";
 
 const siteLinks = [
-  { href: "/results", label: "Results" },
-  { href: "/#pricing", label: "Pricing" },
+  { href: "/#how", label: "How it works" },
   { href: "/blog", label: "Blog" },
   { href: "/about", label: "About Us" },
   { href: "/company", label: "Company" },

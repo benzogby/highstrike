@@ -16,8 +16,15 @@ export function isMember(profile: Profile) {
   return Boolean(profile?.is_admin) || profile?.plan === LIFETIME.plan;
 }
 
-/** Where an account without the membership lands: the dashboard, under the paywall (components/join/MemberGate). */
-export const PAYWALL = "/dashboard";
+/**
+ * Swiping is the only product for now, free to any account (Ben, 2026-11-02: "Hide the rest for now, make this the only
+ * product", "Make it all free for now while we build"): every signed-in account lands on the swipe deck, and the rest
+ * of the app is for admins until it comes back.
+ */
+export const HOME = "/swipe";
+
+/** Where an account that can't open a page lands: the swipe deck (it was the $397 paywall on /dashboard). */
+export const PAYWALL = HOME;
 
 /** The signed-in account as its verified sign-in token describes it. */
 export type Viewer = { id: string; email?: string; user_metadata: UserMetadata; app_metadata: UserAppMetadata };
@@ -56,9 +63,14 @@ export async function memberContext(next: string) {
   return context;
 }
 
-/** A member page's first line: the member, or the paywall for an account without the membership. */
+/** A swipe-app page's first line (Swipe, Saved, Scoreboard, Settings): any signed-in account, free. */
+export async function requireAccount(next: string) {
+  return memberContext(next);
+}
+
+/** The first line of every other app page: hidden for now (admins only), so everyone else goes to the swipe deck. */
 export async function requireMember(next: string) {
   const context = await memberContext(next);
-  if (!context.member) redirect(PAYWALL);
+  if (!context.profile?.is_admin) redirect(HOME);
   return context;
 }

@@ -3,7 +3,7 @@
 import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import NavIcon from "@/components/NavIcon";
-import { ADMIN_LINK, NAV, SETTINGS_LINK, activeKey, type NavLink } from "@/components/appNav";
+import { ADMIN_LINK, SETTINGS_LINK, activeKey, visibleNav, type NavLink } from "@/components/appNav";
 import { BUTTON_PRIMARY_SM } from "@/components/ui";
 
 // The sidebar's pages. The frame stays mounted while pages change (the (app) layout), so the current page comes from
@@ -14,7 +14,7 @@ export default function SideNav({ isAdmin }: { isAdmin: boolean }) {
   return (
     <>
       <nav aria-label="Main" className="flex-1 space-y-0.5 overflow-y-auto px-3 py-3">
-        {NAV.map((link) => (
+        {visibleNav(isAdmin).map((link) => (
           <NavItem key={link.label} link={link} active={link.href !== undefined && link.key === active} />
         ))}
       </nav>
@@ -71,11 +71,8 @@ export function TopAction() {
     return <span className="rounded-md bg-panel-2 px-2 py-1 text-xs font-medium text-ink-2 ring-1 ring-inset ring-line-strong">Admin</span>;
   }
   return (
-    <Link href="/dashboard#watchlist" className={`hidden sm:inline-flex ${BUTTON_PRIMARY_SM}`}>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
-        <path d="M12 5v14M5 12h14" />
-      </svg>
-      New watchlist
+    <Link href="/swipe" className={`hidden sm:inline-flex ${BUTTON_PRIMARY_SM}`}>
+      Swipe setups
     </Link>
   );
 }

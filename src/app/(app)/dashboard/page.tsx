@@ -1,9 +1,10 @@
+import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
 import MemberGate from "@/components/join/MemberGate";
 import { librarySummary } from "@/lib/education";
 import { billingReady, healMembership, publishableKey } from "@/lib/lifetime";
-import { memberContext } from "@/lib/membership";
+import { HOME, memberContext } from "@/lib/membership";
 import { agreedToTerms } from "@/lib/terms";
 import { Gauge } from "@/components/TerminalMockup";
 import { NowDateLong, NowGreeting, UpcomingFriday } from "@/components/Now";
@@ -21,6 +22,8 @@ export const metadata: Metadata = {
 
 export default async function DashboardPage() {
   const { supabase, user, profile, member } = await memberContext("/dashboard");
+  // Hidden for now (Ben, 2026-11-02: "make this the only product"): everyone but admins goes to the swipe deck.
+  if (!profile?.is_admin) redirect(HOME);
 
   // Without the $397 membership: the paywall, over a shell with nothing in it, and nothing read for it. A payment that
   // went through without its browser coming back to /welcome turns access on here first.

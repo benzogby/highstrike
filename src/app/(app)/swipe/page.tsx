@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { requireMember } from "@/lib/membership";
+import { requireAccount } from "@/lib/membership";
 import { supabaseService } from "@/lib/stripe";
 import { deckFor, tasteFor } from "@/lib/options/deck";
 import { myRecord } from "@/lib/options/stats";
@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: "Swipe — HighStrike" };
 
 /** The swipe deck (step 2 of the swipe app, Ben 2026-11-02): options setups, one card at a time. */
 export default async function SwipePage() {
-  const { user } = await requireMember("/swipe");
+  const { user } = await requireAccount("/swipe");
   const db = supabaseService();
   const [initial, rec, favorites] = await Promise.all([deckFor(db, user.id, 15), myRecord(db, user.id), tasteFor(db, user.id)]);
   return (

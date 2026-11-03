@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { requireMember } from "@/lib/membership";
+import { requireAccount } from "@/lib/membership";
 import { Badge, CARD, PageHeader, Stat } from "@/components/ui";
 import { STRUCTURES } from "@/lib/options/cards";
 import type { DeckCard } from "@/lib/options/deck";
@@ -22,7 +22,7 @@ type Row = { id: number; created_at: string; share_token: string; card: DeckCard
  * record on top, then each card as it was saved, with how it's doing (estimated, per contract).
  */
 export default async function SavedPage() {
-  const { supabase, user } = await requireMember("/swipe/saved");
+  const { supabase, user } = await requireAccount("/swipe/saved");
   const [{ data }, rec] = await Promise.all([
     supabase.from("swipes").select("id, created_at, share_token, card, status, pnl, close_reason").eq("user_id", user.id).eq("action", "right").order("created_at", { ascending: false }).limit(200),
     myRecord(supabase, user.id),
