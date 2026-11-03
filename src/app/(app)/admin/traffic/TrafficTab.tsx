@@ -42,7 +42,6 @@ const PAGE_LABEL: Record<string, string> = {
   "/": "Homepage",
   "/blog/[slug]": "Blog posts (all)",
   "/blog": "Blog index",
-  "/results": "Results",
   "/pricing": "Pricing",
   "/about": "About",
   "/company": "Company",

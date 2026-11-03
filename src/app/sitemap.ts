@@ -4,7 +4,7 @@ import { posts } from "@/lib/posts";
 const BASE = "https://www.highstrike.com";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const pages = ["", "/results", "/blog", "/about", "/company"].map(
+  const pages = ["", "/blog", "/about", "/company"].map(
     (path) => ({
       url: `${BASE}${path}`,
       changeFrequency: "weekly" as const,

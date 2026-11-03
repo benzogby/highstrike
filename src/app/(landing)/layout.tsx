@@ -28,7 +28,6 @@ const FOOT = [
   {
     title: "Company",
     links: [
-      { href: "/results", label: "Results" },
       { href: "/blog", label: "Blog" },
       { href: "/about", label: "About" },
       { href: "/company", label: "Company" },

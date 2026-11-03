@@ -7,7 +7,6 @@ import BrandMark from "@/components/BrandMark";
 import { JOIN_LINK } from "@/components/join/events";
 
 const nav = [
-  { href: "/results", label: "Results" },
   { href: "/#pricing", label: "Pricing" },
   { href: "/blog", label: "Blog" },
   { href: "/about", label: "About" },
