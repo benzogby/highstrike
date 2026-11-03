@@ -1,6 +1,6 @@
 import { fetchQuotes } from "@/lib/quotes";
 import { supabaseService } from "@/lib/stripe";
-import { sendMail } from "@/lib/mail";
+import { SITE_URL, sendMail } from "@/lib/mail";
 import { notify } from "@/lib/notify";
 
 // Price-alert sweep: evaluates active alerts against quotes, fires matches
@@ -29,7 +29,14 @@ export async function recordActivity(
   }
 }
 
-async function sendAlertEmail(userId: string, subject: string, body: string) {
+/**
+ * The alert emails' sender (Ben, 2026-11-03: alerts must reliably arrive). mail.highstrike.com is verified on Resend, as
+ * for the morning digest and sale alerts. They used RESEND_FROM, which could fall back to Resend's shared test sender
+ * (onboarding@resend.dev), and that delivers only to the Resend account's owner.
+ */
+const ALERTS_FROM = process.env.ALERTS_FROM || "HighStrike Alerts <alerts@mail.highstrike.com>";
+
+async function sendAlertEmail(userId: string, ticker: string, subject: string, body: string) {
   try {
     const service = supabaseService();
     const { data } = await service.auth.admin.getUserById(userId);
@@ -40,8 +47,8 @@ async function sendAlertEmail(userId: string, subject: string, body: string) {
       to,
       subject,
       html: "",
-      text: `${body}\n\nManage alerts: https://www.highstrike.com/dashboard\n\nMarket commentary, not investment advice.`,
-      from: process.env.RESEND_FROM ?? "HighStrike Alerts <onboarding@resend.dev>",
+      text: `${body}\n\nSee $${ticker}: ${SITE_URL}/symbol/${ticker}\nYour price alerts: ${SITE_URL}/settings\n\nMarket commentary, not investment advice.`,
+      from: ALERTS_FROM,
       kind: "price_alert",
     });
     if (!sent.ok) console.error("alert email failed:", sent.error);
@@ -120,7 +127,7 @@ export async function checkAlerts(opts: { throttled?: boolean } = {}): Promise<{
         body: `It's at $${price.toFixed(2)} now.`,
         href: `/symbol/${a.ticker}`,
       }),
-      sendAlertEmail(a.user_id, `⚡ Alert: ${message}`, message),
+      sendAlertEmail(a.user_id, a.ticker, `⚡ Alert: ${message}`, message),
     ]);
   }
 
