@@ -1,12 +1,12 @@
-import { LIFETIME } from "@/lib/offer";
+import { MEMBERSHIP, MONTHLY_PRICE } from "@/lib/offer";
 import { esc, sendMail } from "@/lib/mail";
 
-// The email Ben gets for every $397 purchase (Ben, 2026-11-02: "format an email to ben.zogby@gmail.com like the attached
-// every time someone purchases for $397"; then "match this new design system and have the email come from
-// payments@mail.highstrike.com"). In the app's design system (Cal.com's dashboard in HighStrike green): a white card with
+// The email Ben gets for every new $14 week (Ben, 2026-11-02: "format an email to ben.zogby@gmail.com like the attached
+// every time someone purchases"; then "match this new design system and have the email come from
+// payments@mail.highstrike.com"; 2026-11-03, with the $14 week then $99/month: alerts for new $14 trials only). In the app's design system (Cal.com's dashboard in HighStrike green): a white card with
 // hairline borders on a soft grey page, the mark and a "New sale" badge, the buyer and the amount in Cal Sans, quiet
 // label/value rows, and a green button to the payment in Stripe. Sent from mail.highstrike.com (verified on Resend,
-// scripts/resend.mjs) through src/lib/mail.ts, once per payment (src/lib/lifetime.ts → settleLifetime), and from
+// scripts/resend.mjs) through src/lib/mail.ts, once per new week (src/lib/billing.ts → settleMembership), and from
 // Admin → Overview as a test.
 
 export const SALE_ALERT_TO = process.env.SALE_ALERT_TO || "ben.zogby@gmail.com";
@@ -37,9 +37,11 @@ export function saleAlertEmail(sale: Sale) {
   const price = `$${(sale.cents / 100).toLocaleString("en-US", { minimumFractionDigits: sale.cents % 100 ? 2 : 0 })}`;
   const exact = `${(sale.cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" })} USD`;
   const when = `${sale.at.toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York" })} ET`;
-  const stripe = `https://dashboard.stripe.com/${sale.live ? "" : "test/"}payments/${encodeURIComponent(sale.paymentIntent)}`;
+  // A card-form payment opens itself; one from Stripe's own page (a checkout session) opens the subscriptions list.
+  const stripe = `https://dashboard.stripe.com/${sale.live ? "" : "test/"}${sale.paymentIntent.startsWith("pi_") ? `payments/${encodeURIComponent(sale.paymentIntent)}` : "subscriptions"}`;
   const account = sale.created ? "New account" : "Upgraded account";
-  const subject = `${sale.test ? "[Test] " : ""}${sale.email} just purchased ${LIFETIME.name} for ${price}`;
+  const weekEnd = new Date(sale.at.getTime() + MEMBERSHIP.trialDays * 86_400_000).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "America/New_York" });
+  const subject = `${sale.test ? "[Test] " : ""}${sale.email} just started a ${price} trial week`;
   const badge = (text: string, bg: string, color: string) =>
     `<span style="display:inline-block;padding:2px 8px;border-radius:6px;background:${bg};color:${color};font-family:${BODY};font-size:12px;font-weight:500;line-height:18px">${text}</span>`;
   const row = (label: string, value: string, last = false) =>
@@ -53,25 +55,25 @@ ${sale.test ? `<tr><td style="padding:10px 24px;background:#FFF6DB;border-radius
 <tr><td style="padding:18px 24px;border-bottom:1px solid ${C.line}">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr>
 <td style="font-family:${DISPLAY};font-size:16px;color:${C.ink}"><span style="display:inline-block;width:14px;height:14px;border-radius:4px;background:${C.green};vertical-align:-2px;margin-right:8px"></span>HighStrike</td>
-<td align="right">${badge("New sale", C.greenSoft, C.greenInk)}</td>
+<td align="right">${badge("New trial", C.greenSoft, C.greenInk)}</td>
 </tr></table>
 </td></tr>
 <tr><td style="padding:24px 24px 6px">
-<p style="margin:0;font-family:${BODY};font-size:13px;color:${C.ink3}">${LIFETIME.name}</p>
-<p style="margin:6px 0 0;font-family:${DISPLAY};font-size:22px;line-height:1.3;color:${C.ink}">${esc(sale.email)} just bought lifetime access</p>
+<p style="margin:0;font-family:${BODY};font-size:13px;color:${C.ink3}">${MEMBERSHIP.name}</p>
+<p style="margin:6px 0 0;font-family:${DISPLAY};font-size:22px;line-height:1.3;color:${C.ink}">${esc(sale.email)} just started their week</p>
 <p style="margin:18px 0 0;font-family:${DISPLAY};font-size:36px;line-height:1;color:${C.ink}">${esc(exact.replace(" USD", ""))} <span style="vertical-align:8px">${badge("Paid", C.greenSoft, C.greenInk)}</span></p>
 </td></tr>
 <tr><td style="padding:14px 24px 4px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse">
-${row("Buyer", esc(sale.email))}${row("Account", badge(sale.created ? "New account" : "Upgraded", sale.created ? C.greenSoft : C.soft, sale.created ? C.greenInk : C.ink2))}${row("Paid", esc(when))}${row("Payment", `<span style="font-family:${MONO};font-size:12px;color:${C.ink2}">${esc(sale.paymentIntent)}</span>`, true)}
+${row("Buyer", esc(sale.email))}${row("Account", badge(sale.created ? "New account" : "Upgraded", sale.created ? C.greenSoft : C.soft, sale.created ? C.greenInk : C.ink2))}${row("Paid", esc(when))}${row("Then", `${MONTHLY_PRICE}/month from ${esc(weekEnd)}`)}${row("Payment", `<span style="font-family:${MONO};font-size:12px;color:${C.ink2}">${esc(sale.paymentIntent)}</span>`, true)}
 </table>
 </td></tr>
 <tr><td style="padding:16px 24px 24px"><a href="${stripe}" style="display:inline-block;padding:10px 16px;border-radius:8px;background:${C.green};color:#FFFFFF;font-family:${BODY};font-size:14px;font-weight:600;text-decoration:none">View in Stripe</a></td></tr>
 </table>
-<p style="max-width:520px;margin:14px auto 0;text-align:center;font-family:${BODY};font-size:12px;color:${C.ink3}">Sent for every ${price} purchase on highstrike.com.</p>
+<p style="max-width:520px;margin:14px auto 0;text-align:center;font-family:${BODY};font-size:12px;color:${C.ink3}">Sent for every new ${price} week on highstrike.com.</p>
 </td></tr></table>
 </body></html>`;
-  const text = `${sale.test ? "[A test from Admin: nobody paid.]\n\n" : ""}${sale.email} just joined ${LIFETIME.name}.\n\n${price}\n${LIFETIME.name}: ${exact}\n${account} · ${when}\n\nView the payment in Stripe: ${stripe}`;
+  const text = `${sale.test ? "[A test from Admin: nobody paid.]\n\n" : ""}${sale.email} just started a ${price} week of ${MEMBERSHIP.name}.\n\n${exact}\n${account} · ${when}\nThen ${MONTHLY_PRICE}/month from ${weekEnd}\n\nView the payment in Stripe: ${stripe}`;
   return { subject, html, text };
 }
 

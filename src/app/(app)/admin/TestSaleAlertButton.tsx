@@ -27,7 +27,7 @@ export default function TestSaleAlertButton({ to }: { to: string }) {
         {busy ? "Sending…" : "Send a test sale alert"}
       </button>
       <span className={`text-sm ${result ? (result.ok ? "text-up" : "text-down") : "text-ink-3"}`}>
-        {result ? result.message : `Every $397 purchase emails ${to}.`}
+        {result ? result.message : `Every new $14 week emails ${to}.`}
       </span>
     </div>
   );

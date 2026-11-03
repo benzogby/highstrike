@@ -3,11 +3,10 @@
 import { useEffect, useState } from "react";
 import JoinButton from "@/components/join/JoinButton";
 import { Bull } from "@/components/landing/Pieces";
-import { LIFETIME_WAS } from "@/lib/offer";
 
 /**
  * The homepage's floating bar at the foot (Ben, 2026-11-02: "Give page a floating footer like getripping.com/staging
- * when the page is scrolled beyond the hero"): "Get HighStrike", $1,997 struck through over the price, and Get Instant Access (Ben's words, 2026-11-02), from when the hero's button (#hero-cta) has
+ * when the page is scrolled beyond the hero"): "Get HighStrike", the $14 week, and the button to try it, from when the hero's button (#hero-cta) has
  * scrolled away until the close (#closing) comes into sight, and not over the pricing section (#pricing), which has its own, so the button is always at hand but never doubled.
  */
 export default function LandingDock({ price }: { price: string }) {
@@ -37,9 +36,9 @@ export default function LandingDock({ price }: { price: string }) {
       <Bull />
       <p className="hs-dock__text">
         <b>Get HighStrike</b>
-        <s>{LIFETIME_WAS}</s> {price}
+        {price} for your first week
       </p>
-      <JoinButton className="hs-btn hs-btn--sm">Get Instant Access</JoinButton>
+      <JoinButton className="hs-btn hs-btn--sm">Try it for {price}</JoinButton>
     </div>
   );
 }

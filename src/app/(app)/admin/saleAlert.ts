@@ -1,8 +1,8 @@
 "use server";
 
 import { supabaseServer } from "@/lib/supabase/server";
-import { liveMode } from "@/lib/lifetime";
-import { LIFETIME } from "@/lib/offer";
+import { liveMode } from "@/lib/billing";
+import { MEMBERSHIP } from "@/lib/offer";
 import { SALE_ALERT_TO, sendSaleAlert } from "@/lib/saleAlert";
 
 /**
@@ -20,7 +20,7 @@ export async function sendTestSaleAlert(): Promise<{ ok: boolean; message: strin
   const sent = await sendSaleAlert({
     email: "jordan@example.com",
     created: true,
-    cents: LIFETIME.cents,
+    cents: MEMBERSHIP.trialCents,
     at: new Date(),
     paymentIntent: "pi_test_alert",
     live: liveMode() ?? true,

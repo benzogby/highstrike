@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "Trading School — HighStrike" };
 /**
  * /education: HighStrike Trading School, the course library (Ben, 2026-11-02: "do all the lessons from HighStrike Alpha
  * Mastermind module, split into the sub modules", then "rename the entire lesson library to HighStrike Trading School"),
- * laid out like getripping.com's Ripping University. Part of the $397
+ * laid out like getripping.com's Ripping University. Part of the
  * membership (src/lib/membership.ts); anyone else is sent to the paywall. This page only loads; LibraryView draws.
  */
 export default async function EducationPage() {

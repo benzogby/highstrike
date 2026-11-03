@@ -1,5 +1,5 @@
 import { JOIN_LINK } from "@/components/join/events";
-import { LIFETIME_PRICE } from "@/lib/offer";
+import { MONTHLY_PRICE, TRIAL_PRICE } from "@/lib/offer";
 
 // The pages' closing call: the homepage's popup, which sells the one membership (src/lib/offer.ts).
 export default function CtaBlock() {
@@ -9,10 +9,10 @@ export default function CtaBlock() {
         href={JOIN_LINK}
         className="press rounded-lg bg-accent px-8 py-3.5 font-display text-base font-bold uppercase tracking-wide text-bg transition hover:bg-accent-2"
       >
-        Get Lifetime Access
+        Try it for {TRIAL_PRICE}
       </a>
       <p className="text-sm text-ink-2">
-        {LIFETIME_PRICE} once for the daily trades, the tools and HighStrike Trading School
+        A week of the daily ideas, the tools and HighStrike Trading School for {TRIAL_PRICE}, then {MONTHLY_PRICE}/month
       </p>
     </div>
   );

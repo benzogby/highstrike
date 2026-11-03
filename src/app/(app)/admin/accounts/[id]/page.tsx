@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Badge, CARD } from "@/components/ui";
 import { DATE, TIME, requireAdmin } from "@/lib/adminGate";
-import { accountOf, accountTraffic } from "@/lib/adminAccounts";
+import { accountOf, accountTraffic, membershipBadge } from "@/lib/adminAccounts";
 import { paymentsList } from "@/lib/adminPayments";
 import { countryOf } from "@/lib/paymentRows";
 import PaymentsTable from "../../payments/PaymentsTable";
@@ -44,11 +44,11 @@ export default async function AdminAccountPage({ params }: { params: Promise<{ i
         <div className="min-w-0">
           <h2 className="truncate font-display text-xl text-ink">{a.email}</h2>
           <div className="mt-1.5 flex gap-1">
-            {a.member ? <Badge tone="up">Lifetime access</Badge> : <Badge>Not paid</Badge>}
+            <Badge tone={membershipBadge(a).tone}>{membershipBadge(a).label}</Badge>
             {a.admin && <Badge tone="accent">Admin</Badge>}
           </div>
         </div>
-        <AccountActions id={a.id} email={a.email} member={a.member} admin={a.admin} self={a.id === me.id} />
+        <AccountActions id={a.id} email={a.email} granted={a.granted} admin={a.admin} self={a.id === me.id} />
       </div>
 
       <dl className={`${CARD} grid divide-y divide-line sm:grid-cols-2 sm:divide-y-0`}>

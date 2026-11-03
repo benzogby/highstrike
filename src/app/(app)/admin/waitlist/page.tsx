@@ -40,7 +40,7 @@ export default async function AdminWaitlistPage() {
                 <tr key={r.id}>
                   <td className="px-4 py-2 text-ink">{r.email}</td>
                   <td className="px-2 py-2 text-ink-2">{r.source ?? "—"}</td>
-                  <td className="px-2 py-2 text-ink-2">{plan === undefined ? "—" : plan === "lifetime" ? "Lifetime member" : "Account, not paid"}</td>
+                  <td className="px-2 py-2 text-ink-2">{plan === undefined ? "—" : plan === "monthly" ? "Member" : plan === "lifetime" ? "Free access" : "Account, not paid"}</td>
                   <td className="whitespace-nowrap px-4 py-2 text-right font-mono-nums text-ink-2">
                     {DATE.format(new Date(r.created_at))} <span className="text-ink-3">{TIME.format(new Date(r.created_at))}</span>
                   </td>

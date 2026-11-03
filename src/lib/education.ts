@@ -7,7 +7,7 @@ export { LESSONS_BUCKET, moduleLabel, clock, lessonHref } from "@/lib/educationS
 // renamed the same day), laid out like getripping.com's Ripping University: one module per course chapter, each a list of
 // lessons. Everything comes from the database
 // (supabase/migrations/20261102170000_education.sql) through the member's own session, so the tables' rules decide
-// what anyone sees: the $397 membership or an admin (public.has_education() → is_member()). The repository is public;
+// what anyone sees: the membership or an admin (public.has_education() → is_member()). The repository is public;
 // no lesson is in it.
 
 type Client = Awaited<ReturnType<typeof supabaseServer>>;

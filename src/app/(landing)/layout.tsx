@@ -5,7 +5,7 @@ import { Bull } from "@/components/landing/Pieces";
 import CookieSettings from "@/components/landing/CookieSettings";
 import LandingDock from "@/components/landing/LandingDock";
 import { LEGAL } from "@/lib/legal";
-import { LIFETIME_PRICE } from "@/lib/offer";
+import { MONTHLY_PRICE, TRIAL_PRICE } from "@/lib/offer";
 import "./landing.css";
 
 // The homepage's own frame in the HighStrike reels system: a black bar with the
@@ -82,7 +82,9 @@ export default function LandingLayout({ children }: Readonly<{ children: React.R
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img className="hs-brand__word" src="/brand/wordmark.png" alt="" width={85} height={17} />
               </Link>
-              <p>Options education, tools and smart scanning, since 2018. {LIFETIME_PRICE} once for lifetime access.</p>
+              <p>
+                Options education, tools and smart scanning, since 2018. {TRIAL_PRICE} for your first week, then {MONTHLY_PRICE}/month.
+              </p>
               <p>
                 HighStrike is owned and operated by ZERO DTE HOLDINGS LLC, a Wyoming limited liability company.
                 <br />
@@ -118,7 +120,7 @@ export default function LandingLayout({ children }: Readonly<{ children: React.R
           </div>
         </div>
       </footer>
-      <LandingDock price={LIFETIME_PRICE} />
+      <LandingDock price={TRIAL_PRICE} />
       <LandingMotion />
     </div>
   );

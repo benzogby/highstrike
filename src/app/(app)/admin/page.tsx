@@ -3,10 +3,11 @@ import { Badge, CARD, Stat } from "@/components/ui";
 import { DATE, daysAgo, requireAdmin } from "@/lib/adminGate";
 import { growth } from "@/lib/adminGrowth";
 import { supabaseService } from "@/lib/stripe";
-import { LIFETIME } from "@/lib/offer";
+import { membershipBadge } from "@/lib/adminAccounts";
 import { SALE_ALERT_TO } from "@/lib/saleAlert";
 import GenerateNowButton from "./GenerateNowButton";
 import TestSaleAlertButton from "./TestSaleAlertButton";
+import BillingSetup from "./BillingSetup";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +35,7 @@ export default async function AdminOverviewPage() {
     <div className="flex flex-col gap-6">
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Stat label="Accounts" value={(g?.accounts ?? 0).toLocaleString("en-US")} note={`${accounts7d.count ?? 0} new in 7 days`} />
-        <Stat label="Lifetime members" value={(g?.members ?? 0).toLocaleString("en-US")} note={`${sales14} ${sales14 === 1 ? "sale" : "sales"} in 14 days`} />
+        <Stat label="Members" value={(g?.members ?? 0).toLocaleString("en-US")} note={`${sales14} ${sales14 === 1 ? "payment" : "payments"} in 14 days`} />
         <Stat label="Revenue, 14 days" value={money(revenue14)} note="Paid in Stripe, less refunds" />
         <Stat
           label="Errors, 24 hours"
@@ -90,7 +91,7 @@ export default async function AdminOverviewPage() {
                   <Link href={`/admin/accounts/${a.id}`} prefetch={false} className="min-w-0 flex-1 truncate text-ink hover:underline">
                     {a.email ?? a.id.slice(0, 8)}
                   </Link>
-                  {a.plan === LIFETIME.plan ? <Badge tone="up">Lifetime</Badge> : a.is_admin ? <Badge tone="accent">Admin</Badge> : <Badge>Not paid</Badge>}
+                  <Badge tone={membershipBadge({ plan: a.plan, admin: a.is_admin }).tone}>{membershipBadge({ plan: a.plan, admin: a.is_admin }).label}</Badge>
                   <span className="whitespace-nowrap text-xs font-mono-nums text-ink-3">{DATE.format(new Date(a.created_at))}</span>
                 </li>
               ))}
@@ -106,10 +107,17 @@ export default async function AdminOverviewPage() {
           </section>
           <section className={`${CARD} flex flex-wrap items-center justify-between gap-3 px-4 py-3.5`}>
             <div>
-              <p className="text-sm font-medium text-ink">Sale alerts</p>
-              <p className="mt-0.5 text-[13px] text-ink-3">An email for every $397 purchase, from payments@mail.highstrike.com.</p>
+              <p className="text-sm font-medium text-ink">Trial alerts</p>
+              <p className="mt-0.5 text-[13px] text-ink-3">An email for every new $14 week, from payments@mail.highstrike.com.</p>
             </div>
             <TestSaleAlertButton to={SALE_ALERT_TO} />
+          </section>
+          <section className={`${CARD} flex flex-col gap-3 px-4 py-3.5`}>
+            <div>
+              <p className="text-sm font-medium text-ink">Billing setup</p>
+              <p className="mt-0.5 text-[13px] text-ink-3">The $14 week and $99/month in Stripe: the price, the billing page and the webhook.</p>
+            </div>
+            <BillingSetup />
           </section>
         </div>
       </div>

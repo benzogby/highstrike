@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import MemberGate from "@/components/join/MemberGate";
+import MemberGate, { type Gate } from "@/components/join/MemberGate";
 import { lessonHref, librarySummary, moduleLabel, myProgress, outline } from "@/lib/education";
 import { IDEA_COLUMNS, SOURCES, STYLES, headlineOf, type Idea } from "@/lib/ideas";
-import { billingReady, healMembership, publishableKey } from "@/lib/lifetime";
+import { billingReady, billingState, healMembership, publishableKey, weekUsedFor } from "@/lib/billing";
 import { memberContext } from "@/lib/membership";
-import { agreedToTerms } from "@/lib/terms";
 import { Gauge } from "@/components/TerminalMockup";
 import { NowDateLong, NowGreeting } from "@/components/Now";
 import { Suspense } from "react";
@@ -23,20 +22,15 @@ export const metadata: Metadata = {
 export default async function DashboardPage() {
   const { supabase, user, profile, member } = await memberContext("/dashboard");
 
-  // Without the $397 membership: the paywall, over a shell with nothing in it, and nothing read for it. A payment that
-  // went through without its browser coming back to /welcome turns access on here first.
+  // Not a member: the paywall, over a shell with nothing in it, and nothing read for it. A first payment that went
+  // through without its browser coming back to /welcome turns access on here first. The paywall offers the $14 week,
+  // $99/month for someone whose week was used or whose membership ended, or the failed $99 to pay (Ben, 2026-11-03).
   const unlocked = member || (billingReady() && (await healMembership(user).catch(() => false)));
   if (!unlocked) {
-    // The Terms check needs the account as it is now, not as the sign-in token saw it, so this rare path asks Supabase.
-    const fresh = (await supabase.auth.getUser()).data.user;
-    return (
-      <MemberGate
-        email={user.email ?? ""}
-        termsOnRecord={agreedToTerms(fresh ?? user)}
-        publishableKey={publishableKey()}
-        library={await librarySummary(supabase)}
-      />
-    );
+    const [state, library] = await Promise.all([billingReady() ? billingState(user, profile).catch(() => null) : null, librarySummary(supabase)]);
+    const gate: Gate =
+      state?.kind === "owed" ? "owed" : (state?.kind === "none" && state.ended) || (await weekUsedFor(user)) ? "full" : "new";
+    return <MemberGate email={user.email ?? ""} gate={gate} publishableKey={publishableKey()} library={library} />;
   }
 
   const firstName = profile?.name || (user.email ?? "trader").split("@")[0];

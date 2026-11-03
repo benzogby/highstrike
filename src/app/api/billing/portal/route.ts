@@ -1,38 +1,33 @@
 import { NextResponse } from "next/server";
-import { supabaseServer } from "@/lib/supabase/server";
-import { getStripe, stripeEnabled, supabaseService } from "@/lib/stripe";
+import { viewer } from "@/lib/membership";
+import { getStripe, supabaseService } from "@/lib/stripe";
+import { billingReady, portalConfiguration } from "@/lib/billing";
 
 export const dynamic = "force-dynamic";
 
-// Opens the Stripe customer portal (manage payment method, cancel, invoices).
-export async function POST(req: Request) {
-  if (!stripeEnabled()) {
-    return NextResponse.json({ error: "Billing is not configured" }, { status: 503 });
+/**
+ * Settings → Billing → Manage billing (Ben, 2026-11-03: "Settings -> Billing -> Link to Stripe billing portal"): Stripe's
+ * billing page for this account's customer, where a member changes the card, sees invoices or cancels (at the end of
+ * what they've paid for). A form POST, answered with a redirect there; the paywall's owing account uses it too.
+ */
+export async function POST(request: Request) {
+  const origin = new URL(request.url).origin;
+  const settings = new URL("/settings?billing=unavailable", origin);
+  if (!billingReady()) return NextResponse.redirect(settings, 303);
+  const me = await viewer();
+  if (!me) return NextResponse.redirect(new URL("/signin?next=/settings", origin), 303);
+  const { data: profile } = await supabaseService().from("profiles").select("stripe_customer_id").eq("id", me.user.id).maybeSingle();
+  if (!profile?.stripe_customer_id) return NextResponse.redirect(settings, 303);
+  try {
+    const stripe = getStripe();
+    const session = await stripe.billingPortal.sessions.create({
+      customer: profile.stripe_customer_id,
+      configuration: await portalConfiguration(stripe),
+      return_url: `${origin}/settings`,
+    });
+    return NextResponse.redirect(session.url, 303);
+  } catch (e) {
+    console.error("billing portal:", e instanceof Error ? e.message : e);
+    return NextResponse.redirect(settings, 303);
   }
-
-  const supabase = await supabaseServer();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Not signed in" }, { status: 401 });
-  }
-
-  const { data: profile } = await supabaseService()
-    .from("profiles")
-    .select("stripe_customer_id")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile?.stripe_customer_id) {
-    return NextResponse.json({ error: "No billing account yet" }, { status: 404 });
-  }
-
-  const origin = new URL(req.url).origin;
-  const session = await getStripe().billingPortal.sessions.create({
-    customer: profile.stripe_customer_id,
-    return_url: `${origin}/settings`,
-  });
-
-  return NextResponse.json({ url: session.url });
 }

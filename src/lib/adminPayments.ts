@@ -4,7 +4,7 @@ import { byNewest, idOf, paymentRow, type PaymentRow, type StripeCharge } from "
 
 // Admin → Payments (ported from getripping.com, 2026-11-02): every charge Stripe has made or tried, newest first, read
 // from Stripe when the page opens, declined ones included (each try at a card is a charge of its own). Each is named by
-// its account (the payment's metadata user_id, else the account its lifetime_purchases row opened, else the one whose
+// its account (the payment's metadata user_id, else the account its purchases row opened, else the one whose
 // Stripe customer paid), else the address the payment or its customer carries. Service role and the secret key: call only from an admin-checked page.
 
 const PER_PAGE = 100;
@@ -36,10 +36,10 @@ export async function paymentsList(customer?: string): Promise<PaymentsList | nu
 
   const db = supabaseService();
   const customers = [...new Set(charges.map((c) => idOf(c.customer)).filter((c): c is string => !!c))];
-  // Pay first: the account a payment opened is on its lifetime_purchases row, not on the payment.
+  // Pay first: the account a first payment opened is on its purchases row, not on the payment.
   const intents = [...new Set(charges.map((c) => idOf(c.payment_intent)).filter((p): p is string => !!p))];
   const { data: bought } = intents.length
-    ? await db.from("lifetime_purchases").select("payment_intent, user_id").in("payment_intent", intents.slice(0, 1000))
+    ? await db.from("purchases").select("payment_intent, user_id").in("payment_intent", intents.slice(0, 1000))
     : { data: [] };
   const opened = new Map(((bought ?? []) as { payment_intent: string; user_id: string | null }[]).filter((b) => b.user_id).map((b) => [b.payment_intent, b.user_id as string]));
   const userOf = (c: StripeCharge) => c.metadata?.user_id || opened.get(idOf(c.payment_intent) ?? "") || "";

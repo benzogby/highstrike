@@ -4,16 +4,16 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "
 import { createPortal } from "react-dom";
 import type { Library } from "@/lib/offer";
 import { JOIN_EVENT, JOIN_LINK } from "./events";
-import LifetimeCheckout, { Spinner, type Buyer } from "./LifetimeCheckout";
+import MembershipCheckout, { Spinner, type Buyer } from "./MembershipCheckout";
 
-/** What GET /api/billing/lifetime says about this browser. */
-type Where = { signedIn?: boolean; email?: string; member?: boolean; termsOnRecord?: boolean; publishableKey?: string | null };
+/** What GET /api/billing/start says about this browser. */
+type Where = { signedIn?: boolean; email?: string; member?: boolean; weekUsed?: boolean; publishableKey?: string | null };
 
 type Step =
   | { at: "closed" }
-  /** Asking where this browser stands (/api/billing/lifetime). */
+  /** Asking where this browser stands (/api/billing/start). */
   | { at: "checking" }
-  | { at: "pay"; buyer: Buyer; publishableKey: string | null }
+  | { at: "pay"; buyer: Buyer; publishableKey: string | null; weekUsed: boolean }
   | { at: "unreachable" }
   /** On to the app. */
   | { at: "leaving"; title: string };
@@ -21,10 +21,10 @@ type Step =
 const NO_SUBSCRIBE = () => () => {};
 
 /**
- * The homepage's payment popup (Ben, 2026-11-02: "Lifetime access should just open to the payment popup. Account is
- * created upon payment"). Get lifetime access opens it straight to the $397 checkout (LifetimeCheckout): a visitor types
- * the email their account opens under when the payment goes through; a signed-in account pays for itself; a member goes
- * on to the app. Members who are signed out have Sign in under it. /?join=1 opens it on arrival (the rest of the site's
+ * The homepage's payment popup (Ben, 2026-11-02: "should just open to the payment popup. Account is created upon
+ * payment"; 2026-11-03: $14 for a week, then $99/month). Every Try button opens it straight to the checkout
+ * (MembershipCheckout): a visitor types the email their account opens under when the payment goes through; a signed-in
+ * account pays for itself (at $99 when its week was used); a member goes on to the app. Members who are signed out have Sign in under it. /?join=1 opens it on arrival (the rest of the site's
  * links, and Stripe's page when someone leaves it). Mounted once per page; JoinButton opens it. It's drawn on <body>,
  * outside the homepage's [data-landing] frame, whose element resets would undo its spacing; landing.css → .hs-join gives
  * it the homepage's colours.
@@ -33,21 +33,24 @@ export default function JoinDialog({ library }: { library: Library | null }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [step, setStep] = useState<Step>({ at: "closed" });
   const [paying, setPaying] = useState(false);
+  /** The price is $99/month (this account or email had its week): the title says Join rather than Try. */
+  const [full, setFull] = useState(false);
   // On <body> once there is one (not while the server renders or the page hydrates).
   const mounted = useSyncExternalStore(NO_SUBSCRIBE, () => true, () => false);
 
   /** Where the browser stands, and the step that follows. */
   const decide = useCallback(async () => {
     setStep({ at: "checking" });
-    const response = await fetch("/api/billing/lifetime", { cache: "no-store" }).catch(() => null);
+    const response = await fetch("/api/billing/start", { cache: "no-store" }).catch(() => null);
     const a = (await response?.json().catch(() => null)) as Where | null;
     if (!response?.ok || !a) return setStep({ at: "unreachable" });
     if (a.member) {
       setStep({ at: "leaving", title: "You're a member. Opening HighStrike" });
       return window.location.assign(new URL("/dashboard", window.location.origin).href);
     }
-    const buyer: Buyer = a.signedIn ? { email: a.email || null, termsOnRecord: Boolean(a.termsOnRecord) } : { email: null, termsOnRecord: false };
-    setStep({ at: "pay", buyer, publishableKey: a.publishableKey ?? null });
+    const buyer: Buyer = { email: a.signedIn ? a.email || null : null };
+    setFull(Boolean(a.weekUsed));
+    setStep({ at: "pay", buyer, publishableKey: a.publishableKey ?? null, weekUsed: Boolean(a.weekUsed) });
   }, []);
 
   const open = useCallback(() => {
@@ -93,7 +96,7 @@ export default function JoinDialog({ library }: { library: Library | null }) {
     >
       <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-4">
         <h2 id="hs-join-title" className="font-display text-lg font-semibold">
-          {step.at === "leaving" ? step.title : "Get lifetime access"}
+          {step.at === "leaving" ? step.title : full ? "Join HighStrike" : "Try HighStrike for a week"}
         </h2>
         <button
           type="button"
@@ -127,7 +130,15 @@ export default function JoinDialog({ library }: { library: Library | null }) {
 
       {step.at === "pay" && (
         <div className="px-5 py-5">
-          <LifetimeCheckout library={library} back={JOIN_LINK} buyer={step.buyer} publishableKey={step.publishableKey} onPaying={setPaying} />
+          <MembershipCheckout
+            library={library}
+            back={JOIN_LINK}
+            buyer={step.buyer}
+            publishableKey={step.publishableKey}
+            weekUsed={step.weekUsed}
+            onPaying={setPaying}
+            onFull={setFull}
+          />
           {!step.buyer.email && (
             <p className="mt-4 text-center text-xs text-ink-3">
               Already a member?{" "}

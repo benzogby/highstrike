@@ -4,7 +4,7 @@ import { SITE_URL, esc, sendMail } from "@/lib/mail";
 import { enrichedScan, etToday, type EnrichedRow } from "@/lib/setupEngine";
 import { buildIdeas } from "@/lib/buildIdeas";
 import { saveOwnIdea } from "@/lib/ownIdeas";
-import { LIFETIME } from "@/lib/offer";
+import { MEMBER_PLANS } from "@/lib/offer";
 import { STYLES, type Style } from "@/lib/ideas";
 
 // The morning, after the engine has written the day's ideas (piece 5 of the trade-ideas plan, Ben 2026-11-02; no AI):
@@ -20,7 +20,7 @@ const PER_MEMBER = 3;
 type Member = { id: string; email: string | null; digest_email: boolean };
 
 async function members(): Promise<Member[]> {
-  const { data } = await supabaseService().from("profiles").select("id, email, digest_email, plan, is_admin").or(`plan.eq.${LIFETIME.plan},is_admin.eq.true`);
+  const { data } = await supabaseService().from("profiles").select("id, email, digest_email, plan, is_admin").or(`plan.in.(${MEMBER_PLANS.join(",")}),is_admin.eq.true`);
   return (data ?? []) as Member[];
 }
 

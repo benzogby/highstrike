@@ -14,7 +14,7 @@ export async function POST(req: Request) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
-  // The $397 membership, as the tables check it (public.is_member()).
+  // The membership, as the tables check it (public.is_member()).
   const { data: member } = await supabase.rpc("is_member");
   if (!member) return NextResponse.json({ error: "Members only" }, { status: 403 });
 

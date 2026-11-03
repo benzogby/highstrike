@@ -21,14 +21,11 @@ export default function SettingsForm({
   userId,
   email,
   hasPassword,
-  membership,
   initial,
 }: {
   userId: string;
   email: string;
   hasPassword: boolean;
-  /** What the account has: the $397 lifetime membership, or an admin's access. */
-  membership: "lifetime" | "admin";
   initial: Initial;
 }) {
   const router = useRouter();
@@ -300,36 +297,6 @@ export default function SettingsForm({
         </form>
       </section>
 
-      {/* Membership: one payment, nothing to manage */}
-      <section className="rounded-xl border border-line bg-panel p-6">
-        <h2 className="font-display text-[15px] text-ink">
-          Membership
-        </h2>
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-panel-2 px-4 py-3.5">
-          <div>
-            <p className="text-sm font-medium text-ink">
-              {membership === "admin" ? "Admin access" : "Lifetime access"}
-            </p>
-            <p className="mt-0.5 text-sm text-ink-2">
-              {membership === "admin"
-                ? "Everything in HighStrike is open to this account."
-                : "Paid once. The daily trades, the tools and HighStrike Trading School are yours, with nothing to renew."}
-            </p>
-          </div>
-          <span className="rounded-md bg-accent-soft px-1.5 py-0.5 text-xs font-medium text-accent-ink ring-1 ring-inset ring-accent/25">
-            Active
-          </span>
-        </div>
-        {membership === "lifetime" && (
-          <p className="mt-3 text-sm text-ink-3">
-            Stripe emailed your receipt when you paid. Questions about a payment go to{" "}
-            <a href="mailto:support@highstrike.com" className="text-ink-2 underline-offset-2 hover:underline">
-              support@highstrike.com
-            </a>
-            .
-          </p>
-        )}
-      </section>
     </div>
   );
 }

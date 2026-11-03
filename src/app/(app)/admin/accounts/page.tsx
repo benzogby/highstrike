@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Badge, CARD, INPUT } from "@/components/ui";
 import { DATE, requireAdmin } from "@/lib/adminGate";
-import { accountsList, type Account } from "@/lib/adminAccounts";
+import { accountsList, membershipBadge, type Account } from "@/lib/adminAccounts";
 import { countryOf } from "@/lib/paymentRows";
 
 export const dynamic = "force-dynamic";
@@ -53,7 +53,7 @@ export default async function AdminAccountsPage({ searchParams }: { searchParams
           ))}
         </nav>
         <span className="text-xs text-ink-3 sm:ml-auto">
-          {all.length} accounts · {members} with lifetime access
+          {all.length} accounts · {members} {members === 1 ? "member" : "members"}
         </span>
       </div>
 
@@ -82,7 +82,7 @@ export default async function AdminAccountsPage({ searchParams }: { searchParams
                   </td>
                   <td className="whitespace-nowrap px-2 py-2">
                     <span className="flex gap-1">
-                      {a.member ? <Badge tone="up">Lifetime</Badge> : <Badge>Not paid</Badge>}
+                      <Badge tone={membershipBadge(a).tone}>{membershipBadge(a).label}</Badge>
                       {a.admin && <Badge tone="accent">Admin</Badge>}
                     </span>
                   </td>

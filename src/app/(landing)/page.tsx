@@ -9,7 +9,7 @@ import JoinButton from "@/components/join/JoinButton";
 import JoinDialog from "@/components/join/JoinDialog";
 import { moduleLabel } from "@/lib/education";
 import ProofRow from "@/components/landing/Proof";
-import { LIFETIME_PRICE, LIFETIME_WAS, type Library } from "@/lib/offer";
+import { MONTHLY_PRICE, TRIAL_PRICE, type Library } from "@/lib/offer";
 import { LOOKUP_START, getLandingData, type CourseModule, type HeroSetup } from "./data";
 
 // The homepage in the HighStrike reels system (design/keyframes-2026-11-02): the dark room with one light punch, Cal
@@ -18,13 +18,13 @@ import { LOOKUP_START, getLandingData, type CourseModule, type HeroSetup } from 
 // options trades, on three pillars (education, tools, smart scanning); the scanner is called what it is, a rule-based
 // "smart scanner", never AI; proof is the stars, the member count, "since 2018", the school's size and members' quotes
 // (Admin → Site → Quotes); a fan of phones for the home-screen app like getripping.com's; a features-only comparison.
-// It sells one thing: $397 once for lifetime access, bought in the popup (components/join/JoinDialog). Refreshed every
-// 30 minutes.
+// It sells one thing, the membership (Ben, 2026-11-03: "Try it for a week for $14 and then $99/month thereafter"), bought
+// in the popup (components/join/JoinDialog). Refreshed every 30 minutes.
 export const revalidate = 1800;
 
 const TITLE = "HighStrike — Find winning options trades before the bell";
 const DESCRIPTION =
-  "Learn options at HighStrike Trading School, check any trade with pro tools, and get fresh trade ideas from the smart scanner every morning. $397 once for lifetime access.";
+  "Learn options at HighStrike Trading School, check any trade with pro tools, and get fresh trade ideas from the smart scanner every morning. Try it for a week for $14, then $99/month.";
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -36,8 +36,12 @@ function faqsFor(library: Library | null) {
   const course = library ? `HighStrike Trading School (${library.modules} modules, ${library.lessons} lessons)` : "HighStrike Trading School";
   return [
     {
-      q: `What do I get for ${LIFETIME_PRICE}?`,
-      a: `All of it: ${course}, the smart scanner's trade ideas every morning, every tool on the desk, alerts, the morning email and the app on your phone. One payment, for life. Nothing renews.`,
+      q: "What do I get?",
+      a: `All of it: ${course}, the smart scanner's trade ideas every morning, every tool on the desk, alerts, the morning email and the app on your phone. Your first week is ${TRIAL_PRICE}, then it's ${MONTHLY_PRICE}/month until you cancel.`,
+    },
+    {
+      q: "Can I cancel?",
+      a: `Yes, anytime, from Settings → Billing in a couple of clicks. Cancel during your first week and the ${MONTHLY_PRICE} is never charged. Cancel later and you keep everything until the end of the month you paid for.`,
     },
     {
       q: "How does the smart scanner find ideas?",
@@ -53,7 +57,7 @@ function faqsFor(library: Library | null) {
     },
     {
       q: "How fast do I get in?",
-      a: "Right away. Pay with your email and your account opens the second the payment goes through. Already have an account under that email? It's upgraded instead.",
+      a: `Right away. Pay ${TRIAL_PRICE} with your email and your account opens the second the payment goes through. Already have an account under that email? It's upgraded instead.`,
     },
     {
       q: "Do I connect my broker?",
@@ -65,7 +69,7 @@ function faqsFor(library: Library | null) {
     },
     {
       q: "Can I get a refund?",
-      a: "No. All sales are final, as the Terms of Service say.",
+      a: "No. Payments are final, as the Terms of Service say. You can cancel anytime, though, so the next month is never charged.",
     },
   ];
 }
@@ -135,7 +139,7 @@ const COMPARE: { row: string; marks: [Mark, Mark, Mark, Mark] }[] = [
   { row: "Position sizing for each trade", marks: ["yes", "some", "no", "no"] },
   { row: "Insider filings and the crowd's lean", marks: ["yes", "no", "some", "no"] },
   { row: "On your phone, from the home screen", marks: ["yes", "some", "some", "some"] },
-  { row: "Pay once, keep it for life", marks: ["yes", "some", "no", "no"] },
+  { row: "School, scanner, tools and alerts in one membership", marks: ["yes", "no", "no", "no"] },
 ];
 const COMPARE_COLS = ["HighStrike", "An options course", "A scanner app", "An alerts service"];
 
@@ -257,14 +261,13 @@ export default async function Home() {
               Learn how options really work, check any trade with the tools the pros use, and start every morning with fresh trade ideas from the smart scanner. All in one place.
             </p>
             <div id="hero-cta" className="hs-hero__actions" data-reveal="" style={at(4)}>
-              <JoinButton className="hs-btn">Get HighStrike</JoinButton>
+              <JoinButton className="hs-btn">Try it for {TRIAL_PRICE}</JoinButton>
               <a href="#scanner" className="hs-link">
                 See how it finds ideas
               </a>
             </div>
             <p className="hs-hero__price" data-reveal="" style={at(4)}>
-              <s className="hs-was">{LIFETIME_WAS}</s>
-              <b>{LIFETIME_PRICE} once.</b> Lifetime access, no subscription.
+              <b>{TRIAL_PRICE} for your first week.</b> Then {MONTHLY_PRICE}/month. Cancel anytime.
             </p>
             <div data-reveal="" style={at(5)}>
               <ProofRow proof={proof} traders={badges.traders} countries={badges.countries} />
@@ -784,22 +787,21 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* One payment, sold as an order ticket */}
+      {/* The membership, sold as an order ticket: the $14 week, then $99/month */}
       <section id="pricing" className="hs-room hs-section hs-pricing" aria-labelledby="hs-pricing-title">
         <Field spy={spy} qqq={qqq} seed={32} />
         <div className="hs-wrap hs-pricing__grid">
           <div>
             <h2 id="hs-pricing-title" className="hs-display hs-h2">
               <span className="hs-line" data-reveal="">
-                Everything, for life,
+                Your first week,
               </span>
               <span className="hs-line" data-reveal="" style={at(1)}>
-                <s className="hs-was">{LIFETIME_WAS}</s>
-                <Tag className="hs-tag--land">{LIFETIME_PRICE}</Tag> once
+                <Tag className="hs-tag--land">{TRIAL_PRICE}</Tag>
               </span>
             </h2>
             <p className="hs-lead" data-reveal="" style={at(2)}>
-              One payment for the school, the tools, the scanner&apos;s ideas and the app. No subscription, nothing renews, and you&apos;re in the second it goes through.
+              Everything opens the second you pay: the school, the tools, the scanner&apos;s ideas and the app. Then {MONTHLY_PRICE}/month, and you can cancel anytime in a couple of clicks.
             </p>
             <ul className="hs-included">
               {included(library).map((t, i) => (
@@ -816,9 +818,9 @@ export default async function Home() {
             <div className="hs-ui-head">
               <Bull className="hs-bull--sm" />
               <span className="hs-ui-head__tk">HighStrike</span>
-              <span className="hs-ui-head__nm">Lifetime</span>
+              <span className="hs-ui-head__nm">Membership</span>
               <span className="hs-ui-head__sp">
-                <Pill>One payment</Pill>
+                <Pill>7-day trial</Pill>
               </span>
             </div>
             <dl>
@@ -827,12 +829,16 @@ export default async function Home() {
                 <dd>School, tools, scanner, app</dd>
               </div>
               <div>
-                <dt>Price</dt>
-                <dd>{LIFETIME_PRICE}.00 once</dd>
+                <dt>First week</dt>
+                <dd>{TRIAL_PRICE}.00</dd>
               </div>
               <div>
-                <dt>Renews</dt>
-                <dd>Never</dd>
+                <dt>Then</dt>
+                <dd>{MONTHLY_PRICE}.00/month</dd>
+              </div>
+              <div>
+                <dt>Cancel</dt>
+                <dd>Anytime, in Settings</dd>
               </div>
               <div>
                 <dt>Opens</dt>
@@ -841,10 +847,10 @@ export default async function Home() {
             </dl>
             <p className="hs-order__due">
               <span>Due today</span>
-              <b>{LIFETIME_PRICE}</b>
+              <b>{TRIAL_PRICE}</b>
             </p>
-            <JoinButton className="hs-btn hs-btn--wide">Get HighStrike</JoinButton>
-            <p className="hs-order__after">Card or Apple Pay through Stripe. All sales are final.</p>
+            <JoinButton className="hs-btn hs-btn--wide">Start my week for {TRIAL_PRICE}</JoinButton>
+            <p className="hs-order__after">Card or Apple Pay through Stripe. Cancel anytime; payments are final.</p>
           </div>
         </div>
       </section>
@@ -887,11 +893,10 @@ export default async function Home() {
               Tomorrow&apos;s ideas are already taking shape.
             </h2>
             <p className="hs-lead" data-reveal="" style={at(1)}>
-              Get HighStrike for <s className="hs-was">{LIFETIME_WAS}</s>
-              {LIFETIME_PRICE} once and start every morning with a plan.
+              Try it for a week for {TRIAL_PRICE} and start every morning with a plan.
             </p>
             <div data-reveal="" style={at(2)}>
-              <JoinButton className="hs-btn">Get HighStrike</JoinButton>
+              <JoinButton className="hs-btn">Try it for {TRIAL_PRICE}</JoinButton>
             </div>
           </div>
         </div>

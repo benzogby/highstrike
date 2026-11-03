@@ -1,10 +1,10 @@
 import { getStripe, supabaseService } from "@/lib/stripe";
-import { LIFETIME } from "@/lib/offer";
+import { MEMBER_PLANS } from "@/lib/offer";
 import { lastDays, nyDay } from "@/lib/adminGate";
 
-// Admin → Growth (getripping.com's tab, for a one-time $397 instead of subscriptions): a day at a time over the last 30
-// days in New York, the money collected (Stripe's paid charges, less refunds), the sales, and the accounts made; and the
-// members in all. Service role and the secret key: call only from an admin-checked page.
+// Admin → Growth (getripping.com's tab): a day at a time over the last 30 days in New York, the money collected
+// (Stripe's paid charges, less refunds: the $14 weeks and the $99 months), the payments, and the accounts made; and the
+// members in all (in their week, paid up, or granted). Service role and the secret key: call only from an admin-checked page.
 
 export type Day = { day: string; revenue: number; sales: number; signups: number };
 export type Growth = { days: Day[]; members: number; accounts: number; stripe: boolean };
@@ -17,7 +17,7 @@ export async function growth(n = 30): Promise<Growth> {
 
   const [{ data: made }, { count: members }, { count: accounts }] = await Promise.all([
     db.from("profiles").select("created_at").gte("created_at", new Date(since).toISOString()).limit(10000),
-    db.from("profiles").select("id", { count: "exact", head: true }).eq("plan", LIFETIME.plan),
+    db.from("profiles").select("id", { count: "exact", head: true }).in("plan", [...MEMBER_PLANS]),
     db.from("profiles").select("id", { count: "exact", head: true }),
   ]);
   for (const p of (made ?? []) as { created_at: string }[]) {

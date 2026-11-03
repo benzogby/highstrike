@@ -3,18 +3,21 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/adminGate";
 import { supabaseService } from "@/lib/stripe";
-import { LIFETIME } from "@/lib/offer";
+import { GRANTED_PLAN } from "@/lib/offer";
+import { refreshPlan } from "@/lib/billing";
 
-// Admin → Accounts' buttons: turn the membership on or off by hand (a comp, or a refund done in Stripe), and make an
-// account an admin or not. Each asks requireAdmin itself, as a server action can be called without its page.
+// Admin → Accounts' buttons: give free access or take it away (a comp; a paid membership is Stripe's and goes on as it
+// is), and make an account an admin or not. Each asks requireAdmin itself, as a server action can be called without its page.
 
 const ID = /^[0-9a-f-]{36}$/i;
 
 export async function setMembership(id: string, on: boolean) {
   await requireAdmin();
   if (!ID.test(id)) throw new Error("No such account.");
-  const { error } = await supabaseService().from("profiles").update({ plan: on ? LIFETIME.plan : "free" }).eq("id", id);
+  const { error } = await supabaseService().from("profiles").update({ plan: on ? GRANTED_PLAN : "free" }).eq("id", id);
   if (error) throw new Error(error.message);
+  // Taken away: back to what their subscription says (a member who pays stays one).
+  if (!on) await refreshPlan(id);
   revalidatePath("/admin/accounts");
   revalidatePath(`/admin/accounts/${id}`);
 }

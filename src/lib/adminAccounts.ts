@@ -1,5 +1,5 @@
 import { supabaseService } from "@/lib/stripe";
-import { LIFETIME } from "@/lib/offer";
+import { GRANTED_PLAN, MEMBER_PLANS } from "@/lib/offer";
 
 // Admin → Accounts (ported from getripping.com's, 2026-11-02): every account, with its sign-in (Google or email), when it
 // last signed in, whether it has the membership, and where it was last seen from (page_views). Service role: call only
@@ -10,7 +10,12 @@ export type Account = {
   email: string;
   name: string | null;
   plan: string;
+  /** In the $14 week or paid up ('monthly'), or granted free access ('lifetime'). */
   member: boolean;
+  /** Free access an admin granted (Admin → Accounts). */
+  granted: boolean;
+  /** Its subscription's status in Stripe (trialing, active, past_due, canceled…), the live one first; null for none. */
+  billing: string | null;
   admin: boolean;
   joined: string;
   lastSignIn: string | null;
@@ -53,7 +58,32 @@ async function lastSeen(ids: string[]) {
   return out;
 }
 
-function shape(p: Record<string, unknown>, u: AuthUser | undefined, seen: { country: string | null; at: string } | undefined): Account {
+/** Each account's subscription status: a live one (in its week or paid up) over one that owes, over the latest of the rest. */
+async function billingOf(ids: string[] | null) {
+  const out = new Map<string, string>();
+  const q = supabaseService().from("subscriptions").select("user_id, status, updated_at").order("updated_at", { ascending: false }).limit(5000);
+  const { data } = ids ? await q.in("user_id", ids) : await q;
+  const rank = (s: string) => (s === "trialing" || s === "active" ? 2 : s === "past_due" || s === "unpaid" ? 1 : 0);
+  for (const r of (data ?? []) as { user_id: string | null; status: string }[]) {
+    if (!r.user_id) continue;
+    const had = out.get(r.user_id);
+    if (had === undefined || rank(r.status) > rank(had)) out.set(r.user_id, r.status);
+  }
+  return out;
+}
+
+/** The badge an account's membership gets in Admin: its words and tone. */
+export function membershipBadge(a: { plan: string | null; admin: boolean; billing?: string | null }): { label: string; tone: "up" | "accent" | "warn" | "down" | "neutral" } {
+  if (a.plan === GRANTED_PLAN) return { label: "Free access", tone: "up" };
+  if (a.billing === "trialing") return { label: "Trial", tone: "up" };
+  if (a.billing === "active" || (a.plan && MEMBER_PLANS.includes(a.plan))) return { label: "Member", tone: "up" };
+  if (a.billing === "past_due" || a.billing === "unpaid") return { label: "Payment failed", tone: "down" };
+  if (a.admin) return { label: "Admin", tone: "accent" };
+  if (a.billing === "canceled") return { label: "Cancelled", tone: "neutral" };
+  return { label: "Not paid", tone: "neutral" };
+}
+
+function shape(p: Record<string, unknown>, u: AuthUser | undefined, seen: { country: string | null; at: string } | undefined, billing: string | null = null): Account {
   const plan = String(p.plan ?? "free");
   const admin = Boolean(p.is_admin);
   return {
@@ -61,7 +91,9 @@ function shape(p: Record<string, unknown>, u: AuthUser | undefined, seen: { coun
     email: String(p.email ?? ""),
     name: (p.name as string | null) ?? null,
     plan,
-    member: plan === LIFETIME.plan,
+    member: MEMBER_PLANS.includes(plan),
+    granted: plan === GRANTED_PLAN,
+    billing,
     admin,
     joined: String(p.created_at),
     lastSignIn: u?.last_sign_in_at ?? null,
@@ -80,8 +112,8 @@ export async function accountsList(): Promise<Account[]> {
   const { data, error } = await db.from("profiles").select(COLUMNS).order("created_at", { ascending: false }).limit(5000);
   if (error) throw new Error(error.message);
   const rows = (data ?? []) as Record<string, unknown>[];
-  const [users, seen] = await Promise.all([authUsers(), lastSeen(rows.map((r) => String(r.id)))]);
-  return rows.map((r) => shape(r, users.get(String(r.id)), seen.get(String(r.id))));
+  const [users, seen, billing] = await Promise.all([authUsers(), lastSeen(rows.map((r) => String(r.id))), billingOf(null)]);
+  return rows.map((r) => shape(r, users.get(String(r.id)), seen.get(String(r.id)), billing.get(String(r.id)) ?? null));
 }
 
 export async function accountOf(id: string): Promise<Account | null> {
@@ -89,8 +121,8 @@ export async function accountOf(id: string): Promise<Account | null> {
   const db = supabaseService();
   const { data } = await db.from("profiles").select(COLUMNS).eq("id", id).maybeSingle();
   if (!data) return null;
-  const [{ data: u }, seen] = await Promise.all([db.auth.admin.getUserById(id), lastSeen([id])]);
-  return shape(data as Record<string, unknown>, (u?.user as AuthUser | undefined) ?? undefined, seen.get(id));
+  const [{ data: u }, seen, billing] = await Promise.all([db.auth.admin.getUserById(id), lastSeen([id]), billingOf([id])]);
+  return shape(data as Record<string, unknown>, (u?.user as AuthUser | undefined) ?? undefined, seen.get(id), billing.get(id) ?? null);
 }
 
 /** The account's most visited pages and how many views in all. */

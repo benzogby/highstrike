@@ -5,7 +5,7 @@ import Eyebrow from "@/components/Eyebrow";
 
 export type LegalSection = { id: string; title: string; body: React.ReactNode };
 
-export const UPDATED = "November 2, 2026";
+export const UPDATED = "November 3, 2026";
 
 export function LegalDoc({
   eyebrow,

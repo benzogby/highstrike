@@ -2,12 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { LegalDoc, Mail, type LegalSection } from "@/components/LegalDoc";
 import { LEGAL } from "@/lib/legal";
-import { LIFETIME_PRICE } from "@/lib/offer";
+import { MONTHLY_PRICE, TRIAL_PRICE } from "@/lib/offer";
 
 export const metadata: Metadata = {
   title: "Terms of Service — HighStrike",
   description:
-    "The terms for using HighStrike and buying its lifetime membership: what it is, what it isn't (financial advice), and what you and we agree to.",
+    "The terms for using HighStrike and its membership ($14 for your first week, then $99/month until you cancel): what it is, what it isn't (financial advice), and what you and we agree to.",
 };
 
 const sections: LegalSection[] = [
@@ -17,7 +17,7 @@ const sections: LegalSection[] = [
     body: (
       <>
         <p>
-          HighStrike and HighStrike AI are owned and operated by ZERO DTE HOLDINGS LLC, a Wyoming limited liability
+          HighStrike is owned and operated by ZERO DTE HOLDINGS LLC, a Wyoming limited liability
           company (&ldquo;HighStrike&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;). These terms cover highstrike.com, the
           HighStrike app and everything in it.
         </p>
@@ -35,8 +35,11 @@ const sections: LegalSection[] = [
       <>
         <p>HighStrike is an options-research and education service. A membership includes:</p>
         <ul>
-          <li>The daily trade setups, each with an entry, target, time frame and written reasoning</li>
-          <li>The tools: the AI terminal, the flow scanner, price alerts, insider filings and the crowd</li>
+          <li>
+            The smart scanner&apos;s daily trade ideas, each with an entry, target, time frame and written reasoning, and
+            where there&apos;s enough price history, a suggested option with an estimated price
+          </li>
+          <li>The tools: the terminal, the scanner, price alerts, insider filings, the crowd and the app on your phone</li>
           <li>HighStrike Trading School, the course library, the live recordings included</li>
           <li>Updates to all of the above</li>
         </ul>
@@ -56,9 +59,10 @@ const sections: LegalSection[] = [
           <p key={p.slice(0, 24)}>{p}</p>
         ))}
         <p>
-          Setups, scores and write-ups are produced in part by software and AI and can be wrong, late or incomplete. Market
-          data comes from third parties and may be delayed or contain errors. Results we publish are past results; they
-          don&apos;t promise yours.
+          Ideas, scores, estimated option prices and write-ups are produced by software following set rules, and can be
+          wrong, late or incomplete. An option price marked &ldquo;est.&rdquo; is an estimate from the stock&apos;s own
+          past moves, not a live quote; check the real price at your broker. Market data comes from third parties and may
+          be delayed or contain errors. Results we publish are past results; they don&apos;t promise yours.
         </p>
       </>
     ),
@@ -80,22 +84,58 @@ const sections: LegalSection[] = [
   },
   {
     id: "membership",
-    title: "The lifetime membership and payment",
+    title: "The membership, your first week and payment",
     body: (
       <>
         <p>
-          HighStrike Lifetime Access costs {LIFETIME_PRICE} (US dollars), paid once by card. There is no subscription
-          and nothing renews. Access starts as soon as the payment goes through.
+          The HighStrike membership costs <strong>{TRIAL_PRICE} (US dollars) for your first 7 days</strong>, then{" "}
+          <strong>{MONTHLY_PRICE} per month</strong>. Access to everything starts as soon as your first payment goes
+          through.
         </p>
         <p>
-          <strong>Lifetime means for as long as HighStrike runs.</strong> It is the lifetime of the service, not of the
-          buyer. If we ever shut HighStrike down, the membership ends with it.
+          <strong>It renews automatically.</strong> Unless you cancel before your first week ends, your membership renews
+          at {MONTHLY_PRICE} per month, charged to the card you paid with on the day your week ends and on the same day
+          each month after, until you cancel. You agree to this when you tick the box at checkout.
         </p>
         <p>
-          Payments are processed by Stripe. We never see or store your full card number. We may change the price for new
-          buyers at any time; that doesn&apos;t change what you paid or what you have.
+          <strong>One first week per person.</strong> The {TRIAL_PRICE} week is for new members. If your email, account or
+          card has had one before, your membership starts at {MONTHLY_PRICE} per month, and checkout tells you so before
+          anything is charged.
+        </p>
+        <p>
+          Payments are processed by Stripe. We never see or store your full card number. If the price ever changes,
+          we&apos;ll email members at least 30 days before it applies to them, so you can cancel first.
         </p>
       </>
+    ),
+  },
+  {
+    id: "cancel",
+    title: "Cancelling",
+    body: (
+      <>
+        <p>
+          You can cancel anytime in Settings → Billing, on Stripe&apos;s secure billing page, in a couple of clicks.
+        </p>
+        <ul>
+          <li>Cancel during your first week and you&apos;re never charged {MONTHLY_PRICE}. Your access lasts until the week ends.</li>
+          <li>Cancel later and your access lasts until the end of the month you&apos;ve paid for. Nothing more is charged.</li>
+        </ul>
+        <p>
+          Trouble cancelling? Email <Mail /> and we&apos;ll cancel it for you.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "failed-payments",
+    title: "If a payment fails",
+    body: (
+      <p>
+        If a monthly payment doesn&apos;t go through, your access pauses right away and we email you. Paying it with any
+        card opens everything again at once. Stripe may try the card again for a while; if the payment is still missing
+        after that, the membership ends.
+      </p>
     ),
   },
   {
@@ -104,9 +144,9 @@ const sections: LegalSection[] = [
     body: (
       <>
         <p>
-          <strong>All sales are final.</strong> The membership gives you instant access to everything, the full course
-          library included, so the {LIFETIME_PRICE} payment is not refundable. That includes an account closed for
-          breaking these terms.
+          <strong>Payments are final.</strong> The first week and each month give you instant access to everything, the
+          full course library included, so they aren&apos;t refundable, partial months included. That includes an account
+          closed for breaking these terms. You can cancel anytime, so the next payment never comes.
         </p>
         <p>
           If you were charged by mistake, for example twice, email <Mail /> and we&apos;ll put it right. Nothing here
@@ -192,7 +232,7 @@ export default function TermsPage() {
     <LegalDoc
       eyebrow="Legal"
       title="Terms of Service"
-      intro="The plain rules for using HighStrike and buying the lifetime membership."
+      intro="The plain rules for using HighStrike and its membership: $14 for your first week, then $99/month until you cancel."
       sections={sections}
     />
   );

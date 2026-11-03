@@ -5,7 +5,7 @@ import { BUTTON_SECONDARY } from "@/components/ui";
 import { setAdmin, setMembership } from "./actions";
 
 /** The account page's buttons, each asking first, since they change what someone can open. */
-export default function AccountActions({ id, email, member, admin, self }: { id: string; email: string; member: boolean; admin: boolean; self: boolean }) {
+export default function AccountActions({ id, email, granted, admin, self }: { id: string; email: string; granted: boolean; admin: boolean; self: boolean }) {
   const [pending, start] = useTransition();
   const [error, setError] = useState("");
   const run = (question: string, act: () => Promise<void>) => {
@@ -28,12 +28,14 @@ export default function AccountActions({ id, email, member, admin, self }: { id:
           className={BUTTON_SECONDARY}
           onClick={() =>
             run(
-              member ? `Take lifetime access away from ${email}? This doesn't refund anything in Stripe.` : `Give ${email} lifetime access without a payment?`,
-              () => setMembership(id, !member)
+              granted
+                ? `Take the free access away from ${email}? A membership they pay for keeps going.`
+                : `Give ${email} free access, with nothing to pay? It doesn't touch a membership they pay for in Stripe.`,
+              () => setMembership(id, !granted)
             )
           }
         >
-          {member ? "Revoke lifetime access" : "Grant lifetime access"}
+          {granted ? "Remove free access" : "Grant free access"}
         </button>
         {!(self && admin) && (
           <button

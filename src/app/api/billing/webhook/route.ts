@@ -1,115 +1,80 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
-import { getStripe, planForPriceId, supabaseService } from "@/lib/stripe";
-import { settleLifetime } from "@/lib/lifetime";
-import { LIFETIME } from "@/lib/offer";
+import { getStripe } from "@/lib/stripe";
+import { settleCheckout, settleMembership, syncSubscription } from "@/lib/billing";
 
 export const dynamic = "force-dynamic";
 
-// Stripe webhook: the single source of truth for plan changes once billing is
-// live. Verifies the signature against the raw body, then applies the change
-// with the service-role client (RLS bypass — users can't write plan/customer
-// columns themselves once billing is enabled).
+/** The subscription an invoice belongs to, if it's a subscription's. */
+function invoiceSubscription(invoice: Stripe.Invoice) {
+  const s = invoice.parent?.subscription_details?.subscription;
+  return typeof s === "string" ? s : s?.id ?? null;
+}
+
+/**
+ * Stripe's webhook: word of every change to the membership (src/lib/billing.ts), checked against Stripe's signature on
+ * the raw body. A first payment settles (account, subscription, emails); anything about a subscription or its invoices
+ * re-reads that subscription from Stripe and brings our copy and the account's plan in step, so events arriving out of
+ * order can't leave an old state behind. A $99 that fails turns access off here (Ben: "Lock until paid") and a payment
+ * that goes through turns it back on.
+ */
 export async function POST(req: Request) {
   const secret = process.env.STRIPE_WEBHOOK_SECRET;
-  if (!secret) {
-    return NextResponse.json({ error: "Webhook not configured" }, { status: 503 });
-  }
-
+  if (!secret) return NextResponse.json({ error: "Webhook not configured" }, { status: 503 });
   const signature = req.headers.get("stripe-signature");
-  if (!signature) {
-    return NextResponse.json({ error: "Missing signature" }, { status: 400 });
-  }
+  if (!signature) return NextResponse.json({ error: "Missing signature" }, { status: 400 });
 
+  const stripe = getStripe();
   const rawBody = await req.text();
   let event: Stripe.Event;
   try {
-    event = await getStripe().webhooks.constructEventAsync(rawBody, signature, secret);
+    event = await stripe.webhooks.constructEventAsync(rawBody, signature, secret);
   } catch (e) {
     console.error("stripe webhook: bad signature:", e instanceof Error ? e.message : e);
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
-  const service = supabaseService();
+  /** The subscription as Stripe has it now, kept in step. */
+  const resync = async (id: string | null) => {
+    if (!id) return;
+    const sub = await stripe.subscriptions.retrieve(id, { expand: ["latest_invoice"] });
+    if (sub.metadata?.app === "highstrike" || sub.metadata?.product === "membership" || sub.metadata?.user_id) await syncSubscription(sub);
+  };
 
   try {
     switch (event.type) {
-      case "checkout.session.completed": {
-        const session = event.data.object;
-        // The $397 membership on Stripe's own page: settled like any other (src/lib/lifetime.ts), once the money is in.
-        if (session.metadata?.product === LIFETIME.plan) {
-          const pi = session.payment_intent;
-          if (session.payment_status === "paid" && pi) {
-            await settleLifetime(typeof pi === "string" ? await getStripe().paymentIntents.retrieve(pi) : pi);
-          }
-          break;
-        }
-        const userId = session.metadata?.user_id;
-        const plan = session.metadata?.plan;
-        // A one-time payment counts once the money is in (Stripe's page for the $397 membership).
-        const paid = session.mode !== "payment" || session.payment_status === "paid";
-        if (userId && plan && paid) {
-          await service
-            .from("profiles")
-            .update({
-              plan,
-              ...(typeof session.customer === "string"
-                ? { stripe_customer_id: session.customer }
-                : {}),
-            })
-            .eq("id", userId);
-        }
+      // A first payment in the popup: the account under its email gets the membership (made if there's none), for a
+      // browser that never came back.
+      case "payment_intent.succeeded":
+        await settleMembership(event.data.object);
         break;
-      }
 
-      // The $397 membership paid in the popup's card form: the account under its email gets it (made if there's none)
-      // and the confirmation email goes out, for a browser that never came back (src/lib/lifetime.ts → settleLifetime).
-      case "payment_intent.succeeded": {
-        const pi = event.data.object;
-        if (pi.metadata?.product === LIFETIME.plan) await settleLifetime(pi);
+      // Stripe's own checkout page (the popup's fallback).
+      case "checkout.session.completed":
+      case "checkout.session.async_payment_succeeded":
+        await settleCheckout(event.data.object);
         break;
-      }
 
-      case "customer.subscription.updated": {
-        const sub = event.data.object;
-        const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer.id;
-        if (sub.status === "active" || sub.status === "trialing") {
-          const priceId = sub.items.data[0]?.price?.id;
-          const plan = priceId ? planForPriceId(priceId) : null;
-          if (plan) {
-            await service
-              .from("profiles")
-              .update({ plan })
-              .eq("stripe_customer_id", customerId);
-          }
-        } else if (["canceled", "unpaid", "incomplete_expired"].includes(sub.status)) {
-          // Only the Trading Room subscription lapses; one-time purchases
-          // (school, mastermind) are never downgraded by subscription events.
-          await service
-            .from("profiles")
-            .update({ plan: "free" })
-            .eq("stripe_customer_id", customerId)
-            .eq("plan", "room");
-        }
+      case "customer.subscription.created":
+      case "customer.subscription.updated":
+      case "customer.subscription.deleted":
+      case "customer.subscription.paused":
+      case "customer.subscription.resumed":
+        await resync(event.data.object.id);
         break;
-      }
 
-      case "customer.subscription.deleted": {
-        const sub = event.data.object;
-        const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer.id;
-        await service
-          .from("profiles")
-          .update({ plan: "free" })
-          .eq("stripe_customer_id", customerId)
-          .eq("plan", "room");
+      case "invoice.paid":
+      case "invoice.payment_failed":
+      case "invoice.payment_action_required":
+      case "invoice.marked_uncollectible":
+        await resync(invoiceSubscription(event.data.object));
         break;
-      }
 
       default:
         break;
     }
   } catch (e) {
-    console.error("stripe webhook: handler failed:", e instanceof Error ? e.message : e);
+    console.error(`stripe webhook: ${event.type} failed:`, e instanceof Error ? e.message : e);
     return NextResponse.json({ error: "Handler failed" }, { status: 500 });
   }
 
