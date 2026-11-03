@@ -33,7 +33,7 @@ async function fetchTeam(): Promise<TeamMember[]> {
 export const metadata: Metadata = {
   title: "Company — HighStrike",
   description:
-    "The company behind HighStrike AI: who we are, how we operate, careers, and how to reach us.",
+    "The company behind HighStrike: who we are, how we operate, careers, and how to reach us.",
 };
 
 const values = [
@@ -59,7 +59,7 @@ const facts = [
   { label: "Legal entity", value: "ZERO DTE HOLDINGS LLC" },
   { label: "Incorporated", value: "Wyoming, United States" },
   { label: "Founded", value: "2018" },
-  { label: "Products", value: "HighStrike AI Terminal · HighStrike Trading School" },
+  { label: "Products", value: "HighStrike Terminal · HighStrike Trading School" },
   { label: "Support", value: "support@highstrike.com" },
 ];
 
@@ -89,7 +89,7 @@ export default async function CompanyPage() {
         <div className="mx-auto max-w-5xl px-5 py-20">
           <div className="grid gap-6 lg:grid-cols-2">
             <div className="rounded-2xl border border-line bg-panel p-8">
-              <h2 className="font-display text-xl font-bold">HighStrike AI Terminal</h2>
+              <h2 className="font-display text-xl font-bold">HighStrike Terminal</h2>
               <p className="mt-3 leading-relaxed text-ink-2">
                 Our flagship product: a daily analytics terminal that scores market
                 conditions each morning and delivers curated options setups —
@@ -107,8 +107,8 @@ export default async function CompanyPage() {
               <h2 className="font-display text-xl font-bold">HighStrike Trading School</h2>
               <p className="mt-3 leading-relaxed text-ink-2">
                 Where it all started. A structured options-trading curriculum
-                covering process, risk management, and trade selection — the same
-                playbook the AI was trained on, taught to humans. Included free with
+                covering process, risk management, and trade selection — the
+                thinking behind the terminal, taught step by step. Included free with
                 qualifying Terminal registrations.
               </p>
               <Link

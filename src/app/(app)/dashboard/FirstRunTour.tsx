@@ -14,7 +14,7 @@ const STEPS: { target: string | null; title: string; body: string }[] = [
   {
     target: "tour-weather",
     title: "Your morning weather report",
-    body: "Every market day before the open, the AI scores volatility, opportunity, and direction — so every idea you see is framed by the day's actual conditions.",
+    body: "Every market day before the open, the smart scanner scores volatility, opportunity, and direction by clear rules — so every idea you see is framed by the day's actual conditions.",
   },
   {
     target: "tour-setups",

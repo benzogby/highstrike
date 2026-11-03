@@ -23,18 +23,22 @@ const plexMono = IBM_Plex_Mono({
   weight: ["400", "500", "600"],
 });
 
+// The default title and description for every page without its own: the homepage's promise (education, tools and smart
+// scanning). The ideas come from a rule-based smart scanner, so the site never calls it AI (Ben, 2026-11-03).
+const TITLE = "HighStrike — Options education, tools and smart scanning";
+const DESCRIPTION =
+  "Learn options at HighStrike Trading School, check any trade with pro tools, and get fresh trade ideas from the smart scanner every morning.";
+
 export const metadata: Metadata = {
-  title: "HighStrike — Everything You Need to Win in the Markets, Powered by AI",
-  description:
-    "Daily trade setups, entries, targets, and market analysis generated for you so you can focus on execution, not research.",
+  title: TITLE,
+  description: DESCRIPTION,
   metadataBase: new URL("https://www.highstrike.com"),
   icons: { icon: "/api/site/favicon", apple: "/app-icons/apple-icon.png" },
   // Added to the home screen, HighStrike opens full screen like an app (src/app/manifest.ts).
   appleWebApp: { capable: true, title: "HighStrike", statusBarStyle: "black" },
   openGraph: {
-    title: "HighStrike — Everything You Need to Win in the Markets, Powered by AI",
-    description:
-      "Daily trade setups, entries, targets, and market analysis generated for you so you can focus on execution, not research.",
+    title: TITLE,
+    description: DESCRIPTION,
     type: "website",
   },
 };

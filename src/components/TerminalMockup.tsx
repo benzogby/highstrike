@@ -1,4 +1,4 @@
-// The HighStrike AI Terminal "weather report" card. When the homepage passes
+// The HighStrike terminal's "weather report" card. When the homepage passes
 // a real published report it renders live values; otherwise it falls back to
 // illustrative gauges with a client-side current date.
 
@@ -35,7 +35,7 @@ export default function TerminalMockup({ report }: { report?: PublicReport | nul
           <span className="h-2.5 w-2.5 rounded-full bg-line-strong" aria-hidden="true" />
         </div>
         <span className="font-display text-xs font-semibold tracking-wide text-ink-2">
-          HighStrike AI Terminal
+          HighStrike Terminal
         </span>
         {report ? (
           <span className="flex items-center gap-1.5 font-mono-nums text-xs text-accent">
@@ -53,8 +53,8 @@ export default function TerminalMockup({ report }: { report?: PublicReport | nul
         </p>
         <p className="mt-0.5 text-xs text-ink-3">
           {report
-            ? "Today's published AI Weather Report — this is the real one"
-            : "Today's HighStrike AI Weather Report"}
+            ? "Today's published Weather Report — this is the real one"
+            : "Today's HighStrike Weather Report"}
         </p>
 
         <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">

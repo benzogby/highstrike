@@ -36,7 +36,7 @@ const stages: Stage[] = [
     ),
   },
   {
-    title: "AI Weather Report",
+    title: "Weather Report",
     status: "live",
     kicker: "Conditions before trades",
     body: "Volatility, opportunity, and direction scored before the open — every setup framed by the day's actual conditions.",

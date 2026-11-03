@@ -5,14 +5,14 @@ import CtaBlock from "@/components/CtaBlock";
 export const metadata: Metadata = {
   title: "About Us — HighStrike",
   description:
-    "HighStrike has been teaching traders since 2018. HighStrike AI turns eight years of theory and 150k trades of data into a daily terminal.",
+    "HighStrike has been teaching traders since 2018. We turned eight years of theory and 150k trades of data into a daily terminal and a smart scanner that runs on clear rules.",
 };
 
 const numbers = [
   { value: "2018", label: "Founded" },
   { value: "8 yrs", label: "Of market theory" },
   { value: "150k", label: "Trades of data" },
-  { value: "Daily", label: "AI setups delivered" },
+  { value: "Daily", label: "Trade ideas delivered" },
 ];
 
 const principles = [
@@ -30,7 +30,7 @@ const principles = [
   },
   {
     title: "Tools, not gurus",
-    body: "The AI does the legwork — scanning, scoring, and writing up the reasoning in plain English. You stay the decision-maker. We build instruments, not oracles.",
+    body: "The smart scanner does the legwork — scanning, scoring, and writing up the reasoning in plain English. You stay the decision-maker. We build instruments, not oracles.",
   },
   {
     title: "Education first",
@@ -51,12 +51,12 @@ const story = [
   {
     period: "2018–2025",
     title: "Eight years of theory, 150k trades of data",
-    body: "Every trade taught, taken, and reviewed became training data. Patterns that survived — and just as importantly, the ones that didn't — were codified into a systematic playbook for reading volatility, flow, and momentum.",
+    body: "Every trade taught, taken, and reviewed became data. Patterns that survived — and just as importantly, the ones that didn't — were codified into a systematic playbook for reading volatility, flow, and momentum.",
   },
   {
     period: "2026",
-    title: "The AI Terminal",
-    body: "HighStrike AI puts that playbook to work every day: scanning the market each morning, scoring conditions, and delivering curated setups with entries, targets, time frames, and written justifications — so members focus on execution, not research.",
+    title: "The smart scanner",
+    body: "The smart scanner puts that playbook to work every market day. Before the open it checks the market, scores the conditions by clear rules, and delivers trade ideas with entries, targets, time frames, and the reasoning written out — so members focus on execution, not research.",
   },
 ];
 
@@ -70,13 +70,13 @@ export default function AboutPage() {
         <div className="relative mx-auto flex max-w-5xl flex-col items-center px-5 pb-16 pt-16 text-center lg:pt-24">
           <Eyebrow>About us</Eyebrow>
           <h1 className="font-display text-3xl font-bold uppercase tracking-tight sm:text-5xl">
-            Traders first. AI second.
+            Traders first. Tools second.
           </h1>
           <p className="mt-6 max-w-2xl text-lg text-ink-2">
-            HighStrike has been teaching options traders since 2018. HighStrike AI
+            HighStrike has been teaching options traders since 2018. The terminal
             is that experience — eight years of theory and 150k trades of data —
-            compressed into a terminal that works the market every morning so you
-            don&apos;t have to.
+            built into a smart scanner that works the market every morning by
+            clear rules, so you don&apos;t have to.
           </p>
         </div>
       </section>

@@ -6,7 +6,7 @@ import { posts, formatDate } from "@/lib/posts";
 export const metadata: Metadata = {
   title: "Blog — HighStrike",
   description:
-    "Trading education and product notes from the HighStrike team: expectancy, position sizing, options flow, and how the AI terminal works.",
+    "Trading education and product notes from the HighStrike team: expectancy, position sizing, options flow, and how the smart scanner works.",
 };
 
 export default function BlogIndex() {
