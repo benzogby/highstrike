@@ -4,6 +4,7 @@ import { computeScan, type ScanRow } from "@/lib/scanner";
 import { latestChatter } from "@/lib/chatter";
 import { supabaseService } from "@/lib/stripe";
 import { recordActivity } from "@/lib/alerts";
+import { closesFor, suggestOption } from "@/lib/optionIdea";
 
 // Daily generation of the market weather report + setup cards. Cross-system
 // by design: generation consumes the terminal's own signals — scanner flow
@@ -439,9 +440,25 @@ export async function generateDaily(force = false): Promise<{
   // Only the AI's own ideas for the day are replaced; other sources' ideas stay.
   await service.from("setups").delete().eq("report_date", date).eq("source", "ai");
   const priceOf = new Map(quotes.map((q) => [q.ticker, q.price]));
+  const liveOf = new Map(quotes.map((q) => [q.ticker, q.live]));
   const expiresOn = new Date(Date.now() + HORIZON_DAYS * 86400000)
     .toISOString()
     .slice(0, 10);
+  // Each idea's option, estimated from the stock's own closes (src/lib/optionIdea.ts); none on a sample price.
+  const closes = await closesFor(service, generated.setups.map((s) => s.ticker), date).catch(() => new Map<string, number[]>());
+  const optionOf = (s: GeneratedSetup) =>
+    liveOf.get(s.ticker)
+      ? suggestOption({
+          ticker: s.ticker,
+          direction: s.direction,
+          entry: priceOf.get(s.ticker) ?? null,
+          target: parsePrice(s.price_target),
+          timeFrame: s.time_frame,
+          asOf: date,
+          expiresOn,
+          closes: closes.get(s.ticker) ?? [],
+        })
+      : null;
   const { error: sErr } = await service.from("setups").insert(
     generated.setups.map((s) => ({
       report_date: date,
@@ -451,6 +468,7 @@ export async function generateDaily(force = false): Promise<{
       entry_price: priceOf.get(s.ticker) ?? null,
       target_price: parsePrice(s.price_target),
       expires_on: expiresOn,
+      option: optionOf(s),
     }))
   );
   if (sErr) throw new Error(`setups insert failed: ${sErr.message}`);

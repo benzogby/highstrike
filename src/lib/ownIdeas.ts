@@ -1,5 +1,6 @@
 import { supabaseService } from "@/lib/stripe";
 import { etToday } from "@/lib/setupEngine";
+import { closesFor, namedContract, suggestOption } from "@/lib/optionIdea";
 import type { Source, Style } from "@/lib/ideas";
 
 // A member's own ideas, pasted (piece 3), built (piece 4) or found on their watchlist each morning (piece 5): saved with their owner_id so only they see them, their own
@@ -41,6 +42,20 @@ export async function saveOwnIdea(i: OwnIdea): Promise<{ id: string } | { error:
   const add = (days: number) => new Date(Date.parse(`${today}T12:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
   const expires = i.expires ?? (i.style === "day" ? today : i.style === "long" ? add(60) : add(14));
   const contract = i.contract?.trim().slice(0, 60) || null;
+  // Its option, estimated from the stock's own closes (src/lib/optionIdea.ts): the contract it names, priced, else the
+  // rules' pick. None when the stock hasn't enough history; never in the way of saving.
+  const closes = await closesFor(db, [i.ticker], today).catch(() => null);
+  const option = suggestOption({
+    ticker: i.ticker,
+    direction: i.direction,
+    entry: i.entry,
+    target: i.target,
+    timeFrame: i.timeFrame,
+    asOf: today,
+    expiresOn: expires,
+    closes: closes?.get(i.ticker) ?? [],
+    named: namedContract(contract, i.expires),
+  });
   const { data, error } = await db
     .from("setups")
     .insert({
@@ -62,6 +77,7 @@ export async function saveOwnIdea(i: OwnIdea): Promise<{ id: string } | { error:
       stop_price: i.stop,
       contract,
       expires_on: expires,
+      option,
     })
     .select("id")
     .single();

@@ -47,10 +47,12 @@ export type Idea = {
   contract: string | null;
   /** The member it belongs to (pasted ideas); null for the house's shared ideas. */
   owner_id: string | null;
+  /** Its option, estimated when it was made (src/lib/optionIdea.ts); read it through asOption. */
+  option: unknown;
 };
 
 export const IDEA_COLUMNS =
-  "id, report_date, ticker, direction, source, style, headline, justification, entry_criteria, price_target, time_frame, status, entry_price, target_price, current_pct, result_pct, stop_price, contract, owner_id";
+  "id, report_date, ticker, direction, source, style, headline, justification, entry_criteria, price_target, time_frame, status, entry_price, target_price, current_pct, result_pct, stop_price, contract, owner_id, option";
 
 /** The idea's one line: its headline, else the first sentence of its reasoning (ideas from before headlines). */
 export const headlineOf = (i: Pick<Idea, "headline" | "justification">) => i.headline?.trim() || i.justification.split(/(?<=\.)\s/)[0];
