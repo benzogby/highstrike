@@ -11,6 +11,7 @@ import { SUPABASE_URL } from "@/lib/supabaseConfig";
 const SECTIONS = [
   { key: "hero", label: "Hero" },
   { key: "proof", label: "Proof" },
+  { key: "quotes", label: "Quotes" },
   { key: "scoreboard", label: "Scoreboard" },
   { key: "legal", label: "Legal" },
 ] as const;
@@ -63,7 +64,7 @@ export default function SiteTab() {
           </button>
         ))}
       </div>
-      {section === "hero" ? <HeroSection /> : section === "proof" ? <ProofSection /> : section === "scoreboard" ? <ScoreboardSection /> : <LegalSection />}
+      {section === "hero" ? <HeroSection /> : section === "proof" ? <ProofSection /> : section === "quotes" ? <QuotesSection /> : section === "scoreboard" ? <ScoreboardSection /> : <LegalSection />}
     </div>
   );
 }
@@ -212,6 +213,141 @@ function ProofSection() {
         </div>
         <p className="mt-2 text-[13px] text-ink-3">Square photos look best. Remember to press Save after uploading or removing.</p>
       </div>
+      <SaveRow onSave={save} saving={saving} saved={saved} error={error} />
+    </div>
+  );
+}
+
+type Quote = { name: string; role: string; quote: string; photo: string };
+const BLANK_QUOTE: Quote = { name: "", role: "", quote: "", photo: "" };
+
+/**
+ * The homepage's member quotes (Ben, 2026-11-03: "I'll add them in Admin"): each a name, an optional line under it (say
+ * "Member since 2021"), the quote and an optional photo in site-assets under quotes/. The row stays off the homepage
+ * until at least one quote is saved. Live within the homepage's 30-minute refresh.
+ */
+function QuotesSection() {
+  const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [uploading, setUploading] = useState<number | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    loadRaw(["quotes"]).then((map) => {
+      if (!map.quotes) return;
+      try {
+        const list = JSON.parse(map.quotes);
+        if (Array.isArray(list)) setQuotes(list.map((q) => ({ ...BLANK_QUOTE, ...q })));
+      } catch {
+        /* start empty */
+      }
+    });
+  }, []);
+
+  const edit = (i: number, patch: Partial<Quote>) => {
+    setQuotes((list) => list.map((q, n) => (n === i ? { ...q, ...patch } : q)));
+    setSaved(false);
+  };
+
+  async function upload(i: number, file: File | undefined) {
+    if (!file || !file.type.startsWith("image/")) return;
+    setUploading(i);
+    setError("");
+    try {
+      const name = file.name.toLowerCase().replace(/[^a-z0-9.]+/g, "-").slice(-60);
+      const path = `quotes/${crypto.randomUUID().slice(0, 8)}-${name}`;
+      const { error: upErr } = await supabaseBrowser().storage.from("site-assets").upload(path, file, { cacheControl: "31536000", upsert: false });
+      if (upErr) throw new Error(upErr.message);
+      edit(i, { photo: `${SUPABASE_URL}/storage/v1/object/public/site-assets/${path}` });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setUploading(null);
+    }
+  }
+
+  async function save() {
+    setSaving(true);
+    setSaved(false);
+    setError("");
+    try {
+      const keep = quotes
+        .map((q) => ({ name: q.name.trim(), role: q.role.trim(), quote: q.quote.trim(), photo: q.photo }))
+        .filter((q) => q.name && q.quote);
+      if (keep.length) await saveSetting("quotes", JSON.stringify(keep));
+      else await clearSetting("quotes");
+      setQuotes(keep);
+      setSaved(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Save failed");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="max-w-2xl">
+      <p className="text-sm text-ink-2">
+        Member quotes for the homepage. The row only shows once at least one is saved. Use real members&apos; words, with their OK.
+      </p>
+      <div className="mt-5 grid gap-4">
+        {quotes.map((q, i) => (
+          <div key={i} className="rounded-xl border border-line bg-panel p-4">
+            <div className="flex items-start gap-4">
+              <label className="grid size-14 flex-none cursor-pointer place-items-center overflow-hidden rounded-full border border-dashed border-line-strong text-xl text-ink-3 transition hover:border-accent hover:text-accent">
+                {q.photo ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={q.photo} alt="" className="size-full object-cover" />
+                ) : uploading === i ? (
+                  "…"
+                ) : (
+                  "+"
+                )}
+                <input type="file" accept="image/*" className="sr-only" disabled={uploading !== null} onChange={(e) => void upload(i, e.target.files?.[0])} />
+              </label>
+              <div className="grid flex-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label className={labelClass}>Name</label>
+                  <input value={q.name} onChange={(e) => edit(i, { name: e.target.value })} placeholder="Jordan M." className={inputClass} />
+                </div>
+                <div>
+                  <label className={labelClass}>Line under the name (optional)</label>
+                  <input value={q.role} onChange={(e) => edit(i, { role: e.target.value })} placeholder="Member since 2021" className={inputClass} />
+                </div>
+              </div>
+            </div>
+            <div className="mt-3">
+              <label className={labelClass}>Quote</label>
+              <textarea
+                value={q.quote}
+                onChange={(e) => edit(i, { quote: e.target.value })}
+                rows={3}
+                className="w-full rounded-lg border border-line-strong bg-bg px-3 py-2 text-sm text-ink placeholder:text-ink-3 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20"
+              />
+            </div>
+            <div className="mt-2 flex gap-4 text-[13px]">
+              {q.photo && (
+                <button type="button" onClick={() => edit(i, { photo: "" })} className="text-ink-3 hover:text-ink">
+                  Remove photo
+                </button>
+              )}
+              <button type="button" onClick={() => { setQuotes((list) => list.filter((_, n) => n !== i)); setSaved(false); }} className="text-ink-3 hover:text-down">
+                Delete this quote
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+      {quotes.length < 9 && (
+        <button
+          type="button"
+          onClick={() => setQuotes((list) => [...list, { ...BLANK_QUOTE }])}
+          className="mt-4 rounded-lg border border-line-strong bg-panel-2 px-4 py-2 text-sm font-medium text-ink transition hover:border-accent"
+        >
+          Add a quote
+        </button>
+      )}
       <SaveRow onSave={save} saving={saving} saved={saved} error={error} />
     </div>
   );

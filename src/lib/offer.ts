@@ -25,8 +25,8 @@ export type Library = { modules: number; lessons: number };
 /** What the membership includes, in the popup's and the paywall's words. */
 export function lifetimeIncludes(library: Library | null) {
   return [
-    "The daily trades: every setup with its entry, target and reasoning, out before the bell",
-    "The tools: the AI terminal, the flow scanner, alerts, insider filings and the crowd",
+    "The smart scanner's trade ideas every morning, each with its entry, target and reasoning, out before the bell",
+    "The tools: the terminal, the scanner, alerts, insider filings, the crowd and the app on your phone",
     library && library.lessons > 0
       ? `HighStrike Trading School: ${library.modules} modules and ${library.lessons} lessons, the live recordings included`
       : "HighStrike Trading School, every module and the live recordings",

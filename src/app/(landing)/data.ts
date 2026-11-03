@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "@/lib/supabaseConfig";
 import { newYorkDate, sessionBefore } from "@/lib/marketCalendar";
+import { moduleArt } from "@/lib/moduleArt";
 
 // Everything the landing page shows, read with the publishable key. Setups and
 // prices are members-only tables, so they come through the public RPCs in
@@ -70,6 +71,8 @@ export type LandingData = {
   movers: Mover[];
   hero: HeroSetup | null;
   reads: Record<string, TickerRead>;
+  /** A month or so of closes for the first names on the slate, for the phones' sparklines. */
+  trails: Record<string, Close[]>;
   lookup: TickerRead | null;
   badges: { traders: string; countries: string };
   proof: Proof;
@@ -77,9 +80,11 @@ export type LandingData = {
   slateToday: boolean;
   /** HighStrike Trading School, as the membership includes it: each module's title and lesson count (get_landing_education). */
   course: CourseModule[];
+  /** Members' quotes from Admin → Site → Quotes; empty hides the row. */
+  quotes: Quote[];
 };
 
-export type CourseModule = { position: number; title: string; lessons: number };
+export type CourseModule = { position: number; title: string; lessons: number; /** Its key image, or null. */ art: string | null };
 
 // The ticker the lookup opens on.
 export const LOOKUP_START = "NVDA";
@@ -89,6 +94,8 @@ const DEFAULT_BADGES = { traders: "10,000+", countries: "142" };
 /** The star rating and the member photos beside it (Admin → Site → Proof; Ben, 2026-11-02, from HighStrike's own reviews). */
 export type Proof = { rating: string; avatars: string[] };
 const DEFAULT_PROOF: Proof = { rating: "4.9", avatars: [] };
+/** A member's words for the homepage (Admin → Site → Quotes; Ben, 2026-11-03). Hidden until he adds some. */
+export type Quote = { name: string; role?: string; quote: string; photo?: string };
 
 // Sessions of history the hero needs before a setup's morning to draw it.
 const HERO_HISTORY = 10;
@@ -181,7 +188,7 @@ export async function getLandingData(): Promise<LandingData> {
     supabase.rpc("get_setup_stats"),
     supabase.rpc("get_landing_weekly_record"),
     supabase.rpc("get_landing_movers"),
-    supabase.from("site_settings").select("key, value").in("key", ["hero_badges", "proof"]),
+    supabase.from("site_settings").select("key, value").in("key", ["hero_badges", "proof", "quotes"]),
     supabase.rpc("get_landing_education"),
   ]);
 
@@ -225,7 +232,14 @@ export async function getLandingData(): Promise<LandingData> {
   // The desk reads every name on today's slate and in the recent record, plus
   // the lookup's first ticker: insiders, the crowd and each last close.
   const names = [...new Set([...today.map((t) => t.ticker), ...closed.map((c) => c.ticker), LOOKUP_START])];
-  const [hero, readList] = await Promise.all([heroSetup(closed), Promise.all(names.map((n) => getTickerRead(n)))]);
+  // The phones draw a month of closes for the first names on the slate.
+  const trailNames = today.slice(0, 5).map((t) => t.ticker);
+  const [hero, readList, trailList] = await Promise.all([
+    heroSetup(closed),
+    Promise.all(names.map((n) => getTickerRead(n))),
+    Promise.all(trailNames.map((n) => closesFor(n, 45))),
+  ]);
+  const trails: Record<string, Close[]> = Object.fromEntries(trailNames.map((n, i) => [n, trailList[i]]));
   const reads: Record<string, TickerRead> = {};
   names.forEach((n, i) => {
     const read = readList[i];
@@ -272,14 +286,17 @@ export async function getLandingData(): Promise<LandingData> {
     })),
     hero,
     reads,
+    trails,
     lookup: reads[LOOKUP_START] ?? null,
     badges: parseSetting(settings.hero_badges, DEFAULT_BADGES),
     proof: parseSetting(settings.proof, DEFAULT_PROOF),
     slateToday: r?.report_date === newYorkDate(Date.now()),
-    course: ((courseRes.data ?? []) as { module_position: number; title: string; lessons: number }[]).map((m) => ({
+    course: ((courseRes.data ?? []) as { module_position: number; title: string; lessons: number; module_id: string | null }[]).map((m) => ({
       position: m.module_position,
       title: m.title,
       lessons: Number(m.lessons),
+      art: m.module_id ? moduleArt(m.module_id) : null,
     })),
+    quotes: [parseSetting<Quote[]>(settings.quotes, [])].flat().filter((q) => q && typeof q.quote === "string" && q.quote.trim() && typeof q.name === "string"),
   };
 }

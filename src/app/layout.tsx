@@ -28,7 +28,9 @@ export const metadata: Metadata = {
   description:
     "Daily trade setups, entries, targets, and market analysis generated for you so you can focus on execution, not research.",
   metadataBase: new URL("https://www.highstrike.com"),
-  icons: { icon: "/api/site/favicon" },
+  icons: { icon: "/api/site/favicon", apple: "/app-icons/apple-icon.png" },
+  // Added to the home screen, HighStrike opens full screen like an app (src/app/manifest.ts).
+  appleWebApp: { capable: true, title: "HighStrike", statusBarStyle: "black" },
   openGraph: {
     title: "HighStrike — Everything You Need to Win in the Markets, Powered by AI",
     description:

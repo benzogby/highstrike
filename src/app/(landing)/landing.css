@@ -3433,3 +3433,1107 @@
   text-decoration-color: var(--red);
   text-decoration-thickness: 2px;
 }
+
+/* ── Phones (Ben, 2026-11-03: a mobile app section like getripping.com's): HighStrike opened from the home screen,
+   in the app's own dark system. Everything inside a phone is sized in em off its width, so one --pw scales it. ── */
+.hs-phone {
+  --pw: 260px;
+  --ph-bg: #0a0f12;
+  --ph-panel: #111a1f;
+  --ph-panel-2: #18242a;
+  --ph-line: #1d2a31;
+  --ph-line-2: #293942;
+  position: relative;
+  flex: none;
+  width: var(--pw);
+  aspect-ratio: 9 / 19.4;
+  padding: calc(var(--pw) * 0.034);
+  border-radius: calc(var(--pw) * 0.17);
+  font-size: calc(var(--pw) / 26);
+  background: linear-gradient(150deg, #3a4448 0%, #15191b 30%, #0c0f10 70%, #2a3235 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14), 0 50px 90px -30px rgba(0, 0, 0, 0.9), 0 20px 40px -20px rgba(0, 0, 0, 0.7);
+}
+
+.hs-phone__screen {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  border-radius: calc(var(--pw) * 0.14);
+  background: var(--ph-bg);
+  color: #eef3f1;
+  font-family: var(--ui);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
+}
+
+.hs-phone__status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 4.6em;
+  padding: 0 2.3em;
+  flex: none;
+}
+
+.hs-phone__status b {
+  font-size: 1.35em;
+  font-weight: 650;
+}
+
+.hs-phone__island {
+  position: absolute;
+  left: 50%;
+  top: 1.1em;
+  width: 8.6em;
+  height: 2.5em;
+  border-radius: 2em;
+  background: #000;
+  transform: translateX(-50%);
+}
+
+.hs-phone__icons {
+  display: flex;
+  gap: 0.35em;
+}
+
+.hs-phone__icons i {
+  width: 1.2em;
+  height: 0.85em;
+  border-radius: 0.2em;
+  background: #eef3f1;
+  opacity: 0.85;
+}
+
+.hs-phone__icons i:last-child {
+  width: 2em;
+}
+
+.hs-ph-body {
+  flex: 1;
+  min-height: 0;
+  padding: 0.6em 1.6em 0;
+  overflow: hidden;
+}
+
+.hs-ph-eyebrow {
+  font-size: 1em;
+  color: #8b9792;
+}
+
+.hs-ph-title {
+  font-family: var(--cal);
+  font-weight: 400;
+  font-size: 2.6em;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+  font-variant-numeric: normal;
+}
+
+.hs-ph-back {
+  font-size: 1.1em;
+  color: var(--green);
+  margin-bottom: 0.5em;
+}
+
+.hs-ph-chips {
+  display: flex;
+  gap: 0.5em;
+  margin: 1.1em 0 1.2em;
+}
+
+.hs-ph-chips span {
+  padding: 0.45em 0.9em;
+  border-radius: 0.6em;
+  font-size: 1em;
+  color: #8b9792;
+}
+
+.hs-ph-chips .is-on {
+  color: #eef3f1;
+  background: var(--ph-panel-2);
+  box-shadow: inset 0 0 0 1px var(--ph-line-2);
+}
+
+.hs-ph-list {
+  display: grid;
+  gap: 0.75em;
+}
+
+.hs-ph-idea {
+  padding: 1em 1.1em;
+  border-radius: 1.1em;
+  background: var(--ph-panel);
+  box-shadow: inset 0 0 0 1px var(--ph-line), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.hs-ph-idea__top {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+}
+
+.hs-ph-idea__top b {
+  font-size: 1.35em;
+  font-weight: 650;
+}
+
+.hs-ph-idea__px {
+  margin-left: auto;
+  font-size: 1.15em;
+  color: #b4bfba;
+}
+
+.hs-ph-side {
+  padding: 0.2em 0.6em;
+  border-radius: 0.5em;
+  font-size: 0.9em;
+  font-weight: 650;
+  color: var(--green);
+  background: rgba(31, 191, 134, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(31, 191, 134, 0.3);
+}
+
+.hs-ph-side.is-short {
+  color: var(--red);
+  background: rgba(255, 93, 82, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(255, 93, 82, 0.3);
+}
+
+.hs-ph-idea__row {
+  display: flex;
+  align-items: center;
+  gap: 1em;
+  margin-top: 0.7em;
+}
+
+.hs-ph-meter {
+  display: block;
+  flex: 1;
+  height: 0.45em;
+  border-radius: 1em;
+  background: var(--ph-line);
+  overflow: hidden;
+}
+
+.hs-ph-meter i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--green);
+}
+
+.hs-ph-spark {
+  width: 6em;
+  height: 2em;
+  overflow: visible;
+}
+
+.hs-ph-spark path {
+  fill: none;
+  stroke: var(--green);
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+}
+
+.hs-ph-spark.is-dn path {
+  stroke: var(--red);
+}
+
+.hs-ph-head {
+  display: flex;
+  align-items: center;
+  gap: 0.7em;
+}
+
+.hs-ph-px {
+  font-size: 1.6em;
+  font-weight: 600;
+  margin-top: 0.15em;
+}
+
+.hs-ph-chart {
+  height: 11em;
+  margin: 1em -0.4em 1.2em;
+  padding: 1em;
+  border-radius: 1.1em;
+  background: linear-gradient(180deg, rgba(31, 191, 134, 0.08), transparent 70%), var(--ph-panel);
+  box-shadow: inset 0 0 0 1px var(--ph-line);
+}
+
+.hs-ph-chart .hs-ph-spark {
+  width: 100%;
+  height: 100%;
+}
+
+.hs-ph-case {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.7em;
+}
+
+.hs-ph-case > div,
+.hs-ph-size {
+  padding: 1em;
+  border-radius: 1em;
+  background: var(--ph-panel);
+  box-shadow: inset 0 0 0 1px var(--ph-line);
+}
+
+.hs-ph-case h5 {
+  font-size: 1em;
+  font-weight: 650;
+  margin: 0 0 0.3em;
+}
+
+.hs-ph-case .is-bull {
+  color: var(--green);
+}
+
+.hs-ph-case .is-bear {
+  color: var(--red);
+}
+
+.hs-ph-case p {
+  font-size: 1em;
+  color: #b4bfba;
+}
+
+.hs-ph-size {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.7em;
+  font-size: 1em;
+}
+
+.hs-ph-size span {
+  color: #8b9792;
+}
+
+.hs-ph-module {
+  margin: 1.2em 0 1em;
+  border-radius: 1.2em;
+  overflow: hidden;
+  background: var(--ph-panel);
+  box-shadow: inset 0 0 0 1px var(--ph-line);
+}
+
+.hs-ph-module img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
+.hs-ph-module__tx {
+  display: grid;
+  gap: 0.35em;
+  padding: 0.9em 1.1em 1.1em;
+}
+
+.hs-ph-module__tx span:first-child {
+  font-size: 0.9em;
+  color: #8b9792;
+}
+
+.hs-ph-module__tx b {
+  font-size: 1.25em;
+  font-weight: 650;
+  margin-bottom: 0.3em;
+}
+
+.hs-ph-lessons {
+  display: grid;
+  gap: 0.8em;
+}
+
+.hs-ph-lessons > div {
+  display: flex;
+  align-items: center;
+  gap: 0.9em;
+}
+
+.hs-ph-lessons img,
+.hs-ph-lessons > div > i {
+  width: 6.4em;
+  height: 3.6em;
+  border-radius: 0.6em;
+  object-fit: cover;
+  flex: none;
+  background: var(--ph-panel-2);
+}
+
+.hs-ph-lessons span {
+  display: grid;
+  font-size: 0.95em;
+  color: #8b9792;
+}
+
+.hs-ph-lessons b {
+  font-size: 1.1em;
+  font-weight: 600;
+  color: #eef3f1;
+}
+
+.hs-ph-scan {
+  margin-top: 1.2em;
+  border-radius: 1.1em;
+  background: var(--ph-panel);
+  box-shadow: inset 0 0 0 1px var(--ph-line);
+  overflow: hidden;
+}
+
+.hs-ph-scan__head,
+.hs-ph-scan__row {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 0.9fr 0.9fr;
+  align-items: center;
+  padding: 0 1.1em;
+}
+
+.hs-ph-scan__head {
+  height: 3em;
+  font-size: 0.9em;
+  color: #8b9792;
+  border-bottom: 1px solid var(--ph-line);
+}
+
+.hs-ph-scan__head span:not(:first-child),
+.hs-ph-scan__row span {
+  text-align: right;
+}
+
+.hs-ph-scan__row {
+  height: 3.6em;
+  border-bottom: 1px solid var(--ph-line);
+}
+
+.hs-ph-scan__row:last-child {
+  border-bottom: 0;
+}
+
+.hs-ph-scan__row b {
+  font-size: 1.15em;
+  font-weight: 650;
+}
+
+.hs-ph-scan__row span {
+  font-size: 1.05em;
+}
+
+.hs-ph-tabs {
+  display: flex;
+  justify-content: space-around;
+  flex: none;
+  padding: 0.9em 0.6em 2.4em;
+  border-top: 1px solid var(--ph-line);
+  background: var(--ph-bg);
+}
+
+.hs-ph-tabs span {
+  display: grid;
+  justify-items: center;
+  gap: 0.3em;
+  font-size: 0.85em;
+  color: #8b9792;
+}
+
+.hs-ph-tabs i {
+  width: 1.6em;
+  height: 1.6em;
+  border-radius: 0.45em;
+  box-shadow: inset 0 0 0 1.5px currentColor;
+}
+
+.hs-ph-tabs .is-on {
+  color: var(--green);
+}
+
+.hs-phone--home .hs-phone__screen {
+  background: radial-gradient(90% 60% at 30% 10%, rgba(31, 191, 134, 0.35), transparent 70%), radial-gradient(80% 60% at 80% 90%, rgba(40, 90, 120, 0.5), transparent 70%), #0b1417;
+}
+
+.hs-ph-home {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2em 0;
+  padding: 2.4em 1.6em 0;
+  flex: 1;
+  align-content: start;
+}
+
+.hs-ph-app {
+  display: grid;
+  justify-items: center;
+  gap: 0.5em;
+  font-size: 0.85em;
+}
+
+.hs-ph-app i {
+  display: grid;
+  place-items: center;
+  width: 5.4em;
+  height: 5.4em;
+  border-radius: 1.35em;
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.hs-ph-app.is-hs {
+  font-weight: 600;
+}
+
+.hs-ph-app.is-hs i {
+  background: linear-gradient(160deg, #13201f, #050807);
+  box-shadow: inset 0 0 0 1px rgba(111, 245, 193, 0.35), 0 0 2em -0.2em rgba(31, 191, 134, 0.7);
+}
+
+.hs-ph-app.is-hs .hs-bull {
+  width: 3.4em;
+  height: 3.4em;
+}
+
+.hs-ph-dockbar {
+  display: flex;
+  justify-content: space-around;
+  margin: 0 1em 1.2em;
+  padding: 1.1em 0.6em;
+  border-radius: 2.2em;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(10px);
+}
+
+.hs-ph-dockbar i {
+  width: 5em;
+  height: 5em;
+  border-radius: 1.3em;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+/* ── The hero's three pillars (Ben, 2026-11-03, option 3): a Trading School module, the scanner and the top idea ─ */
+.hs-trio {
+  position: relative;
+  height: 668px;
+  margin: 0 calc(-1 * var(--gutter) + 8px) 0 0;
+}
+
+.hs-trio > a {
+  position: absolute;
+  display: block;
+  transition: translate 0.3s var(--ease-out);
+}
+
+.hs-trio > a:hover {
+  translate: 0 -4px;
+}
+
+.hs-trio__k {
+  display: block;
+  font: 650 12px/1 var(--ui);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--green);
+}
+
+.hs-trio__school {
+  left: 0;
+  top: 0;
+  width: 440px;
+  overflow: hidden;
+}
+
+.hs-trio__school img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
+.hs-trio__body {
+  display: grid;
+  gap: 8px;
+  padding: 18px 22px 22px;
+}
+
+.hs-trio__body b {
+  font: 400 26px/1.1 var(--cal);
+  color: var(--ink);
+}
+
+.hs-trio__scan {
+  right: 0;
+  top: 118px;
+  width: 372px;
+  padding: 22px 22px 12px;
+  z-index: 2;
+}
+
+.hs-trio__table {
+  display: block;
+  margin-top: 16px;
+}
+
+.hs-trio__row {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr 0.8fr 0.8fr;
+  align-items: center;
+  height: 40px;
+  font-size: 15px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.hs-trio__row span {
+  text-align: right;
+}
+
+.hs-trio__row b {
+  font-weight: 650;
+}
+
+.hs-trio__row--h {
+  height: 30px;
+  font-size: 12px;
+  color: var(--ink-3);
+  border-top: 0;
+}
+
+.hs-trio__row--h b {
+  font-weight: 500;
+}
+
+.hs-trio__idea {
+  left: 40px;
+  top: 436px;
+  width: 404px;
+  padding: 22px 24px 24px;
+  z-index: 3;
+}
+
+.hs-trio__tk {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+  font: 400 34px/1 var(--cal);
+}
+
+.hs-trio__note {
+  display: block;
+  margin-top: 12px;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+
+.hs-trio__figs {
+  display: flex;
+  gap: 32px;
+  margin-top: 16px;
+  font-size: 13px;
+  color: var(--ink-3);
+}
+
+.hs-trio__figs b {
+  display: block;
+  margin-top: 4px;
+  font-size: 21px;
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.hs-trio__figs b.hs-up {
+  color: var(--green);
+}
+
+.hs-trio__figs b.hs-dn {
+  color: var(--red);
+}
+
+/* ── The three pillars ─────────────────────────────────────────────────────────────────────────────────────── */
+.hs-pillars__grid {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.hs-pillar {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  height: 100%;
+  padding: 32px 30px 30px;
+  transition: translate 0.3s var(--ease-out);
+}
+
+.hs-pillar:hover {
+  translate: 0 -4px;
+}
+
+.hs-pillar__n {
+  font: 400 15px/1 var(--cal);
+  color: var(--ink-3);
+}
+
+.hs-pillar__k {
+  margin-top: 26px;
+  font: 650 13px/1 var(--ui);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--green);
+}
+
+.hs-pillar .hs-h3 {
+  font-size: 40px;
+}
+
+.hs-pillar p {
+  flex: 1;
+  font-size: 17px;
+  color: var(--ink-2);
+}
+
+.hs-pillar__go {
+  font-size: 22px;
+  color: var(--green);
+}
+
+/* Trading School's modules, each with its key image. */
+.hs-syllabus__art {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  margin-bottom: 6px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* ── The app: a fan of five phones (Ben, 2026-11-03, option A) ──────────────────────────────────────────────── */
+.hs-app__head {
+  display: grid;
+  justify-items: center;
+  gap: 22px;
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.hs-app__head .hs-lead {
+  max-width: 36em;
+  color: var(--ink-2);
+}
+
+.hs-app__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink-2);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+}
+
+.hs-app__eyebrow svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: var(--green);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+.hs-app__how {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px 28px;
+  font-size: 15px;
+  color: var(--ink-3);
+}
+
+.hs-app__how b {
+  margin-right: 6px;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.hs-fan {
+  --s: 1;
+  position: relative;
+  height: calc(640px * var(--s));
+}
+
+.hs-fan::before {
+  content: "";
+  position: absolute;
+  inset: 20% 10% -10%;
+  z-index: -1;
+  background: radial-gradient(50% 50% at 50% 60%, rgba(31, 191, 134, 0.2), transparent 70%);
+}
+
+.hs-fan__p {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+}
+
+.hs-fan__p--0,
+.hs-fan__p--4 {
+  --pw: calc(232px * var(--s));
+  z-index: 1;
+}
+
+.hs-fan__p--1,
+.hs-fan__p--3 {
+  --pw: calc(252px * var(--s));
+  z-index: 2;
+}
+
+.hs-fan__p--2 {
+  --pw: calc(284px * var(--s));
+  z-index: 3;
+}
+
+.hs-fan__p--0 {
+  transform: translate(-50%, -50%) translate(calc(-520px * var(--s)), calc(60px * var(--s))) rotate(-14deg);
+}
+
+.hs-fan__p--1 {
+  transform: translate(-50%, -50%) translate(calc(-272px * var(--s)), calc(18px * var(--s))) rotate(-7deg);
+}
+
+.hs-fan__p--2 {
+  transform: translate(-50%, -50%);
+}
+
+.hs-fan__p--3 {
+  transform: translate(-50%, -50%) translate(calc(272px * var(--s)), calc(18px * var(--s))) rotate(7deg);
+}
+
+.hs-fan__p--4 {
+  transform: translate(-50%, -50%) translate(calc(520px * var(--s)), calc(60px * var(--s))) rotate(14deg);
+}
+
+/* ── Members' quotes ───────────────────────────────────────────────────────────────────────────────────────── */
+.hs-quotes__grid {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.hs-quote {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 30px;
+}
+
+.hs-quote blockquote {
+  flex: 1;
+  margin: 0;
+  font-size: 19px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.hs-quote__who {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.hs-quote__who img {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.hs-quote__who > span {
+  display: grid;
+  font-size: 14px;
+  color: var(--ink-3);
+}
+
+.hs-quote__who b {
+  font-size: 16px;
+  font-weight: 650;
+  color: var(--ink);
+}
+
+/* ── The comparison, features only ─────────────────────────────────────────────────────────────────────────── */
+.hs-compare__box {
+  padding: 10px 14px;
+  overflow-x: auto;
+}
+
+.hs-compare__table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+}
+
+.hs-compare__table :is(th, td) {
+  padding: 18px 16px;
+  text-align: center;
+  font-size: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.hs-compare__table tbody tr:last-child :is(th, td) {
+  border-bottom: 0;
+}
+
+.hs-compare__table thead th {
+  font-weight: 600;
+  color: var(--ink-2);
+  vertical-align: bottom;
+}
+
+.hs-compare__table tbody th {
+  text-align: left;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.hs-compare__table .is-hs {
+  background: rgba(31, 191, 134, 0.07);
+}
+
+.hs-compare__table thead .is-hs {
+  color: var(--ink);
+  border-radius: 14px 14px 0 0;
+}
+
+.hs-compare__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 650;
+}
+
+.hs-mark {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.hs-mark--yes {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--green) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8.4l2.6 2.5L12 5.4' fill='none' stroke='%2303140d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 76% no-repeat;
+}
+
+.hs-mark--no {
+  width: 14px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--ink-4);
+}
+
+.hs-mark--some {
+  font-size: 14px;
+  color: var(--ink-3);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html.js [data-land]:not(.is-in).hs-trio > a,
+  html.js [data-land]:not(.is-in).hs-fan .hs-fan__p {
+    opacity: 0;
+    translate: 0 30px;
+    animation: hs-show 0.01s 3s forwards;
+  }
+
+  html.js [data-land].hs-trio > a,
+  html.js [data-land].hs-fan .hs-fan__p {
+    transition: opacity 0.8s var(--ease-out), translate 0.9s var(--ease-out);
+  }
+
+  html.js [data-land].hs-trio > :nth-child(2),
+  html.js [data-land].hs-fan .hs-fan__p--1,
+  html.js [data-land].hs-fan .hs-fan__p--3 {
+    transition-delay: 0.12s;
+  }
+
+  html.js [data-land].hs-trio > :nth-child(3),
+  html.js [data-land].hs-fan .hs-fan__p--0,
+  html.js [data-land].hs-fan .hs-fan__p--4 {
+    transition-delay: 0.24s;
+  }
+}
+
+@media (max-width: 1340px) {
+  .hs-fan {
+    --s: 0.86;
+  }
+}
+
+@media (max-width: 1100px) {
+  .hs-trio {
+    height: 600px;
+    max-width: 720px;
+    margin: 0;
+  }
+
+  .hs-pillars__grid,
+  .hs-quotes__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hs-fan {
+    --s: 0.66;
+  }
+}
+
+@media (max-width: 640px) {
+  .hs-trio {
+    display: grid;
+    gap: 14px;
+    height: auto;
+  }
+
+  .hs-trio > a {
+    position: relative;
+    inset: auto;
+    width: auto;
+  }
+
+  .hs-trio > .hs-trio__school {
+    display: grid;
+    grid-template-columns: 120px minmax(0, 1fr);
+    align-items: center;
+  }
+
+  .hs-trio__school img {
+    height: 100%;
+    aspect-ratio: auto;
+  }
+
+  .hs-trio__body {
+    padding: 14px 16px;
+    gap: 5px;
+  }
+
+  .hs-trio__body b {
+    font-size: 20px;
+  }
+
+  .hs-trio__scan {
+    padding: 18px 16px 8px;
+  }
+
+  .hs-trio__idea {
+    padding: 18px 18px 20px;
+  }
+
+  .hs-trio__tk {
+    font-size: 28px;
+  }
+
+  .hs-pillar {
+    padding: 24px 22px;
+  }
+
+  .hs-pillar__k {
+    margin-top: 12px;
+  }
+
+  .hs-pillar .hs-h3 {
+    font-size: 32px;
+  }
+
+  .hs-app__head {
+    margin-bottom: 8px;
+  }
+
+  .hs-app__how {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  /* Three phones fit a phone's width: the two outer ones step aside. */
+  .hs-fan {
+    --s: 0.62;
+    height: 440px;
+    margin: 0 calc(-1 * var(--gutter));
+  }
+
+  .hs-fan__p--0,
+  .hs-fan__p--4 {
+    display: none;
+  }
+
+  .hs-fan__p--1 {
+    transform: translate(-50%, -50%) translate(-112px, 14px) rotate(-8deg);
+  }
+
+  .hs-fan__p--3 {
+    transform: translate(-50%, -50%) translate(112px, 14px) rotate(8deg);
+  }
+
+  .hs-quote {
+    padding: 24px 22px;
+  }
+
+  .hs-quote blockquote {
+    font-size: 17px;
+  }
+
+  .hs-compare__box {
+    margin: 0 calc(-1 * var(--gutter));
+    border-radius: 0;
+    padding: 4px 6px;
+  }
+
+  .hs-compare__table {
+    min-width: 600px;
+  }
+
+  .hs-compare__table :is(th, td) {
+    padding: 14px 10px;
+    font-size: 14px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .hs-syllabus {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .hs-syllabus__t {
+    font-size: 21px;
+  }
+}
+
+/* On a phone each module is one row: its key image as a thumbnail, then its name, then its lesson count. */
+@media (max-width: 640px) {
+  .hs-syllabus li {
+    grid-template-columns: 88px minmax(0, 1fr) auto;
+    padding: 10px 14px 10px 10px;
+  }
+
+  .hs-syllabus__art {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    align-self: center;
+    margin: 0;
+    border-radius: 8px;
+  }
+
+  .hs-syllabus__k,
+  .hs-syllabus__t {
+    grid-column: 2;
+  }
+
+  .hs-syllabus__n {
+    grid-column: 3;
+  }
+}
