@@ -65,17 +65,20 @@ function Pending() {
   );
 }
 
-/** The top bar's one action: "New watchlist", or an "Admin" tag while in Admin. */
+/**
+ * The top bar's one action: "Check a trade idea" (Ben, 2026-11-03), which opens Paste an idea, one tap from Build; just
+ * its icon on a phone. An "Admin" tag instead while in Admin.
+ */
 export function TopAction() {
   if (activeKey(usePathname()) === "admin") {
     return <span className="rounded-md bg-panel-2 px-2 py-1 text-xs font-medium text-ink-2 ring-1 ring-inset ring-line-strong">Admin</span>;
   }
   return (
-    <Link href="/dashboard#watchlist" className={`hidden sm:inline-flex ${BUTTON_PRIMARY_SM}`}>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
-        <path d="M12 5v14M5 12h14" />
+    <Link href="/ideas/paste" className={`inline-flex max-sm:h-9 max-sm:w-9 max-sm:rounded-lg max-sm:px-0 ${BUTTON_PRIMARY_SM}`}>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
       </svg>
-      New watchlist
+      <span className="max-sm:sr-only">Check a trade idea</span>
     </Link>
   );
 }

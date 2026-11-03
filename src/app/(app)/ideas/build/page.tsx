@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requireMember } from "@/lib/membership";
 import { PageHeader } from "@/components/ui";
+import CheckSwitch from "../CheckSwitch";
 import BuildForm from "./BuildForm";
 
 export const metadata: Metadata = { title: "Build an idea — HighStrike" };
@@ -14,7 +15,11 @@ export default async function BuildIdeaPage() {
       <Link href="/ideas" className="text-[13px] text-ink-3 hover:text-ink">
         ← Ideas
       </Link>
-      <PageHeader title="Build an idea" subtitle="Say what kind of trade you want. HighStrike scans the market right now and shows what fits, with the reasons." />
+      <PageHeader
+        title="Build an idea"
+        subtitle="Say what kind of trade you want. HighStrike scans the market right now and shows what fits, with the reasons."
+        actions={<CheckSwitch on="build" />}
+      />
       <BuildForm />
     </div>
   );

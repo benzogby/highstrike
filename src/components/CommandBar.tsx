@@ -4,18 +4,23 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 
-type PageCmd = { kind: "page"; label: string; hint: string; href: string };
+type PageCmd = { kind: "page"; label: string; hint: string; href: string; also?: string };
 type SymbolCmd = { kind: "symbol"; ticker: string; name: string };
 type Cmd = PageCmd | SymbolCmd;
 
+/** Every page, in the sidebar's order, with the other words people might type for it (`also`). */
 const PAGES: Omit<PageCmd, "kind">[] = [
-  { label: "Dashboard", hint: "Home — weather, setups, watchlist", href: "/dashboard" },
+  { label: "Home", hint: "Weather, today's ideas, your watchlist", href: "/dashboard", also: "dashboard" },
   { label: "Ideas", hint: "Every trade idea, filtered your way", href: "/ideas" },
-  { label: "Track record", hint: "Every idea graded: wins and losses", href: "/ideas/record" },
-  { label: "Scanner", hint: "Universe ranked by flow score", href: "/scanner" },
-  { label: "Insider Feed", hint: "Form 4 buys, sells, clusters", href: "/insiders" },
-  { label: "Watchlists", hint: "Your lists with live prices", href: "/watchlists" },
-  { label: "Settings", hint: "Profile, security, plan", href: "/settings" },
+  { label: "Track record", hint: "Every idea graded: wins and losses", href: "/ideas/record", also: "setups scoreboard history results win rate" },
+  { label: "Check a trade idea", hint: "Paste an idea from anywhere", href: "/ideas/paste", also: "paste" },
+  { label: "Build an idea", hint: "Say what you want, see what fits", href: "/ideas/build", also: "builder" },
+  { label: "Scanner", hint: "Every stock ranked by flow score", href: "/scanner" },
+  { label: "Watchlists", hint: "Your lists with live prices", href: "/watchlists", also: "watchlist" },
+  { label: "Insider feed", hint: "Form 4 buys, sells, clusters", href: "/insiders", also: "insiders" },
+  { label: "Chatter", hint: "Where the crowd is loudest", href: "/chatter", also: "stocktwits social crowd" },
+  { label: "Trading School", hint: "Lessons and courses", href: "/education", also: "education lessons course learn" },
+  { label: "Settings", hint: "Profile, price alerts, morning email", href: "/settings", also: "alerts account profile" },
 ];
 
 export default function CommandBar({ isAdmin }: { isAdmin: boolean }) {
@@ -39,7 +44,7 @@ export default function CommandBar({ isAdmin }: { isAdmin: boolean }) {
 
   const q = query.trim().toLowerCase();
   const pageMatches = q
-    ? pages.filter((p) => p.label.toLowerCase().includes(q))
+    ? pages.filter((p) => `${p.label} ${p.also ?? ""}`.toLowerCase().includes(q))
     : pages;
   const results: Cmd[] = [...(q ? symbols : []), ...pageMatches];
 

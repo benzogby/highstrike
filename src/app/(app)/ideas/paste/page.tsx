@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requireMember } from "@/lib/membership";
 import { PageHeader } from "@/components/ui";
+import CheckSwitch from "../CheckSwitch";
 import PasteForm from "./PasteForm";
 
 export const metadata: Metadata = { title: "Paste an idea — HighStrike" };
@@ -14,7 +15,11 @@ export default async function PasteIdeaPage() {
       <Link href="/ideas" className="text-[13px] text-ink-3 hover:text-ink">
         ← Ideas
       </Link>
-      <PageHeader title="Paste an idea" subtitle="Got a trade idea from somewhere else? Paste it, and HighStrike turns it into an idea you can evaluate and follow." />
+      <PageHeader
+        title="Paste an idea"
+        subtitle="Got a trade idea from somewhere else? Paste it, and HighStrike turns it into an idea you can evaluate and follow."
+        actions={<CheckSwitch on="paste" />}
+      />
       <PasteForm />
     </div>
   );
