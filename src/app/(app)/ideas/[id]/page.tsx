@@ -6,12 +6,13 @@ import { fetchQuotes } from "@/lib/quotes";
 import { Badge, CARD } from "@/components/ui";
 import { IDEA_COLUMNS, SOURCES, STATUS, STYLES, headlineOf, type Idea } from "@/lib/ideas";
 import { caseFor, quickAnswers, type Signals } from "@/lib/ideaCase";
-import { asOption } from "@/lib/optionIdea";
+import { asOption, contractName } from "@/lib/optionIdea";
 import PriceChart from "../../symbol/[ticker]/PriceChart";
 import BullBear from "./BullBear";
 import PositionSizer from "./PositionSizer";
 import QuickAnswers from "./QuickAnswers";
 import SuggestedOption from "./SuggestedOption";
+import TakeIdea from "./TakeIdea";
 
 export const metadata: Metadata = { title: "Idea — HighStrike" };
 
@@ -25,18 +26,20 @@ const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigi
  */
 export default async function IdeaPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { supabase } = await requireMember(`/ideas/${id}`);
+  const { supabase, user } = await requireMember(`/ideas/${id}`);
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const { data } = await supabase.from("setups").select(IDEA_COLUMNS).eq("id", id).maybeSingle();
   if (!data) notFound();
   const idea = data as Idea;
   const since = new Date(`${idea.report_date}T12:00:00Z`);
   since.setUTCDate(since.getUTCDate() - 30);
-  const [[quote], { data: closes }, { data: trades }, { data: crowd }] = await Promise.all([
+  const [[quote], { data: closes }, { data: trades }, { data: crowd }, { count: taken }] = await Promise.all([
     fetchQuotes([idea.ticker]).catch(() => []),
     supabase.from("price_history").select("close").eq("ticker", idea.ticker).order("price_date", { ascending: false }).limit(15),
     supabase.from("insider_trades").select("transaction_code, value").eq("ticker", idea.ticker).gte("filed_at", since.toISOString().slice(0, 10)),
     supabase.from("chatter_stats").select("bullish, bearish, watchers").eq("ticker", idea.ticker).order("day", { ascending: false }).limit(1).maybeSingle(),
+    // The member's own trades from this idea ("I took this", src/lib/trades.ts).
+    supabase.from("trades").select("id", { count: "exact", head: true }).eq("setup_id", idea.id).eq("user_id", user.id),
   ]);
   const live = quote?.live ? quote : null;
   const range = live?.high != null && live?.low != null && live.high > live.low ? (live.price - live.low) / (live.high - live.low) : null;
@@ -98,6 +101,16 @@ export default async function IdeaPage({ params }: { params: Promise<{ id: strin
       </dl>
 
       {option && <SuggestedOption ticker={idea.ticker} option={option} />}
+
+      {idea.status === "open" && (
+        <TakeIdea
+          setupId={idea.id}
+          ticker={idea.ticker}
+          sharePrice={live ? live.price : idea.entry_price}
+          option={option ? { name: contractName(idea.ticker, option), premium: option.premium } : null}
+          taken={taken ?? 0}
+        />
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <div className="flex min-w-0 flex-col gap-6">
