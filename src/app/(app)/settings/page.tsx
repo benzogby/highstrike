@@ -5,7 +5,7 @@ import AlertsManager from "./AlertsManager";
 import DigestSwitch from "./DigestSwitch";
 import BillingSection from "./BillingSection";
 import { supabaseService } from "@/lib/stripe";
-import { billingState, type BillingState } from "@/lib/billing";
+import { billingReady, billingState, recheckMember, type BillingState } from "@/lib/billing";
 import { PageHeader } from "@/components/ui";
 
 export const metadata: Metadata = {
@@ -16,11 +16,13 @@ type Props = { searchParams: Promise<{ billing?: string }> };
 
 export default async function SettingsPage({ searchParams }: Props) {
   const { user, profile } = await requireMember("/settings");
+  const q = await searchParams;
+  // Back from Stripe's billing page: what changed there (a cancellation, a new card) shows now, not at the next webhook.
+  if (q.billing === "back" && billingReady()) await recheckMember(user.id).catch(() => null);
 
-  const [{ data: prefs }, billing, q] = await Promise.all([
+  const [{ data: prefs }, billing] = await Promise.all([
     supabaseService().from("profiles").select("digest_email").eq("id", user.id).maybeSingle(),
     billingState(user, profile).catch((): BillingState => (profile?.is_admin ? { kind: "admin" } : { kind: "none", ended: false })),
-    searchParams,
   ]);
 
   const providers: string[] = Array.isArray(user.app_metadata?.providers)

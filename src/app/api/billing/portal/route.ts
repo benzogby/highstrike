@@ -23,7 +23,8 @@ export async function POST(request: Request) {
     const session = await stripe.billingPortal.sessions.create({
       customer: profile.stripe_customer_id,
       configuration: await portalConfiguration(stripe),
-      return_url: `${origin}/settings`,
+      // Back on Settings, the page asks Stripe what changed (a cancellation shows at once, webhook or not).
+      return_url: `${origin}/settings?billing=back`,
     });
     return NextResponse.redirect(session.url, 303);
   } catch (e) {
