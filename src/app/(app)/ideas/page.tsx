@@ -49,7 +49,7 @@ export default async function IdeasPage({ searchParams }: { searchParams: Promis
 
   return (
     <>
-      <PageHeader className="anim-rise" title="Ideas" subtitle="Every trade idea in one place, the newest first. Open one for the bull and bear case, sizing and Ask the AI." />
+      <PageHeader className="anim-rise" title="Ideas" subtitle="Every trade idea in one place, the newest first. Open one for the bull and bear case, quick answers and sizing." />
 
       <div className="anim-rise mt-6 flex flex-col gap-3" style={{ "--rise-delay": "60ms" } as React.CSSProperties}>
         <div className="flex flex-wrap items-center gap-3">
@@ -144,7 +144,7 @@ export default async function IdeasPage({ searchParams }: { searchParams: Promis
                           Target {i.price_target} · {i.time_frame}
                         </p>
                         <Link href={`/ideas/${i.id}`} className="mt-3 inline-block text-[13px] font-medium text-accent hover:underline">
-                          Open the idea: bull vs bear, sizing, Ask the AI →
+                          Open the idea: bull vs bear, quick answers, sizing →
                         </Link>
                       </div>
                     </div>
@@ -157,7 +157,7 @@ export default async function IdeasPage({ searchParams }: { searchParams: Promis
       ))}
 
       <p className="mt-10 text-xs leading-relaxed text-ink-3">
-        Ideas are market commentary from HighStrike AI and other sources, not investment advice. Every idea is followed to its target, a stop (an 8% move against it) or its expiry.
+        Ideas are market commentary, not investment advice. Every idea is followed to its target, a stop (an 8% move against it) or its expiry.
       </p>
     </>
   );

@@ -4,11 +4,12 @@ import { notFound } from "next/navigation";
 import { requireMember } from "@/lib/membership";
 import { fetchQuotes } from "@/lib/quotes";
 import { Badge, CARD } from "@/components/ui";
-import { IDEA_COLUMNS, SOURCES, STATUS, STYLES, headlineOf, type Cases, type Idea } from "@/lib/ideas";
+import { IDEA_COLUMNS, SOURCES, STATUS, STYLES, headlineOf, type Idea } from "@/lib/ideas";
+import { caseFor, quickAnswers, type Signals } from "@/lib/ideaCase";
 import PriceChart from "../../symbol/[ticker]/PriceChart";
-import AskAI from "./AskAI";
 import BullBear from "./BullBear";
 import PositionSizer from "./PositionSizer";
+import QuickAnswers from "./QuickAnswers";
 
 export const metadata: Metadata = { title: "Idea — HighStrike" };
 
@@ -16,27 +17,49 @@ const DAY = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", weekday: "long",
 const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 /**
- * One trade idea, to evaluate it (piece 2 of the trade-ideas plan, Ben 2026-11-02): what it is, the chart, the AI's bull
- * and bear case, a position sizer, and Ask the AI. The market's odds and the contract picker join when options data is in.
+ * One trade idea, to evaluate it (piece 2 of the trade-ideas plan, Ben 2026-11-02): what it is, the chart, the bull and
+ * bear case and quick answers worked out by rules from HighStrike's own data (no AI service: "Do this all without AI
+ * APIs"), and a position sizer. The market's odds and the contract picker join when options data is in.
  */
 export default async function IdeaPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { supabase, user } = await requireMember(`/ideas/${id}`);
+  const { supabase } = await requireMember(`/ideas/${id}`);
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
-  const [{ data }, { data: chat }] = await Promise.all([
-    supabase.from("setups").select(`${IDEA_COLUMNS}, cases`).eq("id", id).maybeSingle(),
-    supabase.from("idea_chats").select("role, content").eq("setup_id", id).eq("user_id", user.id).order("id").limit(60),
-  ]);
+  const { data } = await supabase.from("setups").select(IDEA_COLUMNS).eq("id", id).maybeSingle();
   if (!data) notFound();
-  const idea = data as Idea & { cases: Cases | null };
-  const [quote] = await fetchQuotes([idea.ticker]).catch(() => []);
+  const idea = data as Idea;
+  const since = new Date(`${idea.report_date}T12:00:00Z`);
+  since.setUTCDate(since.getUTCDate() - 30);
+  const [[quote], { data: closes }, { data: trades }, { data: crowd }] = await Promise.all([
+    fetchQuotes([idea.ticker]).catch(() => []),
+    supabase.from("price_history").select("close").eq("ticker", idea.ticker).order("price_date", { ascending: false }).limit(15),
+    supabase.from("insider_trades").select("transaction_code, value").eq("ticker", idea.ticker).gte("filed_at", since.toISOString().slice(0, 10)),
+    supabase.from("chatter_stats").select("bullish, bearish, watchers").eq("ticker", idea.ticker).order("day", { ascending: false }).limit(1).maybeSingle(),
+  ]);
+  const live = quote?.live ? quote : null;
+  const range = live?.high != null && live?.low != null && live.high > live.low ? (live.price - live.low) / (live.high - live.low) : null;
+  const tally = ((trades ?? []) as { transaction_code: "P" | "S"; value: number | null }[]).reduce(
+    (t, r) => (r.transaction_code === "P" ? { ...t, buys: t.buys + 1, buyValue: t.buyValue + Number(r.value ?? 0) } : { ...t, sells: t.sells + 1, sellValue: t.sellValue + Number(r.value ?? 0) }),
+    { buys: 0, buyValue: 0, sells: 0, sellValue: 0 }
+  );
+  const c = crowd as { bullish: number; bearish: number; watchers: number | null } | null;
+  const signals: Signals = {
+    price: live?.price ?? null,
+    changePct: live?.changePct ?? null,
+    rangePos: range,
+    closes: ((closes ?? []) as { close: number }[]).map((r) => Number(r.close)).reverse(),
+    insiders: tally,
+    crowd: c ? { bullishPct: c.bullish + c.bearish >= 5 ? Math.round((c.bullish / (c.bullish + c.bearish)) * 100) : null, watchers: c.watchers } : null,
+  };
+  const read = caseFor(idea, signals);
+  
   const st = STATUS[idea.status] ?? STATUS.open;
   const pct = idea.status === "open" ? idea.current_pct : idea.result_pct;
   const facts: [string, string][] = [
     ["Entry", idea.entry_price != null ? money(idea.entry_price) : "—"],
     ["Target", idea.target_price != null ? money(idea.target_price) : idea.price_target],
     ["Time", idea.time_frame],
-    ["Now", quote?.live ? `${money(quote.price)} (${quote.changePct >= 0 ? "+" : ""}${quote.changePct.toFixed(2)}% today)` : "—"],
+    ["Now", live ? `${money(live.price)} (${live.changePct >= 0 ? "+" : ""}${live.changePct.toFixed(2)}% today)` : "—"],
   ];
 
   return (
@@ -86,16 +109,16 @@ export default async function IdeaPage({ params }: { params: Promise<{ id: strin
               </ul>
             </div>
           </section>
-          <BullBear id={idea.id} initial={idea.cases} />
+          <BullBear bull={read.bull} bear={read.bear} verdict={read.verdict} />
         </div>
         <div className="flex min-w-0 flex-col gap-6">
-          <AskAI id={idea.id} ticker={idea.ticker} initial={(chat ?? []) as { role: "user" | "assistant"; content: string }[]} />
-          <PositionSizer entry={quote?.live ? quote.price : idea.entry_price} side={idea.direction} />
+          <QuickAnswers items={quickAnswers(idea, signals)} />
+          <PositionSizer entry={live ? live.price : idea.entry_price} side={idea.direction} />
         </div>
       </div>
 
       <p className="text-xs leading-relaxed text-ink-3">
-        Market commentary and education from HighStrike AI, not investment advice. You make every decision. The market&apos;s odds and a contract picker arrive with live options data.
+        Market commentary and education, not investment advice. You make every decision. The bull and bear case and the quick answers are worked out from the price, insider filings and the crowd; the market&apos;s odds and a contract picker arrive with live options data.
       </p>
     </div>
   );
