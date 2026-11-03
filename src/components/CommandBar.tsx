@@ -10,6 +10,7 @@ type Cmd = PageCmd | SymbolCmd;
 
 const PAGES: Omit<PageCmd, "kind">[] = [
   { label: "Dashboard", hint: "Home — weather, setups, watchlist", href: "/dashboard" },
+  { label: "Ideas", hint: "Every trade idea, filtered your way", href: "/ideas" },
   { label: "Setups", hint: "Setup history & scoreboard", href: "/setups" },
   { label: "Scanner", hint: "Universe ranked by flow score", href: "/scanner" },
   { label: "Insider Feed", hint: "Form 4 buys, sells, clusters", href: "/insiders" },

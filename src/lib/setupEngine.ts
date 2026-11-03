@@ -48,9 +48,15 @@ function insiderNote(r: EnrichedRow): string | null {
   return `${parts.join(", ")} filed in the last 14 days`;
 }
 
+export type IdeaStyle = "day" | "swing" | "long";
+
 export type GeneratedSetup = {
   ticker: string;
   direction: "long" | "short";
+  /** Day trade, swing (days to a couple of weeks) or longer-term. */
+  style: IdeaStyle;
+  /** The idea in one plain sentence, for the feed. */
+  headline: string;
   justification: string;
   entry_criteria: string[];
   price_target: string;
@@ -200,9 +206,15 @@ function heuristic(quotes: EnrichedRow[]): Generated {
         : null,
     ].filter(Boolean);
     const insiderBoost = dir === "long" ? Math.min(q.insBuyers * 6, 12) : 0;
+    const style: IdeaStyle = Math.abs(q.changePct) >= 4 ? "day" : q.mom5d != null && Math.abs(q.mom5d) >= 8 ? "long" : "swing";
     return {
       ticker: q.ticker,
       direction: dir,
+      style,
+      headline:
+        dir === "long"
+          ? `${q.ticker} is leading the scanner; ride the momentum toward ${target(q, true)}.`
+          : `${q.ticker} keeps getting sold; fade it toward ${target(q, false)}.`,
       justification:
         dir === "long"
           ? `${q.ticker} tops the scanner (${signalBits.join(", ")}) at ${q.changePct >= 0 ? "+" : ""}${q.changePct.toFixed(2)}% with breadth ${gainers}/${quotes.length} positive${ins ? `, and ${ins}` : ""} — momentum continuation while the leaders hold.`
@@ -215,18 +227,16 @@ function heuristic(quotes: EnrichedRow[]): Generated {
         "Broad-market direction score unchanged or improving",
       ],
       price_target: target(q, dir === "long"),
-      time_frame: "3-5 days",
+      time_frame: style === "day" ? "Today" : style === "long" ? "2-4 weeks" : "3-5 days",
       flow_score: clamp(q.score + insiderBoost),
     };
   };
 
+  // The strongest names as longs and the weakest as shorts: ten ideas a day when the scanner has them.
   const setups: GeneratedSetup[] = [];
-  if (byScore[0]) setups.push(mk(byScore[0], "long"));
-  if (byScore[1]) setups.push(mk(byScore[1], "long"));
-  const weakest = byScore[byScore.length - 1];
-  if (weakest && weakest.score <= 45 && weakest.changePct < 0) {
-    setups.push(mk(weakest, "short"));
-  }
+  for (const q of byScore.slice(0, 6)) if (q.score >= 55) setups.push(mk(q, "long"));
+  for (const q of byScore.slice(-4).reverse()) if (q.score <= 45 && q.changePct < 0) setups.push(mk(q, "short"));
+  if (setups.length === 0 && byScore[0]) setups.push(mk(byScore[0], "long"));
 
   const clusterTickers = quotes
     .filter((q) => q.insBuyers >= 2)
@@ -278,12 +288,14 @@ async function claudeGenerate(quotes: EnrichedRow[]): Promise<Generated> {
       "adjusting for signal quality. " +
       "Respond with ONLY a JSON object, no markdown fences, matching exactly: " +
       '{"weather":{"volatility":0-100,"opportunity":0-100,"direction":0-100,"summary":"1-2 sentences"},' +
-      '"setups":[{"ticker":"...","direction":"long"|"short","justification":"2 sentences of concrete reasoning tied to the data","entry_criteria":["3 specific trigger conditions"],"price_target":"$123.45","time_frame":"e.g. 3-5 days","flow_score":0-100}]} ' +
-      "Produce exactly 3 setups chosen from the provided universe only. Price targets must be within ±12% of the current price.",
+      '"setups":[{"ticker":"...","direction":"long"|"short","style":"day"|"swing"|"long","headline":"the idea in one plain sentence a busy trader gets at a glance, under 90 characters, no jargon","justification":"2 sentences of concrete reasoning tied to the data","entry_criteria":["3 specific trigger conditions"],"price_target":"$123.45","time_frame":"e.g. Today, 3-5 days, 2-4 weeks","flow_score":0-100}]} ' +
+      "Produce between 10 and 15 trade ideas chosen from the provided universe only, the best first, mixing longs and shorts as the tape warrants, at most one per ticker. " +
+      "style is day (closes today; time_frame Today), swing (days to two weeks) or long (two weeks or more). " +
+      "Price targets must be within ±12% of the current price.",
     messages: [
       {
         role: "user",
-        content: `Today's scan universe with the terminal's signals:\n${quoteLines}\n\nGenerate today's weather report and 3 setups.`,
+        content: `Today's scan universe with the terminal's signals:\n${quoteLines}\n\nGenerate today's weather report and 10 to 15 trade ideas.`,
       },
     ],
   });
@@ -307,8 +319,14 @@ async function claudeGenerate(quotes: EnrichedRow[]): Promise<Generated> {
         Array.isArray(s.entry_criteria) &&
         s.justification
     )
-    .slice(0, 3)
-    .map((s) => ({ ...s, flow_score: clamp(s.flow_score) }));
+    .filter((s, i, all) => all.findIndex((t) => t.ticker === s.ticker) === i)
+    .slice(0, 15)
+    .map((s) => ({
+      ...s,
+      style: (["day", "swing", "long"] as const).includes(s.style) ? s.style : "swing",
+      headline: String(s.headline ?? "").slice(0, 140) || s.justification.split(". ")[0].slice(0, 140),
+      flow_score: clamp(s.flow_score),
+    }));
   if (setups.length === 0) throw new Error("no valid setups in model output");
 
   return {
@@ -404,7 +422,8 @@ export async function generateDaily(force = false): Promise<{
   });
   if (wErr) throw new Error(`weather upsert failed: ${wErr.message}`);
 
-  await service.from("setups").delete().eq("report_date", date);
+  // Only the AI's own ideas for the day are replaced; other sources' ideas stay.
+  await service.from("setups").delete().eq("report_date", date).eq("source", "ai");
   const priceOf = new Map(quotes.map((q) => [q.ticker, q.price]));
   const expiresOn = new Date(Date.now() + HORIZON_DAYS * 86400000)
     .toISOString()
@@ -413,6 +432,7 @@ export async function generateDaily(force = false): Promise<{
     generated.setups.map((s) => ({
       report_date: date,
       ...s,
+      source: "ai",
       model: generated.model,
       entry_price: priceOf.get(s.ticker) ?? null,
       target_price: parsePrice(s.price_target),
@@ -423,7 +443,7 @@ export async function generateDaily(force = false): Promise<{
 
   await recordActivity(
     "report_published",
-    `Weather report published — ${generated.setups.length} setups (${generated.setups
+    `Morning report published: ${generated.setups.length} trade ideas (${generated.setups
       .map((s) => `$${s.ticker}`)
       .join(", ")})`
   );
