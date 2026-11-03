@@ -2,6 +2,13 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "@/lib/supabaseConfig";
 
+/**
+ * The app's pages, which a signed-out visitor is sent to Sign in from before anything renders (the pages check again,
+ * and check the membership). Not /welcome: a buyer whose payment upgraded an account they weren't signed in to lands
+ * there signed out, and it says what happened.
+ */
+const MEMBER_PATHS = ["/dashboard", "/ideas", "/journal", "/watchlists", "/scanner", "/insiders", "/chatter", "/education", "/settings", "/symbol", "/admin"];
+
 // Refreshes the Supabase auth session on every matched request and gates
 // members-only routes.
 export default async function proxy(request: NextRequest) {
@@ -31,7 +38,7 @@ export default async function proxy(request: NextRequest) {
 
   const path = request.nextUrl.pathname;
 
-  if (!user && path.startsWith("/dashboard")) {
+  if (!user && MEMBER_PATHS.some((p) => path === p || path.startsWith(`${p}/`))) {
     const url = request.nextUrl.clone();
     url.pathname = "/signin";
     url.searchParams.set("next", path);
