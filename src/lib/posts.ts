@@ -163,7 +163,7 @@ export const posts: Post[] = [
       },
       {
         type: "p",
-        text: "This is why every setup in the terminal ships with a time frame and defined-risk structures rather than a dollar amount: the right size is a function of your account, not our conviction. The system can find the trade. Only you can size it.",
+        text: "This is why every setup in the terminal ships with an entry, a target, and a time frame rather than a dollar amount: the right size is a function of your account, not our conviction. The system can find the trade. Only you can size it.",
       },
     ],
   },
@@ -207,7 +207,7 @@ export const posts: Post[] = [
       },
       {
         type: "callout",
-        text: "In our pipeline, unusual options activity is a confirming input, never a standalone trigger — it's one of the flags you see on a setup card, weighed alongside price action, insider filings, and chatter.",
+        text: "Treat unusual options activity as a confirming input, never a standalone trigger — weigh it alongside price action, insider filings, and what the crowd is saying.",
       },
       {
         type: "p",
@@ -251,7 +251,7 @@ export const posts: Post[] = [
       },
       {
         type: "p",
-        text: "When a setup card in the terminal shows insider flags, this is what's behind them: recent filings scored on those criteria, not a raw count of transactions. Two meaningful flags on a name with confirming price action and options flow is a very different situation than two routine filings on a quiet chart.",
+        text: "When a setup card in the terminal mentions insider buying, it means open-market purchases filed in the last 14 days, counted by insider and by dollar value, and two or more buyers in one name get flagged as a cluster. Two buyers on a name with confirming price action is a very different situation than two routine filings on a quiet chart.",
       },
       {
         type: "callout",
