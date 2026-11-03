@@ -1,18 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import MemberGate from "@/components/join/MemberGate";
-import { librarySummary } from "@/lib/education";
+import { lessonHref, librarySummary, moduleLabel, myProgress, outline } from "@/lib/education";
+import { IDEA_COLUMNS, SOURCES, STYLES, headlineOf, type Idea } from "@/lib/ideas";
 import { billingReady, healMembership, publishableKey } from "@/lib/lifetime";
 import { memberContext } from "@/lib/membership";
 import { agreedToTerms } from "@/lib/terms";
 import { Gauge } from "@/components/TerminalMockup";
-import { NowDateLong, NowGreeting, UpcomingFriday } from "@/components/Now";
+import { NowDateLong, NowGreeting } from "@/components/Now";
 import { Suspense } from "react";
 import MarketNews, { MarketNewsBones } from "./MarketNews";
 import WatchlistPanel from "./WatchlistPanel";
 import ActivityFeed from "./ActivityFeed";
 import FirstRunTour from "./FirstRunTour";
-import { PageHeader } from "@/components/ui";
+import { Badge, PageHeader } from "@/components/ui";
 
 export const metadata: Metadata = {
   title: "Dashboard — HighStrike",
@@ -40,40 +41,32 @@ export default async function DashboardPage() {
 
   const firstName = profile?.name || (user.email ?? "trader").split("@")[0];
 
-  // The latest weather report and the latest setups, asked for together; the report's own day picks its setups.
-  const [{ data: weather }, { data: recentSetups }] = await Promise.all([
+  // The latest weather report, today's ideas and the member's own open ones, and where they are in Trading School
+  // (Ben, 2026-11-03: "revert the dashboard back to the trade ideas and learning theme").
+  const [{ data: weather }, { data: mine }, course, progress] = await Promise.all([
     supabase
       .from("weather_reports")
       .select("report_date, volatility, opportunity, direction, summary, model")
       .order("report_date", { ascending: false })
       .limit(1)
       .maybeSingle(),
-    supabase
-      .from("setups")
-      .select(
-        "report_date, ticker, direction, justification, entry_criteria, price_target, time_frame, flow_score, status, current_pct, result_pct, symbols(name)"
-      )
-      .order("report_date", { ascending: false })
-      .order("flow_score", { ascending: false })
-      .limit(100),
+    supabase.from("setups").select(IDEA_COLUMNS).eq("owner_id", user.id).eq("status", "open").order("report_date", { ascending: false }).limit(5),
+    outline(supabase),
+    myProgress(supabase, user.id),
   ]);
-  const setupRows = weather ? (recentSetups ?? []).filter((s) => s.report_date === weather.report_date) : [];
+  const { data: todays, count: todayCount } = weather
+    ? await supabase.from("setups").select(IDEA_COLUMNS, { count: "exact" }).eq("report_date", weather.report_date).is("owner_id", null).order("flow_score", { ascending: false }).limit(6)
+    : { data: [], count: 0 };
+  const ideas = (todays ?? []) as Idea[];
+  const own = (mine ?? []) as Idea[];
 
-  const setups = (setupRows ?? []).map((s) => {
-    const pct = s.status === "open" ? s.current_pct : s.result_pct;
-    return {
-      ticker: `$${s.ticker}`,
-      name: (s.symbols as unknown as { name: string } | null)?.name ?? s.ticker,
-      direction: s.direction === "long" ? "Long" : "Short",
-      up: s.direction === "long",
-      target: s.price_target,
-      frame: s.time_frame,
-      justification: s.justification,
-      flow: s.flow_score,
-      status: s.status as string,
-      pct: pct as number | null,
-    };
-  });
+  // The lesson to pick up: one started and not finished, else the first not done, in library order.
+  const done = course.lessons.filter((l) => progress.get(l.id)?.completedAt).length;
+  const next =
+    course.lessons.find((l) => (progress.get(l.id)?.positionSec ?? 0) > 0 && !progress.get(l.id)?.completedAt) ??
+    course.lessons.find((l) => !progress.get(l.id)?.completedAt) ??
+    null;
+  const nextModule = next ? course.modules.find((m) => m.id === next.moduleId) : null;
 
   const reportLabel = weather
     ? new Date(`${weather.report_date}T12:00:00Z`).toLocaleDateString("en-US", {
@@ -134,92 +127,67 @@ export default async function DashboardPage() {
           </section>
 
           <div className="mt-10 grid gap-8 xl:grid-cols-3">
-            {/* Setups */}
+            {/* Today's ideas */}
             <section id="tour-setups" className="anim-rise xl:col-span-2" style={{ "--rise-delay": "160ms" } as React.CSSProperties}>
-              <div className="flex items-baseline justify-between">
-                <h2 className="font-display text-[15px] text-ink">
-                  {reportLabel ? `Setups — ${reportLabel}` : "Setups"}
-                </h2>
-                <span className="text-xs text-ink-3 font-medium">
-                  Market commentary — not investment advice
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <h2 className="font-display text-[15px] text-ink">{reportLabel ? `Today's ideas — ${reportLabel}` : "Today's ideas"}</h2>
+                <span className="flex gap-3 text-[13px]">
+                  <Link href="/ideas/paste" className="text-ink-2 hover:text-ink">
+                    Paste an idea
+                  </Link>
+                  <Link href="/ideas/build" className="text-ink-2 hover:text-ink">
+                    Build an idea
+                  </Link>
+                  <Link href="/ideas" className="font-medium text-accent hover:underline">
+                    All {todayCount ? `${todayCount} ` : ""}ideas →
+                  </Link>
                 </span>
               </div>
-              {setups.length === 0 && (
+              {ideas.length === 0 && (
                 <p className="mt-3 rounded-xl border border-line bg-panel px-4 py-6 text-center text-sm text-ink-3">
-                  No setups published yet — the next batch lands before the open.
+                  No ideas published yet — the next batch lands before the open.
                 </p>
               )}
-              <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {setups.map((s) => (
-                  <div
-                    key={s.ticker}
-                    className="flex flex-col rounded-xl border border-line bg-panel p-5 transition hover:border-line-strong"
-                  >
-                    <div className="flex items-center justify-between">
-                      <Link
-                        href={`/symbol/${s.ticker.replace("$", "")}`}
-                        className="font-display text-lg text-ink transition hover:text-accent"
-                      >
-                        {s.ticker}
-                      </Link>
-                      <span
-                        className={`font-mono-nums text-xs ${s.up ? "text-up" : "text-down"}`}
-                      >
-                        {s.up ? "▲" : "▼"} {s.direction}
-                      </span>
-                    </div>
-                    <div className="mt-0.5 flex items-center justify-between">
-                      <p className="text-xs text-ink-3">{s.name}</p>
-                      <span
-                        className={`font-mono-nums text-[11px] ${
-                          s.pct == null
-                            ? "text-ink-3"
-                            : s.pct >= 0
-                              ? "text-up"
-                              : "text-down"
-                        }`}
-                      >
-                        {s.status === "target_hit" && "✓ Target hit "}
-                        {s.status === "stopped" && "✕ Stopped "}
-                        {s.status === "expired" && "Expired "}
-                        {s.pct != null &&
-                          `${s.pct >= 0 ? "+" : ""}${s.pct.toFixed(2)}%${s.status === "open" ? " so far" : ""}`}
-                      </span>
-                    </div>
-                    <p className="mt-3 flex-1 text-xs leading-relaxed text-ink-2">
-                      {s.justification}
-                    </p>
-                    <dl className="mt-4 space-y-1.5 border-t border-line pt-3 text-xs">
-                      <div className="flex justify-between">
-                        <dt className="text-ink-3">Target</dt>
-                        <dd className="font-mono-nums text-accent">{s.target}</dd>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {ideas.map((i) => {
+                  const pct = i.status === "open" ? i.current_pct : i.result_pct;
+                  return (
+                    <Link key={i.id} href={`/ideas/${i.id}`} className="flex flex-col rounded-xl border border-line bg-panel p-4 transition hover:border-line-strong hover:bg-panel-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono-nums text-[15px] font-semibold text-ink">{i.ticker}</span>
+                        <Badge tone={i.direction === "long" ? "up" : "down"}>{i.direction === "long" ? "Long" : "Short"}</Badge>
+                        <span className="ml-auto text-xs text-ink-3">{STYLES[i.style] ?? i.style}</span>
                       </div>
-                      <div className="flex justify-between">
-                        <dt className="text-ink-3">Time frame</dt>
-                        <dd className="font-mono-nums">{s.frame}</dd>
+                      <p className="mt-2 flex-1 text-sm leading-snug text-ink-2">{headlineOf(i)}</p>
+                      <div className="mt-3 flex items-center justify-between border-t border-line pt-2 font-mono-nums text-xs">
+                        <span className="text-ink-3">
+                          {i.entry_price != null ? `$${i.entry_price.toFixed(2)}` : "—"} → {i.target_price != null ? `$${Number(i.target_price).toFixed(2)}` : i.price_target}
+                        </span>
+                        {pct != null && <span className={pct >= 0 ? "text-up" : "text-down"}>{`${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%`}</span>}
                       </div>
-                      <div className="flex justify-between">
-                        <dt className="text-ink-3">Nearest expiry</dt>
-                        <dd className="font-mono-nums">
-                          <UpcomingFriday />
-                        </dd>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <dt className="text-ink-3">Flow score</dt>
-                        <dd className="flex items-center gap-2">
-                          <span className="h-1.5 w-12 overflow-hidden rounded-full bg-panel-2" aria-hidden="true">
-                            <span
-                              className="block h-full rounded-full bg-accent"
-                              style={{ width: `${s.flow}%` }}
-                            />
-                          </span>
-                          <span className="font-mono-nums">{s.flow}</span>
-                        </dd>
-                      </div>
-                    </dl>
-                  </div>
-                ))}
+                    </Link>
+                  );
+                })}
               </div>
+
+              {own.length > 0 && (
+                <div className="mt-6">
+                  <h3 className="text-sm font-medium text-ink">Your open ideas</h3>
+                  <ul className="mt-2 divide-y divide-line rounded-xl border border-line bg-panel">
+                    {own.map((i) => (
+                      <li key={i.id}>
+                        <Link href={`/ideas/${i.id}`} className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-panel-2">
+                          <span className="w-14 font-mono-nums font-semibold text-ink">{i.ticker}</span>
+                          <Badge tone={i.direction === "long" ? "up" : "down"}>{i.direction === "long" ? "Long" : "Short"}</Badge>
+                          <span className="min-w-0 flex-1 truncate text-ink-2">{headlineOf(i)}</span>
+                          <span className="hidden text-xs text-ink-3 sm:inline">{SOURCES[i.source] ?? i.source}</span>
+                          {i.current_pct != null && <span className={`font-mono-nums text-xs ${i.current_pct >= 0 ? "text-up" : "text-down"}`}>{`${i.current_pct >= 0 ? "+" : ""}${Number(i.current_pct).toFixed(1)}%`}</span>}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
               {/* Watchlist — live */}
               <WatchlistPanel userId={user.id} />
@@ -227,6 +195,34 @@ export default async function DashboardPage() {
 
             {/* Right rail */}
             <section id="tour-activity" className="anim-rise" style={{ "--rise-delay": "240ms" } as React.CSSProperties}>
+              {/* Keep learning */}
+              {course.lessons.length > 0 && (
+                <div className="mb-6 rounded-xl border border-line bg-panel p-5">
+                  <div className="flex items-baseline justify-between">
+                    <h2 className="font-display text-[15px] text-ink">Keep learning</h2>
+                    <span className="font-mono-nums text-xs text-ink-3">
+                      {done}/{course.lessons.length} lessons
+                    </span>
+                  </div>
+                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-panel-2" aria-hidden="true">
+                    <div className="h-full rounded-full bg-accent" style={{ width: `${Math.round((done / course.lessons.length) * 100)}%` }} />
+                  </div>
+                  {next ? (
+                    <>
+                      <p className="mt-3 text-xs text-ink-3">{nextModule ? moduleLabel(nextModule.title).eyebrow : "Trading School"}</p>
+                      <p className="mt-0.5 text-sm font-medium text-ink">{next.title}</p>
+                      <Link href={lessonHref(next.id)} className="mt-3 inline-flex rounded-lg bg-accent px-3.5 py-2 text-xs font-medium text-on-accent transition hover:bg-accent-2">
+                        {(progress.get(next.id)?.positionSec ?? 0) > 0 ? "Continue lesson" : done ? "Next lesson" : "Start Trading School"}
+                      </Link>
+                    </>
+                  ) : (
+                    <p className="mt-3 text-sm text-ink-2">You&apos;ve finished every lesson. Rewatch any of them in Trading School.</p>
+                  )}
+                  <Link href="/education" className="ml-3 text-xs text-ink-2 hover:text-ink">
+                    All modules
+                  </Link>
+                </div>
+              )}
               <div className="flex items-baseline justify-between">
                 <h2 className="font-display text-[15px] text-ink">
                   Activity
@@ -241,29 +237,6 @@ export default async function DashboardPage() {
                 <MarketNews />
               </Suspense>
 
-              <div className="mt-6 rounded-xl border border-line bg-panel p-6">
-                <h3 className="font-display text-sm font-semibold">
-                  While you wait for your cohort
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-ink-2">
-                  The blog covers the process behind every card — expectancy,
-                  sizing, and how the AI reads the market each morning.
-                </p>
-                <div className="mt-4 flex gap-3">
-                  <Link
-                    href="/blog"
-                    className="rounded-lg bg-accent px-4 py-2 text-xs font-medium text-on-accent transition hover:bg-accent-2"
-                  >
-                    Read the blog
-                  </Link>
-                  <Link
-                    href="/results"
-                    className="rounded-lg border border-line-strong bg-panel-2 px-4 py-2 text-xs font-medium text-ink transition hover:bg-panel-3"
-                  >
-                    Scoreboard
-                  </Link>
-                </div>
-              </div>
             </section>
           </div>
     </>

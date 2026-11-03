@@ -56,16 +56,6 @@ export async function memberContext(next: string) {
   return context;
 }
 
-/**
- * The swipe app's pages (Swipe, Saved, Scoreboard) while it's being built: admins only (Ben, 2026-11-02: "Put the
- * landing page back before the product is ready"). Everyone else goes to the paywall.
- */
-export async function requireAdminPage(next: string) {
-  const context = await memberContext(next);
-  if (!context.profile?.is_admin) redirect(PAYWALL);
-  return context;
-}
-
 /** A member page's first line: the member, or the paywall for an account without the membership. */
 export async function requireMember(next: string) {
   const context = await memberContext(next);

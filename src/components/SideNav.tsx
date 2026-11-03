@@ -3,7 +3,7 @@
 import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import NavIcon from "@/components/NavIcon";
-import { ADMIN_LINK, SETTINGS_LINK, activeKey, visibleNav, type NavLink } from "@/components/appNav";
+import { ADMIN_LINK, NAV, SETTINGS_LINK, activeKey, type NavLink } from "@/components/appNav";
 import { BUTTON_PRIMARY_SM } from "@/components/ui";
 
 // The sidebar's pages. The frame stays mounted while pages change (the (app) layout), so the current page comes from
@@ -14,7 +14,7 @@ export default function SideNav({ isAdmin }: { isAdmin: boolean }) {
   return (
     <>
       <nav aria-label="Main" className="flex-1 space-y-0.5 overflow-y-auto px-3 py-3">
-        {visibleNav(isAdmin).map((link) => (
+        {NAV.map((link) => (
           <NavItem key={link.label} link={link} active={link.href !== undefined && link.key === active} />
         ))}
       </nav>

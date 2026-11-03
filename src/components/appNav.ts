@@ -1,9 +1,8 @@
 // The app's pages as the sidebar and the phone menu list them, and which one a URL belongs to. The frame lives in the
 // (app) layout and stays mounted while pages change, so the current page is read from the URL rather than passed in.
 
-export type NavKey = "home" | "swipe" | "ideas" | "setups" | "scanner" | "insiders" | "chatter" | "education" | "admin" | "settings" | "none";
-/** `adminOnly`: shown to admins only (the swipe app while it's being built). */
-export type NavLink = { label: string; key: NavKey; href?: string; icon: string; adminOnly?: boolean };
+export type NavKey = "home" | "ideas" | "setups" | "scanner" | "insiders" | "chatter" | "education" | "admin" | "settings" | "none";
+export type NavLink = { label: string; key: NavKey; href?: string; icon: string };
 
 export const NAV: NavLink[] = [
   {
@@ -11,14 +10,6 @@ export const NAV: NavLink[] = [
     key: "home",
     href: "/dashboard",
     icon: "M3 12l9-9 9 9M5 10v10a1 1 0 001 1h3a1 1 0 001-1v-6h4v6a1 1 0 001 1h3a1 1 0 001-1V10",
-  },
-  // Swipe, the options-setup deck (Ben, 2026-11-02: the swipe app, step 2), first under Home while it's built.
-  {
-    label: "Swipe",
-    key: "swipe",
-    href: "/swipe",
-    icon: "M7 4h10a2 2 0 012 2v12a2 2 0 01-2 2H7a2 2 0 01-2-2V6a2 2 0 012-2zm3 6l2 2 4-4",
-    adminOnly: true,
   },
   // Ideas, the product's hero (Ben, 2026-11-02: "make this all about TRADE IDEAS"), right under Home. Setups keeps its
   // page for the scoreboard and history, one step down.
@@ -64,9 +55,6 @@ export const NAV: NavLink[] = [
     icon: "M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422A12.083 12.083 0 0121 12c0 2.21-.895 4.21-2.343 5.657L12 21l-6.657-3.343A7.962 7.962 0 013 12c0-1.192.26-2.323.727-3.339L12 14z",
   },
 ];
-
-/** The sidebar's pages for this account (the swipe app is admins' only until it's ready). */
-export const visibleNav = (isAdmin: boolean) => NAV.filter((l) => isAdmin || !l.adminOnly);
 
 export const ADMIN_LINK: NavLink = {
   label: "Admin",
