@@ -1,9 +1,9 @@
-/** A 16px outline icon for the sidebar and its buttons, in the text colour unless a class says otherwise. */
-export default function NavIcon({ d, className = "" }: { d: string; className?: string }) {
+/** An outline icon for the sidebar, the phone's bar and their buttons (16px unless sized), in the text colour unless a class says otherwise. */
+export default function NavIcon({ d, className = "", size = 16 }: { d: string; className?: string; size?: number }) {
   return (
     <svg
-      width="16"
-      height="16"
+      width={size}
+      height={size}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"

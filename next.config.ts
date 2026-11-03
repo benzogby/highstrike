@@ -11,7 +11,7 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       // Ben removed the Results page on 2026-11-03: its numbers were typed in by hand and nothing updated them. Members
-      // see every graded idea, wins and losses, on /setups.
+      // see every graded idea, wins and losses, on Ideas' Track record.
       { source: "/results", destination: "/", permanent: true },
       // The scanner runs on rules, never AI (Ben, 2026-11-03), so the post about it took a new address (src/lib/posts.ts).
       {
@@ -19,6 +19,8 @@ const nextConfig: NextConfig = {
         destination: "/blog/how-the-smart-scanner-reads-the-market-every-morning",
         permanent: true,
       },
+      // Setups became Ideas' Track record tab (Ben, 2026-11-03), so old links and bookmarks land there for good.
+      { source: "/setups", destination: "/ideas/record", permanent: true },
     ];
   },
 };

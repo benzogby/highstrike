@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireMember } from "@/lib/membership";
-import { BUTTON_PRIMARY, BUTTON_SECONDARY, CARD, INPUT, PageHeader } from "@/components/ui";
+import { CARD, INPUT } from "@/components/ui";
 import { IDEA_COLUMNS, SOURCES, STYLES, ideasSince, type Idea, type Source, type Style } from "@/lib/ideas";
-import IdeaRow from "./IdeaRow";
+import IdeaRow from "../IdeaRow";
 
 export const metadata: Metadata = { title: "Ideas — HighStrike" };
 
@@ -13,7 +13,8 @@ const DAY = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", weekday: "long",
 
 /**
  * The idea feed, HighStrike's hero (Ben, 2026-11-02: "Yes, start the feed"): every trade idea from every source in one
- * list, newest first, filtered by source, style, side and ticker. Open ideas by default; the last 30 days.
+ * list, newest first, filtered by source, style, side and ticker. Open ideas by default; the last 30 days. Ideas' first
+ * tab; the header, its buttons and the tabs are the layout's.
  */
 export default async function IdeasPage({ searchParams }: { searchParams: Promise<Filters> }) {
   const { supabase } = await requireMember("/ideas");
@@ -49,23 +50,7 @@ export default async function IdeasPage({ searchParams }: { searchParams: Promis
 
   return (
     <>
-      <PageHeader
-        className="anim-rise"
-        title="Ideas"
-        subtitle="Every trade idea in one place, the newest first. Open one for the bull and bear case, quick answers and sizing."
-        actions={
-          <>
-            <Link href="/ideas/build" className={BUTTON_SECONDARY}>
-              Build an idea
-            </Link>
-            <Link href="/ideas/paste" className={BUTTON_PRIMARY}>
-              Paste an idea
-            </Link>
-          </>
-        }
-      />
-
-      <div className="anim-rise mt-6 flex flex-col gap-3" style={{ "--rise-delay": "60ms" } as React.CSSProperties}>
+      <div className="mt-5 flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-3">
           <form action="/ideas" className="w-40">
             {Object.entries({ source, style, side, show: show !== "open" ? show : null }).map(([k, v]) => (v ? <input key={k} type="hidden" name={k} value={v} /> : null))}

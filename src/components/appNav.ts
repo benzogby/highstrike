@@ -1,7 +1,8 @@
-// The app's pages as the sidebar and the phone menu list them, and which one a URL belongs to. The frame lives in the
-// (app) layout and stays mounted while pages change, so the current page is read from the URL rather than passed in.
+// The app's pages as the sidebar and the phone's bottom bar list them, and which one a URL belongs to. The frame lives
+// in the (app) layout and stays mounted while pages change, so the current page is read from the URL rather than passed
+// in.
 
-export type NavKey = "home" | "ideas" | "journal" | "setups" | "scanner" | "insiders" | "chatter" | "education" | "admin" | "settings" | "none";
+export type NavKey = "home" | "ideas" | "journal" | "scanner" | "watchlists" | "insiders" | "chatter" | "education" | "admin" | "settings" | "none";
 export type NavLink = { label: string; key: NavKey; href?: string; icon: string };
 
 export const NAV: NavLink[] = [
@@ -11,8 +12,8 @@ export const NAV: NavLink[] = [
     href: "/dashboard",
     icon: "M3 12l9-9 9 9M5 10v10a1 1 0 001 1h3a1 1 0 001-1v-6h4v6a1 1 0 001 1h3a1 1 0 001-1V10",
   },
-  // Ideas, the product's hero (Ben, 2026-11-02: "make this all about TRADE IDEAS"), right under Home. Setups keeps its
-  // page for the scoreboard and history, one step down.
+  // Ideas, the product's hero (Ben, 2026-11-02: "make this all about TRADE IDEAS"), right under Home. Setups' scoreboard
+  // and history are its Track record tab since 2026-11-03 (/ideas/record).
   {
     label: "Ideas",
     key: "ideas",
@@ -25,12 +26,6 @@ export const NAV: NavLink[] = [
     key: "journal",
     href: "/journal",
     icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01",
-  },
-  {
-    label: "Setups",
-    key: "setups",
-    href: "/setups",
-    icon: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z",
   },
   {
     label: "Scanner",
@@ -78,6 +73,28 @@ export const SETTINGS_LINK: NavLink = {
 };
 
 export const SIGN_OUT_ICON = "M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1";
+
+/** Three dots: the phone bar's More. */
+export const MORE_ICON = "M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z";
+
+/** The top bar's bell. */
+export const BELL_ICON = "M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9";
+
+const byKey = (key: NavKey) => [...NAV, ADMIN_LINK, SETTINGS_LINK].find((l) => l.key === key)!;
+
+/**
+ * The phone's bottom bar (Ben, 2026-11-03: most visits are Instagram on phones, and members keep HighStrike on their
+ * home screen as an app): four pages under their short names, then More. Below lg, where the sidebar hides.
+ */
+export const TAB_BAR: NavLink[] = [
+  byKey("home"),
+  byKey("ideas"),
+  byKey("scanner"),
+  { ...byKey("education"), label: "School" },
+];
+
+/** What the phone's More opens: the rest of the sidebar, then Settings (Admin and Sign out are added by the sheet). */
+export const MORE_LINKS: NavLink[] = NAV.filter((l) => !TAB_BAR.some((t) => t.key === l.key)).concat(SETTINGS_LINK);
 
 /** The section a URL belongs to: a lesson is Trading School, every Admin tab is Admin, a symbol's page is none. */
 export function activeKey(path: string): NavKey {

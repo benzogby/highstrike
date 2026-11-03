@@ -108,10 +108,10 @@ export default async function SymbolPage({
             Setup history — ${ticker}
           </h2>
           <Link
-            href="/setups"
+            href="/ideas/record"
             className="text-xs font-semibold text-accent transition hover:text-accent-2"
           >
-            All setups →
+            Track record →
           </Link>
         </div>
         {(history ?? []).length === 0 ? (
