@@ -4,6 +4,7 @@ import { supabaseServer } from "@/lib/supabase/server";
 import { generateDaily, gradeSetups, snapshotPrices } from "@/lib/setupEngine";
 import { checkAlerts } from "@/lib/alerts";
 import { checkTrades } from "@/lib/tradeAlerts";
+import { SITE_URL } from "@/lib/mail";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -61,7 +62,9 @@ async function handle(request: Request) {
     // The day's ideas are in: start the morning email and watchlist scans in a run of their own (once a day; a forced
     // regeneration from Admin doesn't email anyone).
     if (result.status === "generated" && !wantsForce) {
-      const origin = new URL(request.url).origin;
+      // On production, the site's own address: Vercel Cron calls the deployment's generated vercel.app URL, which sits
+      // behind Vercel Authentication, so the email's start got its sign-in page and waited for the backup cron.
+      const origin = process.env.VERCEL_ENV === "production" ? SITE_URL : new URL(request.url).origin;
       after(() =>
         fetch(`${origin}/api/cron/morning-digest`, { headers: { "x-morning-token": morningToken(result.date) } })
           .then((r) => r.json())
