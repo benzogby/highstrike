@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { checkAlerts } from "@/lib/alerts";
 import { checkTrades } from "@/lib/tradeAlerts";
 import { marketOpen } from "@/lib/marketCalendar";
+import { supabaseService } from "@/lib/stripe";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -20,6 +21,11 @@ export async function GET(request: Request) {
   const [alerts, trades] = await Promise.all([checkAlerts().catch(failed), checkTrades().catch(failed)]);
   const broke = "error" in alerts || "error" in trades;
   if (broke) console.error("check-alerts:", JSON.stringify({ alerts, trades }));
-  else if (alerts.fired || trades.alerted) console.log("check-alerts:", JSON.stringify({ alerts, trades }));
+  else {
+    if (alerts.fired || trades.alerted) console.log("check-alerts:", JSON.stringify({ alerts, trades }));
+    // The last good check, so anyone can see alerts are being watched: stale during market hours means they aren't.
+    const now = new Date().toISOString();
+    await supabaseService().from("site_settings").upsert({ key: "price_check_last", value: now, updated_at: now });
+  }
   return NextResponse.json({ alerts, trades }, { status: broke ? 500 : 200 });
 }
