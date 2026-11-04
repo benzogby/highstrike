@@ -1,5 +1,6 @@
-// The NYSE calendar the homepage needs: which days are sessions, which session
-// a morning price snapshot belongs to, and when the next bell rings. Holidays
+// The NYSE calendar the homepage and the price checks need: which days are
+// sessions, which session a morning price snapshot belongs to, when the next
+// bell rings and whether the market's open. Holidays
 // and 1 p.m. closes are from nyse.com/markets/hours-calendars; add each new
 // year's dates here. Past the listed years every weekday counts as a session.
 
@@ -69,6 +70,15 @@ function instant(iso: string, minutes: number) {
 
 const OPEN = 9 * 60 + 30;
 
+/** A session's closing bell in minutes past midnight New York time: 4 p.m., or 1 p.m. on an early close. */
+const closeOf = (iso: string) => (EARLY_CLOSES.has(iso) ? 13 * 60 : 16 * 60);
+
+/** True while the market is open at `now`, and for `grace` minutes after the closing bell. */
+export function marketOpen(now: number, grace = 0) {
+  const { date, minutes } = newYork(now);
+  return isSession(date) && minutes >= OPEN && minutes < closeOf(date) + grace;
+}
+
 export type Bell = {
   kind: "open" | "close";
   // when it rings
@@ -83,7 +93,7 @@ export type Bell = {
 export function nextBell(now: number): Bell {
   const { date, minutes } = newYork(now);
   if (isSession(date)) {
-    const close = EARLY_CLOSES.has(date) ? 13 * 60 : 16 * 60;
+    const close = closeOf(date);
     if (minutes < OPEN) return { kind: "open", at: instant(date, OPEN), day: date, time: "9:30" };
     if (minutes < close) return { kind: "close", at: instant(date, close), day: date, time: close === 13 * 60 ? "1:00" : "4:00" };
   }

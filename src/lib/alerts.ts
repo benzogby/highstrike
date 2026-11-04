@@ -5,9 +5,9 @@ import { notify } from "@/lib/notify";
 
 // Price-alert sweep: evaluates active alerts against quotes, fires matches
 // into the activity feed and the owner's bell (notify), and emails the owner
-// when RESEND_API_KEY is set. Runs from the daily cron and piggybacks
-// (throttled) on member traffic so alerts fire within minutes whenever anyone
-// is using the terminal.
+// when RESEND_API_KEY is set. Runs every minute while the market's open
+// (api/cron/check-alerts), from the morning job, and piggybacks (throttled) on
+// member traffic.
 
 const SWEEP_THROTTLE_SECONDS = 120;
 

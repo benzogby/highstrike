@@ -6,8 +6,9 @@ import { TRADE_COLUMNS, levelHit, money, tradeName, type Trade } from "@/lib/tra
 
 // A tracked trade reached its target or its stop (Ben, 2026-11-03: alerts by email and the in-app bell; trades from
 // "I took this" and My trades, src/lib/trades.ts). Each trade alerts once, on a live price only: the stock's price
-// against the levels it watches (an option's too: its levels are the stock's). Swept on member traffic at most every
-// two minutes (/api/quotes, as price alerts are) and by the morning job.
+// against the levels it watches (an option's too: its levels are the stock's). Swept every minute while the market's
+// open (api/cron/check-alerts), by the morning job, and on member traffic at most every two minutes (/api/quotes, as
+// price alerts are).
 
 const FROM = "HighStrike Alerts <alerts@mail.highstrike.com>";
 const SWEEP_KEY = "trades_last_sweep";
