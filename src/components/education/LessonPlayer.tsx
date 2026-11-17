@@ -29,7 +29,7 @@ const tenths = (n: number) => Math.round(n * 10) / 10;
 /**
  * A lesson's video, ported from getripping.com's Ripping University: the HLS stream from
  * /api/education/<lesson>/stream/master.m3u8, whose playlists come back with every segment behind a signed storage
- * link. Safari plays HLS itself; everywhere else hls.js (loaded only then) feeds it through Media Source.
+ * link. hls.js feeds it through Media Source wherever that runs; only a browser without it (older iPhones) plays HLS itself.
  *
  * Nothing but the playlist loads until play is pressed. It starts where `startAt` says (unless that's within 10 s of the
  * end), saves the place every ~10 s of playing, on pause, at the end and on leaving mid-lesson, never twice inside 5 s,
@@ -154,47 +154,53 @@ export default function LessonPlayer({ lessonId, src, poster, startAt, durationS
     video.addEventListener("error", onError);
     document.addEventListener("visibilitychange", onHidden);
 
-    if (video.canPlayType(HLS_MIME)) {
+    // hls.js first wherever Media Source runs it. Chrome now answers "maybe" to canPlayType(HLS) too, but its own HLS
+    // player refuses these streams ("no supported source"), so the browser's player is only the fallback for the
+    // browsers hls.js can't run in (older iPhones).
+    const goNative = () => {
+      if (!video.canPlayType(HLS_MIME)) return false;
       native = true;
       playNative(from);
-    } else {
-      import("hls.js")
-        .then(({ default: H }) => {
-          if (!alive) return;
-          if (!H.isSupported()) {
-            setProblem(UNSUPPORTED);
-            return;
-          }
-          const attach = (at: number, autoLoad: boolean) => {
-            const h = new H({ autoStartLoad: autoLoad, startPosition: at > 0 ? at : -1, capLevelToPlayerSize: true });
-            loading = autoLoad;
-            h.on(H.Events.ERROR, (_event, data) => {
-              if (!alive || !data.fatal) return;
-              if (data.type === H.ErrorTypes.MEDIA_ERROR && mediaFixes < 2) {
-                mediaFixes++;
-                rolling = false;
-                h.recoverMediaError();
-                return;
-              }
-              if (data.type === H.ErrorTypes.NETWORK_ERROR && everPlayed && reloads < MAX_RELOADS) {
-                reloads++;
-                const wasPlaying = !video.paused;
-                rolling = false;
-                h.destroy();
-                attach(here, true);
-                if (wasPlaying) video.play().catch(() => {});
-                return;
-              }
-              fail();
-            });
-            h.loadSource(src);
-            h.attachMedia(video);
-            hls = h;
-          };
-          attach(from, !video.paused);
-        })
-        .catch(fail);
-    }
+      return true;
+    };
+    import("hls.js")
+      .then(({ default: H }) => {
+        if (!alive) return;
+        if (!H.isSupported()) {
+          if (!goNative()) setProblem(UNSUPPORTED);
+          return;
+        }
+        const attach = (at: number, autoLoad: boolean) => {
+          const h = new H({ autoStartLoad: autoLoad, startPosition: at > 0 ? at : -1, capLevelToPlayerSize: true });
+          loading = autoLoad;
+          h.on(H.Events.ERROR, (_event, data) => {
+            if (!alive || !data.fatal) return;
+            if (data.type === H.ErrorTypes.MEDIA_ERROR && mediaFixes < 2) {
+              mediaFixes++;
+              rolling = false;
+              h.recoverMediaError();
+              return;
+            }
+            if (data.type === H.ErrorTypes.NETWORK_ERROR && everPlayed && reloads < MAX_RELOADS) {
+              reloads++;
+              const wasPlaying = !video.paused;
+              rolling = false;
+              h.destroy();
+              attach(here, true);
+              if (wasPlaying) video.play().catch(() => {});
+              return;
+            }
+            fail();
+          });
+          h.loadSource(src);
+          h.attachMedia(video);
+          hls = h;
+        };
+        attach(from, !video.paused);
+      })
+      .catch(() => {
+        if (alive && !goNative()) fail();
+      });
 
     return () => {
       if (!video.paused) save();
