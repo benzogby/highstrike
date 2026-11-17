@@ -4,8 +4,37 @@
     {
       "name": "highstrike-dev",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
       "port": 3000
+    },
+    {
+      "name": "landing-b-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "/Users/benjaminzogby/Desktop/highstrike-landing-b",
+        "run",
+        "dev",
+        "--",
+        "-p",
+        "3001"
+      ],
+      "port": 3001
+    },
+    {
+      "name": "taste-options",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "4111",
+        "--directory",
+        "/Users/benjaminzogby/Desktop/highstrike/.taste-skill/options"
+      ],
+      "port": 4111
     }
   ]
 }
