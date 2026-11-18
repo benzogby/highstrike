@@ -204,7 +204,10 @@ export async function getIntraday(raw: string, tf: Intraday): Promise<CandleSet>
   } catch {}
   const cacheKey = `bars:${ticker}:${tf}`;
   const { data: cached } = db ? await db.from("market_cache").select("body, fetched_at").eq("key", cacheKey).maybeSingle() : { data: null };
-  if (cached && fresh(cached.fetched_at) && (cached.body as Candle[]).length > 0) {
+  // In market hours intraday bars are kept a minute (a plan with today's bars keeps the chart current; the live price
+  // moves the last candle in between); otherwise like daily candles.
+  const current = marketOpen(Date.now()) ? Date.now() - Date.parse(cached?.fetched_at ?? "1970-01-01") < 60_000 : Boolean(cached && fresh(cached.fetched_at));
+  if (cached && current && (cached.body as Candle[]).length > 0) {
     return { candles: cached.body as Candle[], source: "massive", stale: false, fetchedAt: cached.fetched_at };
   }
   const key = await massiveKey();
