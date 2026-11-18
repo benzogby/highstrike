@@ -63,7 +63,8 @@ export async function alpacaBars(ticker: string, timeframe: string, days: number
   const end = new Date(Date.now() - SIP_DELAY_MS).toISOString();
   const out: Candle[] = [];
   let token: string | null = null;
-  for (let page = 0; page < 6; page++) {
+  // Alpaca pages these by its own measure (a few hundred bars at times), so follow up to 30 pages.
+  for (let page = 0; page < 30; page++) {
     const q = new URLSearchParams({ timeframe, start, end, limit: "10000", adjustment: "split", feed: "sip", sort: "asc" });
     if (token) q.set("page_token", token);
     const body: { bars?: Bar[] | null; next_page_token?: string | null } = await get(`/v2/stocks/${encodeURIComponent(ticker)}/bars?${q}`, keys);
