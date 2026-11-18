@@ -41,7 +41,9 @@ export default async function proxy(request: NextRequest) {
   if (!user && MEMBER_PATHS.some((p) => path === p || path.startsWith(`${p}/`))) {
     const url = request.nextUrl.clone();
     url.pathname = "/signin";
-    url.searchParams.set("next", path);
+    // Back to the same view after signing in, its query too (Home's ?t=NVDA&tf=4h).
+    url.search = "";
+    url.searchParams.set("next", `${path}${request.nextUrl.search}`);
     return NextResponse.redirect(url);
   }
 
