@@ -12,8 +12,9 @@ import { volatility } from "@/lib/options/pricing";
 //                       0.75–1 → 60, 1–3 → 100, 3–5 → 70, over 5 → 40.
 //   Target reach (20)   target distance ÷ a typical move over the hold (price × yearly volatility × √(days ÷ 252)):
 //                       ≤0.75 → 100, ≤1 → 85, ≤1.5 → 60, ≤2 → 35, more → 15.
-//   Option price (10)   options only: today's 20-day volatility against the last year's (its percentile, a stand-in for
-//                       IV rank until real chains): ≤30 → 100, ≤60 → 75, ≤80 → 50, more → 25.
+//   Option price (10)   options only. With the contract's real implied volatility (src/lib/optionQuotes.ts): IV over the
+//                       stock's own 20-day volatility: ≤0.9 → 100, ≤1.15 → 80, ≤1.4 → 55, more → 30. Without it, today's
+//                       20-day volatility as a percentile of the last year's: ≤30 → 100, ≤60 → 75, ≤80 → 50, more → 25.
 //   Earnings (10)       an earnings date inside the plan (or before the option expires) → 25; none → 100.
 //   Liquidity (5)       average dollar volume over 20 days: $500M+ → 100, $100M+ → 85, $20M+ → 60, less → 25.
 //   Size (10)           what the size risks ÷ the member's risk per trade: ≤1 → 100, ≤1.25 → 70, ≤2 → 35, more → 0.
@@ -40,6 +41,8 @@ export type PlanInput = {
   /** The plan's last day and, for an option, its expiry (YYYY-MM-DD). */
   planEnd: string;
   expiry: string | null;
+  /** The contract's real implied volatility (yearly, a fraction), when there is one. */
+  iv?: number | null;
 };
 
 const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : NaN);
@@ -159,7 +162,18 @@ export function gradePlan(bars: Candle[], p: PlanInput): Grade {
   }
 
   // Option price
-  if (p.instrument === "option") {
+  if (p.instrument === "option" && p.iv != null && p.iv > 0 && closes.length >= 22) {
+    const hv = volatility(closes.slice(-21));
+    const k = p.iv / hv;
+    const score = k <= 0.9 ? 100 : k <= 1.15 ? 80 : k <= 1.4 ? 55 : 30;
+    checks.push({
+      key: "iv",
+      name: "Option price",
+      weight: 10,
+      score,
+      text: `The option is priced for ${Math.round(p.iv * 100)}% yearly swings; the stock has moved ${Math.round(hv * 100)}% a year over the last month (${k.toFixed(1)}×).${k > 1.4 ? " Options are expensive next to the stock's moves: a spread costs less." : k <= 0.9 ? " Options are cheap next to the stock's moves." : ""}`,
+    });
+  } else if (p.instrument === "option") {
     const pct = volPercentile(closes);
     const score = pct == null ? null : pct <= 30 ? 100 : pct <= 60 ? 75 : pct <= 80 ? 50 : 25;
     checks.push({

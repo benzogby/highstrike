@@ -29,7 +29,7 @@ house ideas 37.9% wins / avg +6.2% / avg −6.9% over 214 closed (loses on balan
 3. **Onboarding to a first sized idea** (LIVE 2026-11-18) — 3 questions saved to the profile (/start → /start/idea); every idea, plan and size uses them.
 4. **Trade Planner + A–F grade** (LIVE 2026-11-18, /plan; rules in src/lib/planGrade.ts; IV is est. from price swings until item 5) — ticker → chart → direction/option → contracts for their account and stop → grade
    (trend, reward:risk, IV level, earnings risk, liquidity, size vs account) with reasons → save plan + alerts.
-5. **Real option chains + IV** (Polygon Options Starter): real prices replace "est.", IV rank, expected move, P&L
+5. **Real option chains + IV** (LIVE 2026-11-18 on the free plan: real contracts, last close, IV from price; Options Starter adds delayed bid/ask, IV, delta, OI automatically): real prices replace "est.", IV rank, expected move, P&L
    diagram per contract.
 6. **Earnings calendar + IV crush** warnings for their watchlist and every idea.
 7. **Setup backtester** — pick a setup + ticker → last 1–2 years: win rate, avg win/loss, every trade on the chart.

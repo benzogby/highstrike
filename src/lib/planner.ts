@@ -1,6 +1,7 @@
 import type { Style } from "@/lib/ideas";
 import { addSessions, expiryFor, listsWeeklies, strikeGap, yearlyVol } from "@/lib/optionIdea";
 import { bs, nickel, roundStrike } from "@/lib/options/pricing";
+import type { OptionQuote } from "@/lib/optionQuotes";
 
 // The Trade Planner's numbers (docs/plans/offer-overhaul.md item 4): a style's starting plan, and the option a plan
 // would use, priced the same way as every idea's option (src/lib/optionIdea.ts: Black-Scholes on the stock's own
@@ -14,6 +15,8 @@ export const STYLE_PLAN: Record<Style, { hold: number; target: number; stop: num
 };
 
 export type PlanOption = {
+  /** est.: priced by the rules; real: a listed contract at its real price (atTarget and atStop still estimates, at its IV). */
+  source: "est" | "real";
   type: "call" | "put";
   strike: number;
   expiry: string;
@@ -45,6 +48,7 @@ export function planOption(ticker: string, side: "long" | "short", entry: number
   const premium = nickel(bs(type, entry, strike, total, vol));
   if (premium < 0.05) return null;
   return {
+    source: "est",
     type,
     strike,
     expiry,
@@ -60,3 +64,28 @@ export function optionName(o: PlanOption) {
   const day = new Date(`${o.expiry}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
   return `${day} $${Number.isInteger(o.strike) ? o.strike : o.strike.toFixed(2)} ${o.type}`;
 }
+
+/**
+ * The plan's option from a real listed contract (src/lib/optionQuotes.ts): its strike, expiry and real price; what it'd be
+ * worth at the target (on the plan's last day) and at the stop (halfway) worked out at its own implied volatility, else the
+ * stock's.
+ */
+export function realPlanOption(q: OptionQuote, stop: number, target: number, today: string, hold: number, closes: number[]): PlanOption {
+  const planEnd = planEndOf(today, hold);
+  const vol = q.iv && q.iv > 0 ? q.iv : yearlyVol(closes.slice(-31));
+  const total = Math.max(1, daysBetween(today, q.expiry)) / 365;
+  const leftAtEnd = Math.max(1, daysBetween(planEnd, q.expiry)) / 365;
+  return {
+    source: "real",
+    type: q.type,
+    strike: q.strike,
+    expiry: q.expiry,
+    planEnd,
+    premium: q.price,
+    atTarget: nickel(bs(q.type, target, q.strike, leftAtEnd, vol)),
+    atStop: nickel(bs(q.type, stop, q.strike, (total + leftAtEnd) / 2, vol)),
+  };
+}
+
+/** The move options price in by expiry: the stock price times the IV times the square root of the time left. */
+export const expectedMove = (spot: number, iv: number, today: string, expiry: string) => spot * iv * Math.sqrt(Math.max(1, daysBetween(today, expiry)) / 365);

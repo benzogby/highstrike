@@ -1,13 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useId, useMemo, useState, useTransition } from "react";
+import { useEffect, useId, useMemo, useState, useTransition } from "react";
 import HighStrikeChart from "@/components/chart/HighStrikeChart";
 import { BUTTON_PRIMARY, CARD, HINT, INPUT, LABEL } from "@/components/ui";
 import type { Candle } from "@/lib/chart/types";
 import type { Style } from "@/lib/ideas";
 import { gradePlan, type Check } from "@/lib/planGrade";
-import { STYLE_PLAN, optionName, planEndOf, planOption } from "@/lib/planner";
+import { STYLE_PLAN, expectedMove, optionName, planEndOf, planOption, realPlanOption, type PlanOption } from "@/lib/planner";
+import { addDays } from "@/lib/marketCalendar";
+import { strikeGap } from "@/lib/optionIdea";
+import { roundStrike } from "@/lib/options/pricing";
+import type { OptionQuote } from "@/lib/optionQuotes";
 import { riskBudget, type TradingProfile } from "@/lib/tradingProfile";
 import { savePlan } from "./actions";
 
@@ -79,7 +83,36 @@ export default function Planner({
   const t = num(target);
   const h = Math.max(1, Math.min(250, Math.round(num(hold) || 1)));
   const closes = useMemo(() => candles.map((c) => c.c), [candles]);
-  const option = useMemo(() => (e > 0 && s > 0 && t > 0 ? planOption(ticker, side, e, s, t, today, h, closes) : null), [ticker, side, e, s, t, today, h, closes]);
+  const estimate = useMemo(() => (e > 0 && s > 0 && t > 0 ? planOption(ticker, side, e, s, t, today, h, closes) : null), [ticker, side, e, s, t, today, h, closes]);
+
+  // The real listed contract and its price (src/lib/optionQuotes.ts via /api/options/contract): the first expiry at least a
+  // week after the plan ends, struck nearest the entry. Asked half a second after the numbers stop changing; until it
+  // answers (or when there's none), the estimate stands, marked est.
+  const ask =
+    instrument === "option" && estimate
+      ? `u=${ticker}&type=${estimate.type}&from=${addDays(planEndOf(today, h), 7)}&strike=${roundStrike(e, strikeGap(e))}`
+      : null;
+  const [real, setReal] = useState<{ ask: string; quote: OptionQuote | null } | null>(null);
+  useEffect(() => {
+    if (!ask) return;
+    const ctl = new AbortController();
+    const timer = setTimeout(() => {
+      fetch(`/api/options/contract?${ask}`, { signal: ctl.signal })
+        .then((r) => (r.ok ? r.json() : { quote: null }))
+        .then((j: { quote: OptionQuote | null }) => setReal({ ask, quote: j.quote }))
+        .catch(() => {});
+    }, 500);
+    return () => {
+      clearTimeout(timer);
+      ctl.abort();
+    };
+  }, [ask]);
+  const quote = real && real.ask === ask ? real.quote : null;
+  const loadingReal = Boolean(ask) && (!real || real.ask !== ask);
+  const option: PlanOption | null = useMemo(
+    () => (quote && e > 0 && s > 0 && t > 0 ? realPlanOption(quote, s, t, today, h, closes) : estimate),
+    [quote, estimate, e, s, t, today, h, closes]
+  );
   const useOption = instrument === "option" && option != null;
   const budget = profile ? riskBudget(profile) : null;
   const contractCost = option ? option.premium * 100 : null;
@@ -111,8 +144,9 @@ export default function Planner({
         earnings,
         planEnd,
         expiry: option?.expiry ?? null,
+        iv: quote?.iv ?? null,
       }),
-    [candles, side, e, s, t, h, useOption, quantity, sizeRisk, budget, earnings, planEnd, option?.expiry]
+    [candles, side, e, s, t, h, useOption, quantity, sizeRisk, budget, earnings, planEnd, option?.expiry, quote?.iv]
   );
 
   const levels = e > 0 && s > 0 && t > 0 && !("error" in grade) ? { entry: e, stop: s, target: t, direction: side, from: today } : null;
@@ -204,18 +238,42 @@ export default function Planner({
               Shares
             </button>
           </div>
-          {instrument === "option" && !option && <p className={`${HINT} mt-3`}>No option estimate for this plan. Sizing it in shares.</p>}
+          {instrument === "option" && !option && <p className={`${HINT} mt-3`}>No option for this plan. Sizing it in shares.</p>}
           {useOption && option && (
             <div className="mt-3 rounded-lg bg-bg/60 p-3 text-sm">
-              <p className="font-mono-nums text-ink">
-                {ticker} {optionName(option)}
+              <p className="flex items-center justify-between gap-2">
+                <span className="font-mono-nums text-ink">
+                  {ticker} {optionName(option)}
+                </span>
+                <span
+                  className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${option.source === "real" ? "bg-up-soft text-up" : "bg-panel-3 text-ink-3"}`}
+                  title={option.source === "real" ? "A listed contract at its real price" : "Estimated from the stock's own moves"}
+                >
+                  {option.source === "real" ? "real" : loadingReal ? "est. · checking…" : "est."}
+                </span>
               </p>
               <p className="mt-1 text-ink-2">
-                est. <span className="font-mono-nums text-ink">{money(option.premium)}</span> a share, {whole(option.premium * 100)} a contract
+                {quote ? (quote.priceKind === "mid" ? "Bid/ask mid " : `Last close (${shortDay(quote.asOf)}) `) : "est. "}
+                <span className="font-mono-nums text-ink">{money(option.premium)}</span> a share, {whole(option.premium * 100)} a contract
               </p>
+              {quote && (
+                <p className="mt-1 font-mono-nums text-xs text-ink-3">
+                  {quote.bid != null && quote.ask != null ? `bid ${money(quote.bid)} · ask ${money(quote.ask)} · ` : ""}
+                  {quote.iv != null ? `IV ${Math.round(quote.iv * 100)}%` : "IV n/a"}
+                  {quote.volume != null ? ` · ${quote.volume.toLocaleString("en-US")} traded` : ""}
+                  {quote.openInterest != null ? ` · ${quote.openInterest.toLocaleString("en-US")} open` : ""}
+                </p>
+              )}
+              {quote?.iv != null && e > 0 && (
+                <p className="mt-1 text-xs text-ink-2">
+                  Options price a move of about <span className="font-mono-nums text-ink">±{money(expectedMove(e, quote.iv, today, option.expiry))}</span> by expiry.
+                </p>
+              )}
               <p className="mt-1 font-mono-nums text-xs text-ink-3">
-                at target ≈ {money(option.atTarget)} · at stop ≈ {money(option.atStop)}
+                est. at target ≈ {money(option.atTarget)} · at stop ≈ {money(option.atStop)}
               </p>
+              <Payoff option={option} side={side} entry={e} stop={s} target={t} contracts={Math.max(1, quantity)} />
+              {quote?.priceKind === "close" && <p className="mt-2 text-[11px] leading-relaxed text-ink-3">The last session&apos;s closing trade, not a live quote: check the bid and ask in your broker.</p>}
             </div>
           )}
           <div className="mt-4 grid grid-cols-2 items-end gap-3">
@@ -327,5 +385,64 @@ function CheckRow({ c }: { c: Check }) {
         <p className="mt-0.5 text-[13px] leading-relaxed text-ink-2">{c.text}</p>
       </div>
     </li>
+  );
+}
+
+const shortDay = (iso: string) => new Date(`${iso.slice(0, 10)}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+
+/** Profit or loss at expiry across stock prices, for the contracts in the plan, with the stop, entry and target marked. */
+function Payoff({ option: o, side, entry, stop, target, contracts }: { option: PlanOption; side: "long" | "short"; entry: number; stop: number; target: number; contracts: number }) {
+  if (!(entry > 0 && stop > 0 && target > 0)) return null;
+  const W = 300;
+  const H = 110;
+  const pad = 6;
+  const cost = o.premium * 100 * contracts;
+  const breakeven = o.type === "call" ? o.strike + o.premium : o.strike - o.premium;
+  const lo = Math.min(stop, target, breakeven, entry) * 0.97;
+  const hi = Math.max(stop, target, breakeven, entry) * 1.03;
+  const pnl = (p: number) => (Math.max(0, o.type === "call" ? p - o.strike : o.strike - p) * 100 - o.premium * 100) * contracts;
+  const xs = Array.from({ length: 61 }, (_, i) => lo + ((hi - lo) * i) / 60);
+  const ys = xs.map(pnl);
+  const yMax = Math.max(...ys, cost * 0.25);
+  const yMin = Math.min(...ys, -cost);
+  const x = (p: number) => pad + ((p - lo) / (hi - lo)) * (W - pad * 2);
+  const y = (v: number) => pad + ((yMax - v) / (yMax - yMin)) * (H - pad * 2);
+  const line = xs.map((p, i) => `${i ? "L" : "M"}${x(p).toFixed(1)},${y(ys[i]).toFixed(1)}`).join(" ");
+  const area = `${line} L${x(hi).toFixed(1)},${y(0).toFixed(1)} L${x(lo).toFixed(1)},${y(0).toFixed(1)} Z`;
+  const mark = (p: number, label: string, cls: string) => (
+    <g key={label}>
+      <line x1={x(p)} x2={x(p)} y1={pad} y2={H - pad} className={cls} strokeDasharray="3 3" strokeWidth={1} />
+      <text x={x(p)} y={H + 11} textAnchor="middle" className="fill-ink-3 text-[9px]">
+        {label}
+      </text>
+    </g>
+  );
+  void side;
+  return (
+    <figure className="mt-3">
+      <figcaption className="flex justify-between text-[11px] text-ink-3">
+        <span>At expiry, {contracts} contract{contracts === 1 ? "" : "s"}</span>
+        <span className="font-mono-nums">
+          max loss <span className="text-down">−{whole(cost)}</span> · breakeven {money(breakeven)}
+        </span>
+      </figcaption>
+      <svg viewBox={`0 0 ${W} ${H + 14}`} className="mt-1 w-full" role="img" aria-label={`Profit or loss at expiry: breakeven ${money(breakeven)}, most it can lose ${whole(cost)}`}>
+        <defs>
+          <clipPath id="payoff-up">
+            <rect x={0} y={0} width={W} height={y(0)} />
+          </clipPath>
+          <clipPath id="payoff-down">
+            <rect x={0} y={y(0)} width={W} height={H} />
+          </clipPath>
+        </defs>
+        <path d={area} className="fill-up/15" clipPath="url(#payoff-up)" />
+        <path d={area} className="fill-down/15" clipPath="url(#payoff-down)" />
+        <line x1={pad} x2={W - pad} y1={y(0)} y2={y(0)} className="stroke-line-strong" strokeWidth={1} />
+        {mark(stop, "stop", "stroke-down/60")}
+        {mark(entry, "entry", "stroke-ink-3/60")}
+        {mark(target, "target", "stroke-up/60")}
+        <path d={line} fill="none" className="stroke-ink" strokeWidth={1.5} />
+      </svg>
+    </figure>
   );
 }
