@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { requireMember } from "@/lib/membership";
 
 // The three first questions' answers (src/lib/tradingProfile.ts), saved as the member through the profile's column
-// grants (supabase/migrations/20261118000000_trading_profile.sql). Skip marks the questions seen without answers.
+// grants (supabase/migrations/20261118000000_trading_profile.sql).
 
 export async function saveAnswers(input: { account: number; riskPct: number; style: string }): Promise<{ error: string } | never> {
   const { supabase, user } = await requireMember("/start");
@@ -19,10 +19,4 @@ export async function saveAnswers(input: { account: number; riskPct: number; sty
     .eq("id", user.id);
   if (error) return { error: "Your answers couldn't be saved. Try again." };
   redirect("/start/idea");
-}
-
-export async function skipQuestions() {
-  const { supabase, user } = await requireMember("/start");
-  await supabase.from("profiles").update({ onboarded_at: new Date().toISOString() }).eq("id", user.id);
-  redirect("/dashboard");
 }

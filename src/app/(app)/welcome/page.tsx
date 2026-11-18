@@ -109,7 +109,7 @@ export default async function WelcomePage({ searchParams }: Props) {
           </p>
         )}
         <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <Link href="/start" className={`${BUTTON} bg-accent text-on-accent hover:bg-accent-2`}>
+          <Link href="/dashboard" className={`${BUTTON} bg-accent text-on-accent hover:bg-accent-2`}>
             Get your first trade idea
           </Link>
           {mine?.created_account ? (

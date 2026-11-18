@@ -2,6 +2,8 @@ import type { Viewport } from "next";
 import AppShell from "@/components/AppShell";
 import { brandLogos } from "@/lib/brand";
 import { viewer } from "@/lib/membership";
+import { ONBOARDING_KEY, onboardingCopy } from "@/lib/onboardingCopy";
+import OnboardingGate from "./start/OnboardingGate";
 
 /**
  * The app reaches under a phone's notch and home indicator (viewport-fit=cover), so its bottom bar can pad itself clear
@@ -20,6 +22,9 @@ export const viewport: Viewport = { viewportFit: "cover" };
 export default async function AppLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const [me, logos] = await Promise.all([viewer(), brandLogos()]);
   if (!me) return children;
+  // A member who hasn't answered the three first questions gets them as a popup over every page (src/app/(app)/start).
+  const ask = me.member && !(me.profile as { onboarded_at?: string | null } | null)?.onboarded_at;
+  const copy = ask ? onboardingCopy((await me.supabase.from("site_settings").select("value").eq("key", ONBOARDING_KEY).maybeSingle()).data?.value) : null;
   return (
     <AppShell
       email={me.user.email ?? ""}
@@ -29,6 +34,7 @@ export default async function AppLayout({ children }: Readonly<{ children: React
       logos={logos}
     >
       {children}
+      {copy && <OnboardingGate copy={copy} />}
     </AppShell>
   );
 }

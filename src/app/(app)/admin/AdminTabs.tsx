@@ -29,6 +29,7 @@ const GROUPS = [
       { href: "/admin/content", label: "Content" },
       { href: "/admin/education", label: "Trading School" },
       { href: "/admin/site", label: "Site" },
+      { href: "/admin/onboarding", label: "Onboarding" },
       { href: "/admin/team", label: "Team" },
     ],
   },
