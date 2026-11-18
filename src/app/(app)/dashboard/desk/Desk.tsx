@@ -382,7 +382,11 @@ export default function Desk({
   const disclaimer = (
     <>
       Paper trading with practice money: nothing here is a real order or investment advice. Stocks fill at the live price.{" "}
-      {state.optionPrices === "quote" ? "Options fill at the 15-minute-delayed bid and ask." : "Options fill at estimated prices from the live stock price and each contract's implied volatility, marked est."}
+      {state.optionPrices === "quote"
+        ? "Options fill at the 15-minute-delayed bid and ask."
+        : state.optionPrices === "indicative"
+          ? "Options fill at Alpaca's indicative bid and ask, derived from the official feed; real prices can differ."
+          : "Options fill at estimated prices from the live stock price and each contract's implied volatility, marked est."}
     </>
   );
 

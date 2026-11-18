@@ -1,0 +1,8 @@
+{
+  "name": "highstrike-worker",
+  "private": true,
+  "type": "module",
+  "description": "Records Alpaca's real-time minute bars into Supabase for HighStrike's charts",
+  "engines": { "node": ">=22" },
+  "scripts": { "start": "node index.mjs" }
+}

@@ -3,6 +3,7 @@ import { marketOpen, newYorkDate } from "@/lib/marketCalendar";
 import { bs, volatility } from "@/lib/options/pricing";
 import { getCandles } from "@/lib/candles";
 import { contractQuote, parseContract } from "@/lib/optionQuotes";
+import { indicativeChain, type IndicativeQuote } from "@/lib/alpaca";
 
 // The paper trading engine (Ben, 2026-11-18: Home becomes "the paper trading charts and execution hub"; $25,000 to
 // start). Every order is priced and filled here, on the server, from real prices:
@@ -21,7 +22,7 @@ const MAX_QTY = 10_000;
 
 export type Kind = "stock" | "option";
 export type OrderInput = { symbol: string; side: "buy" | "sell"; qty: number; type: "market" | "limit"; limit?: number | null };
-export type Fill = { price: number; source: "live" | "quote" | "est" | "expiry" };
+export type Fill = { price: number; source: "live" | "quote" | "indicative" | "est" | "expiry" };
 
 let testDb: ReturnType<typeof supabaseService> | null = null;
 /** Tests only: run the engine against a stand-in database. */
@@ -50,7 +51,7 @@ export async function liveStock(ticker: string): Promise<{ price: number; prevCl
 }
 
 /** An option's fair price now (per share), from its quote or the model, and the bid and ask a fill would get. */
-export async function optionMarket(contract: string, spot: number | null): Promise<{ bid: number; ask: number; mid: number; source: "quote" | "est" } | null> {
+export async function optionMarket(contract: string, spot: number | null): Promise<{ bid: number; ask: number; mid: number; source: "quote" | "indicative" | "est" } | null> {
   const p = parseContract(contract);
   if (!p) return null;
   const { candles } = await getCandles(p.underlying);
@@ -59,6 +60,10 @@ export async function optionMarket(contract: string, spot: number | null): Promi
   if (q && q.priceKind === "mid" && q.bid != null && q.ask != null && q.ask > 0) {
     return { bid: q.bid, ask: q.ask, mid: cents((q.bid + q.ask) / 2), source: "quote" };
   }
+  // Alpaca's free indicative quote for the contract, when its keys are in (kept 30 seconds per expiry).
+  const ind = await indicativeFor(p.underlying, p.expiry);
+  const iq = ind?.get(contract);
+  if (iq && iq.bid != null && iq.ask != null && iq.ask > 0) return { bid: iq.bid, ask: iq.ask, mid: cents((iq.bid + iq.ask) / 2), source: "indicative" };
   const s = spot ?? candles.at(-1)?.c ?? null;
   if (!s) return null;
   const iv = q?.iv ?? volatility(candles.slice(-31).map((c) => c.c));
@@ -66,6 +71,16 @@ export async function optionMarket(contract: string, spot: number | null): Promi
   const mid = Math.max(0.01, bs(p.type, s, p.strike, years, iv));
   const spread = Math.max(0.05, mid * 0.03);
   return { bid: cents(Math.max(0.01, mid - spread / 2)), ask: cents(mid + spread / 2), mid: cents(mid), source: "est" };
+}
+
+const indicativeMemo = new Map<string, { at: number; value: Promise<Map<string, IndicativeQuote> | null> }>();
+function indicativeFor(underlying: string, expiry: string) {
+  const k = `${underlying}:${expiry}`;
+  const hit = indicativeMemo.get(k);
+  if (hit && Date.now() - hit.at < 30_000) return hit.value;
+  const value = indicativeChain(underlying, expiry);
+  indicativeMemo.set(k, { at: Date.now(), value });
+  return value;
 }
 
 /** What a fill would be now for this side, or null when it can't fill (closed market, no price). */
@@ -270,7 +285,7 @@ export type PositionView = {
   qty: number;
   avg: number;
   mark: number | null;
-  markSource: "live" | "quote" | "est" | "close" | null;
+  markSource: "live" | "quote" | "indicative" | "est" | "close" | null;
   value: number | null;
   pnl: number | null;
   pnlPct: number | null;
@@ -307,7 +322,7 @@ export type PaperState = {
   positions: PositionView[];
   orders: OrderView[];
   open: boolean;
-  optionPrices: "quote" | "est";
+  optionPrices: "quote" | "indicative" | "est";
 };
 
 /** The account as the desk shows it: cash, positions marked to the market, the last 60 orders. */
@@ -319,7 +334,7 @@ export async function paperState(userId: string): Promise<PaperState> {
   ]);
   const underlyings = [...new Set((pos ?? []).map((p) => p.underlying as string))];
   const spots = new Map(await Promise.all(underlyings.map(async (u) => [u, await liveStock(u)] as const)));
-  let optionPrices: "quote" | "est" = "est";
+  let optionPrices: "quote" | "indicative" | "est" = "est";
   const positions: PositionView[] = await Promise.all(
     (pos ?? []).map(async (p) => {
       const kind = p.kind as Kind;
@@ -336,6 +351,7 @@ export async function paperState(userId: string): Promise<PaperState> {
         mark = m?.mid ?? null;
         markSource = m?.source ?? null;
         if (m?.source === "quote") optionPrices = "quote";
+        else if (m?.source === "indicative" && optionPrices === "est") optionPrices = "indicative";
       }
       const qty = Number(p.qty);
       const avg = Number(p.avg_price);

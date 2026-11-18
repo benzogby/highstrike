@@ -2,6 +2,7 @@ import { getCandles } from "@/lib/candles";
 import { bs, volatility } from "@/lib/options/pricing";
 import { chainSnapshot, contractQuote, expiriesFor, strikesFor } from "@/lib/optionQuotes";
 import { liveStock } from "@/lib/paper";
+import { indicativeChain } from "@/lib/alpaca";
 
 // The desk's option chain (src/app/(app)/dashboard): one expiry's listed strikes around the price, calls on the left and
 // puts on the right. With Options Starter, the delayed bid, ask, IV, delta, volume and open interest of every contract;
@@ -15,7 +16,7 @@ export type ChainView = {
   expiries: string[];
   expiry: string | null;
   rows: { strike: number; call: Side | null; put: Side | null }[];
-  source: "quote" | "est" | "none";
+  source: "quote" | "indicative" | "est" | "none";
   iv: number | null;
 };
 
@@ -48,7 +49,41 @@ export async function chainView(underlying: string, wanted?: string | null): Pro
     return { ...empty, expiries, expiry, rows: keep.map((k) => ({ strike: k, call: side(strikes.call.get(k)), put: side(strikes.put.get(k)) })), source: "quote", iv: null };
   }
 
+  // Alpaca's free indicative quotes (src/lib/alpaca.ts), where it has them; the rest estimated as below.
+  const ind = await indicativeChain(u, expiry);
+  if (ind && ind.size) {
+    const fallback = await estimator(u, spot, expiry, keep, strikes, candles);
+    const pick = (type: "call" | "put", k: number, c: string | undefined): Side | null => {
+      if (!c) return null;
+      const q = ind.get(c);
+      if (q && q.ask != null && q.bid != null) return { contract: c, bid: q.bid, ask: q.ask, mid: Math.round(((q.bid + q.ask) / 2) * 100) / 100, iv: q.iv, delta: q.delta, volume: null, oi: null };
+      return fallback.est(type, k, c);
+    };
+    const rows = keep.map((k) => ({ strike: k, call: pick("call", k, strikes.call.get(k)), put: pick("put", k, strikes.put.get(k)) }));
+    return { ...empty, expiries, expiry, rows, source: "indicative", iv: fallback.iv };
+  }
+
   // The free plan: price every strike from the at-the-money call's own IV.
+  const { est, iv } = await estimator(u, spot, expiry, keep, strikes, candles);
+  return {
+    ...empty,
+    expiries,
+    expiry,
+    rows: keep.map((k) => ({ strike: k, call: est("call", k, strikes.call.get(k)), put: est("put", k, strikes.put.get(k)) })),
+    source: "est",
+    iv,
+  };
+}
+
+/** Estimated quotes for a chain: Black-Scholes at the live price and the at-the-money contract's own IV, with the fills' spread. */
+async function estimator(
+  u: string,
+  spot: number,
+  expiry: string,
+  keep: number[],
+  strikes: { call: Map<number, string>; put: Map<number, string> },
+  candles: { t: string; c: number }[]
+) {
   const atm = keep.reduce((best, k) => (Math.abs(k - spot) < Math.abs(best - spot) ? k : best), keep[0]);
   const closes = new Map(candles.map((c) => [c.t, c.c]));
   const atmContract = strikes.call.get(atm) ?? strikes.put.get(atm);
@@ -64,14 +99,8 @@ export async function chainView(underlying: string, wanted?: string | null): Pro
     const nd = 0.5 * (1 + erf(d1 / Math.SQRT2));
     return { contract: c, bid: cents(Math.max(0.01, m - spread / 2)), ask: cents(m + spread / 2), mid: cents(m), iv, delta: type === "call" ? nd : nd - 1, volume: null, oi: null };
   };
-  return {
-    ...empty,
-    expiries,
-    expiry,
-    rows: keep.map((k) => ({ strike: k, call: est("call", k, strikes.call.get(k)), put: est("put", k, strikes.put.get(k)) })),
-    source: "est",
-    iv,
-  };
+  void u;
+  return { est, iv };
 }
 
 /** The error function (Abramowitz and Stegun 7.1.26), for the model's delta. */

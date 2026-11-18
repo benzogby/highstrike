@@ -11,7 +11,8 @@
     "supabase:token": "node scripts/supabase.mjs token",
     "dns": "node scripts/cloudflare.mjs dns",
     "cloudflare:token": "node scripts/cloudflare.mjs token",
-    "massive:key": "node scripts/massive.mjs"
+    "massive:key": "node scripts/massive.mjs",
+    "alpaca:key": "node scripts/alpaca.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.121.0",

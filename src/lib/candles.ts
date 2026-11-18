@@ -3,6 +3,7 @@ import { fetchQuotes } from "@/lib/quotes";
 import { isSession, marketOpen, newYorkDate } from "@/lib/marketCalendar";
 import type { Candle } from "@/lib/chart/types";
 import { barStart, hhmm, minuteOf } from "@/lib/chart/sessions";
+import { AlpacaBusy, SIP_DELAY_MS, alpacaBars, alpacaKeys, nyStamp as nyStampOf, recentMinutes } from "@/lib/alpaca";
 
 // Daily candles for HighStrike Chart (Ben, 2026-11-17: "our own custom charts, with our UI, and deep markup ability";
 // data from a Massive/Polygon account, docs/plans/offer-overhaul.md). Two years of daily bars per ticker, cached in
@@ -15,7 +16,7 @@ import { barStart, hhmm, minuteOf } from "@/lib/chart/sessions";
 const FRESH_OPEN_MS = 20 * 60_000;
 
 /** `busy`: the data plan's requests-a-minute ran out (the free plan has 5); the chart tries again shortly. */
-export type CandleSet = { candles: Candle[]; source: "massive" | "none"; stale: boolean; fetchedAt: string | null; busy?: boolean };
+export type CandleSet = { candles: Candle[]; source: "massive" | "alpaca" | "none"; stale: boolean; fetchedAt: string | null; busy?: boolean };
 
 /** Massive refused for its requests-a-minute limit: no point asking its other host, which shares the limit. */
 class RateLimited extends Error {}
@@ -102,14 +103,25 @@ export async function getCandles(raw: string): Promise<CandleSet> {
   let candles: Candle[] = [];
   let source: CandleSet["source"] = "none";
   let busy = false;
-  const key = await massiveKey();
+  // Alpaca first when its keys are in (about 200 requests a minute, today's bar included), else Massive.
+  if (await alpacaKeys()) {
+    try {
+      candles = await alpacaBars(ticker, "1Day", 730);
+      if (candles.length) source = "alpaca";
+    } catch (e) {
+      busy = e instanceof AlpacaBusy;
+      if (!busy) console.error("candles: alpaca failed for", ticker, e instanceof Error ? e.message : e);
+    }
+  }
+  const key = candles.length ? "" : await massiveKey();
   if (key) {
     try {
       candles = await fromMassive(ticker, key);
       source = "massive";
+      busy = false;
     } catch (e) {
-      busy = e instanceof RateLimited;
-      if (!busy) console.error("candles: massive failed for", ticker, e instanceof Error ? e.message : e);
+      busy = busy || e instanceof RateLimited;
+      if (!(e instanceof RateLimited)) console.error("candles: massive failed for", ticker, e instanceof Error ? e.message : e);
     }
   }
 
@@ -211,7 +223,45 @@ function groupBars(bars: Candle[], n: number): Candle[] {
   return out;
 }
 
+/** The bar sizes in minutes. */
+const TF_MINUTES: Record<Intraday, number> = { "1m": 1, "5m": 5, "15m": 15, "30m": 30, "1h": 60, "4h": 240 };
+
+async function intradayFromAlpaca(ticker: string, tf: Intraday): Promise<Candle[]> {
+  const spec = INTRADAY[tf];
+  const frame = spec.group > 1 ? "30Min" : `${spec.mult}Min`;
+  const bars = (await alpacaBars(ticker, frame, spec.days)).filter((b) => {
+    const hm = b.t.slice(11, 16);
+    return hm >= "04:00" && hm < "20:00";
+  });
+  return spec.group > 1 ? groupBars(bars, spec.group) : bars;
+}
+
+/**
+ * Intraday bars for a chart: the history (kept a minute in market hours), then the always-on worker's real-time minute
+ * bars from the last 16 minutes (public.live_bars; Alpaca's free history stops 15 minutes back) folded into the
+ * timeframe's bars, so the chart runs right up to now.
+ */
 export async function getIntraday(raw: string, tf: Intraday): Promise<CandleSet> {
+  const set = await intradayHistory(raw, tf);
+  if (!set.candles.length || !marketOpen(Date.now(), 4 * 60)) return set;
+  const recent = await recentMinutes(raw.toUpperCase());
+  if (!recent.length) return set;
+  const cutoff = nyStampOf(Date.now() - SIP_DELAY_MS);
+  const size = TF_MINUTES[tf];
+  const out = set.candles.slice();
+  for (const m of recent) {
+    if (m.t < cutoff) continue;
+    const start = barStart(minuteOf(m.t), size);
+    if (start == null) continue;
+    const t = `${m.t.slice(0, 10)}T${hhmm(start)}`;
+    const last = out[out.length - 1];
+    if (last.t === t) out[out.length - 1] = { ...last, h: Math.max(last.h, m.h), l: Math.min(last.l, m.l), c: m.c, v: last.v + m.v };
+    else if (t > last.t) out.push({ ...m, t });
+  }
+  return { ...set, candles: out };
+}
+
+async function intradayHistory(raw: string, tf: Intraday): Promise<CandleSet> {
   const ticker = raw.toUpperCase();
   let db: ReturnType<typeof supabaseService> | null = null;
   try {
@@ -230,21 +280,33 @@ export async function getIntraday(raw: string, tf: Intraday): Promise<CandleSet>
   if (cached && current && (cached.body as Candle[]).length > 0) {
     return { candles: cached.body as Candle[], source: "massive", stale: false, fetchedAt: cached.fetched_at };
   }
-  const key = await massiveKey();
   let candles: Candle[] = [];
+  let source: CandleSet["source"] = "none";
   let busy = false;
+  if (await alpacaKeys()) {
+    try {
+      candles = await intradayFromAlpaca(ticker, tf);
+      if (candles.length) source = "alpaca";
+    } catch (e) {
+      busy = e instanceof AlpacaBusy;
+      if (!busy) console.error("candles: alpaca intraday failed for", ticker, tf, e instanceof Error ? e.message : e);
+    }
+  }
+  const key = candles.length ? "" : await massiveKey();
   if (key) {
     try {
       candles = await intradayFromMassive(ticker, tf, key);
+      source = "massive";
+      busy = false;
     } catch (e) {
-      busy = e instanceof RateLimited;
-      if (!busy) console.error("candles: massive intraday failed for", ticker, tf, e instanceof Error ? e.message : e);
+      busy = busy || e instanceof RateLimited;
+      if (!(e instanceof RateLimited)) console.error("candles: massive intraday failed for", ticker, tf, e instanceof Error ? e.message : e);
     }
   }
   if (candles.length > 0) {
     const fetchedAt = new Date().toISOString();
     if (db) await db.from("market_cache").upsert({ key: cacheKey, body: candles, fetched_at: fetchedAt });
-    return { candles, source: "massive", stale: false, fetchedAt };
+    return { candles, source, stale: false, fetchedAt };
   }
   if (cached && (cached.body as Candle[]).length > 0) return { candles: cached.body as Candle[], source: "massive", stale: true, fetchedAt: cached.fetched_at };
   return { candles: [], source: "none", stale: false, fetchedAt: null, busy };

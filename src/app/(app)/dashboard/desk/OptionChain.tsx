@@ -58,7 +58,13 @@ export default function OptionChain({ ticker, picked, onPick, fill = false }: { 
           </h2>
         )}
         <span className="text-[11px] text-ink-3">
-          {data?.source === "quote" ? "15 min delayed" : data?.source === "est" ? `est. from IV ${data.iv != null ? Math.round(data.iv * 100) : "—"}%` : ""}
+          {data?.source === "quote"
+            ? "15 min delayed"
+            : data?.source === "indicative"
+              ? "Indicative prices (Alpaca)"
+              : data?.source === "est"
+                ? `est. from IV ${data.iv != null ? Math.round(data.iv * 100) : "—"}%`
+                : ""}
         </span>
       </div>
       {data && data.expiries.length > 0 && (
