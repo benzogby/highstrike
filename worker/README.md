@@ -4,6 +4,10 @@ An always-on program that keeps one connection open to Alpaca's free real-time s
 
 ## Deploy (Railway)
 
+`npm run worker:deploy` (scripts/railway.mjs) does all of this through Railway's API, with a token saved in the Keychain. It's already set up as project `highstrike-worker`, service `worker`. Run it again to update the settings and redeploy.
+
+By hand:
+
 1. Create a new Railway project from this GitHub repository, with the service's **root directory** set to `worker`. Railway runs `npm start`, which is `node index.mjs` on Node 22, and needs nothing to install.
 2. Set these variables on the service:
    - `ALPACA_KEY_ID` and `ALPACA_SECRET`: from the Alpaca dashboard, the same ones saved by `npm run alpaca:key`.
