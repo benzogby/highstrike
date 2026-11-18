@@ -12,7 +12,7 @@ const money = (n: number | null) => (n == null ? "—" : n.toFixed(2));
  * One expiry's chain: calls left, the strike in the middle, puts right; in-the-money strikes shaded and a line at the
  * price. Tap an ask to buy that contract, a bid to sell it; the ticket fills in.
  */
-export default function OptionChain({ ticker, picked, onPick }: { ticker: string; picked: string | null; onPick: (p: Pick) => void }) {
+export default function OptionChain({ ticker, picked, onPick, fill = false }: { ticker: string; picked: string | null; onPick: (p: Pick) => void; fill?: boolean }) {
   const [expiry, setExpiry] = useState<string | null>(null);
   const [chain, setChain] = useState<{ key: string; data: ChainView | null } | null>(null);
   const key = `${ticker}|${expiry ?? ""}`;
@@ -49,11 +49,14 @@ export default function OptionChain({ ticker, picked, onPick }: { ticker: string
   };
 
   return (
-    <section className="rounded-xl border border-line bg-panel">
+    <section className={fill ? "flex h-full flex-col" : "rounded-xl border border-line bg-panel"}>
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-3 py-2">
-        <h2 className="text-[13px] font-medium text-ink">
-          Option chain <span className="font-mono-nums text-ink-3">{ticker}</span>
-        </h2>
+        {/* In the desk's dock the tab already names it. */}
+        {!fill && (
+          <h2 className="text-[13px] font-medium text-ink">
+            Option chain <span className="font-mono-nums text-ink-3">{ticker}</span>
+          </h2>
+        )}
         <span className="text-[11px] text-ink-3">
           {data?.source === "quote" ? "15 min delayed" : data?.source === "est" ? `est. from IV ${data.iv != null ? Math.round(data.iv * 100) : "—"}%` : ""}
         </span>
@@ -73,11 +76,11 @@ export default function OptionChain({ ticker, picked, onPick }: { ticker: string
         </div>
       )}
       {loading ? (
-        <div className="h-64 animate-pulse bg-panel-2/40" />
+        <div className={`${fill ? "min-h-0 flex-1" : "h-64"} animate-pulse bg-panel-2/40`} />
       ) : !data || data.rows.length === 0 ? (
         <p className="px-4 py-10 text-center text-sm text-ink-3">No option chain for {ticker} right now.</p>
       ) : (
-        <div className="max-h-[420px] overflow-auto">
+        <div className={fill ? "min-h-0 flex-1 overflow-auto" : "max-h-[420px] overflow-auto"}>
           <table className="w-full min-w-[460px] text-[12px]">
             <thead className="sticky top-0 bg-panel-2 text-[11px] text-ink-3">
               <tr>

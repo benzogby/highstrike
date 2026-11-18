@@ -59,13 +59,23 @@ const TWO_POINT: Tool[] = ["trend", "zone", "arrow", "measure", "fib"];
 
 const uid = () => Math.random().toString(36).slice(2, 10);
 
-type Props = { ticker: string; userId?: string; levels?: HouseLevels | null; height?: number };
+type Props = {
+  ticker: string;
+  userId?: string;
+  levels?: HouseLevels | null;
+  height?: number;
+  /** Fill the box's height (the desk's full-screen chart) instead of a fixed height. */
+  fill?: boolean;
+};
 
-export default function HighStrikeChart({ ticker, userId, levels, height }: Props) {
+export default function HighStrikeChart({ ticker, userId, levels, height, fill = false }: Props) {
   const [data, setData] = useState<{ candles: Candle[]; source: string; stale: boolean } | null>(null);
   const [failed, setFailed] = useState(false);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [width, setWidth] = useState(0);
+  // With `fill`: the height of the plot area, measured.
+  const [areaH, setAreaH] = useState(0);
+  const areaRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<{ end: number; count: number } | null>(null);
   const [drawings, setDrawings] = useState<Drawing[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
@@ -176,6 +186,13 @@ export default function HighStrikeChart({ ticker, userId, levels, height }: Prop
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+  useEffect(() => {
+    const el = areaRef.current;
+    if (!fill || !el) return;
+    const ro = new ResizeObserver(([e]) => setAreaH(Math.floor(e.contentRect.height)));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [fill]);
 
   const bars = useMemo(() => (data ? (settings.weekly ? toWeekly(data.candles) : data.candles) : []), [data, settings.weekly]);
   const ts = useMemo(() => timeScale(bars, settings.weekly), [bars, settings.weekly]);
@@ -184,7 +201,10 @@ export default function HighStrikeChart({ ticker, userId, levels, height }: Prop
   const closes = useMemo(() => (data?.candles ?? []).map((c) => c.c), [data]);
 
   const narrow = width > 0 && width < 640;
-  const priceH = height ?? (narrow ? 300 : 420);
+  const drawn = Boolean(data && bars.length > 0 && width > 0);
+  // Filling: the plot area less the legend (20px), the time axis and the RSI pane when it's on.
+  const filled = fill && areaH > 0 ? Math.max(180, areaH - 20 - TIME_H - (settings.rsi ? RSI_H + GAP : 0)) : null;
+  const priceH = filled ?? height ?? (narrow ? 300 : 420);
   // The tool rail takes 40px of the box (w-8 + gap-2) beside the chart; on a phone it's a row above it.
   const chartW = Math.max(160, narrow ? width : width - 40);
   const plotW = chartW - AXIS_W;
@@ -250,18 +270,27 @@ export default function HighStrikeChart({ ticker, userId, levels, height }: Prop
   useEffect(() => {
     const el = svgRef.current;
     if (!el) return;
+    // Ben, 2026-11-18: "Scroll and zoom are way too sensitive". A trackpad sends many small wheel events per swipe and a
+    // mouse a few big ones, so zoom follows how far the wheel moved (about 10% a mouse notch, a little per trackpad
+    // event, never more than 12% at once) and a sideways swipe pans at half its distance.
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       const r = el.getBoundingClientRect();
-      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
-        setView((cur) => (cur ? { ...cur, end: cur.end + (e.deltaX / r.width) * cur.count } : cur));
+      const unit = e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? r.height : 1;
+      const dx = e.deltaX * unit;
+      const dy = e.deltaY * unit;
+      if (Math.abs(dx) > Math.abs(dy)) {
+        setView((cur) => (cur ? { ...cur, end: cur.end + (dx / r.width) * cur.count * 0.5 } : cur));
         return;
       }
-      zoomRef.current(e.deltaY > 0 ? 1.12 : 1 / 1.12, e.clientX - r.left);
+      const factor = Math.min(1.12, Math.max(1 / 1.12, Math.exp(dy * 0.001)));
+      if (Math.abs(factor - 1) < 0.0005) return;
+      zoomRef.current(factor, e.clientX - r.left);
     };
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
-  }, [data]);
+    // Re-attached once the plot is actually drawn (it waits for the box's width as well as the prices).
+  }, [data, drawn]);
 
   // ---- Hit testing --------------------------------------------------------------------------------------------------
 
@@ -518,7 +547,7 @@ export default function HighStrikeChart({ ticker, userId, levels, height }: Prop
   const cursor = tool !== "cursor" || draft ? "crosshair" : "default";
 
   return (
-    <div ref={boxRef} className="relative select-none">
+    <div ref={boxRef} className={`relative select-none ${fill ? "flex h-full flex-col" : ""}`}>
       {/* Top bar: timeframe, indicators, zoom, save state */}
       <div className="mb-2 flex flex-wrap items-center gap-1.5 text-xs">
         <Seg options={[["D", false], ["W", true]] as const} value={settings.weekly} onChange={(w) => changeSettings({ weekly: w })} label="Timeframe" />
@@ -546,7 +575,7 @@ export default function HighStrikeChart({ ticker, userId, levels, height }: Prop
         </span>
       </div>
 
-      <div className={`flex gap-2 ${narrow ? "flex-col" : ""}`}>
+      <div className={`flex gap-2 ${narrow ? "flex-col" : ""} ${fill ? "min-h-0 flex-1" : ""}`}>
         {/* Drawing tools */}
         <div className={`flex shrink-0 gap-1 ${narrow ? "-mx-1 overflow-x-auto px-1 pb-1" : "flex-col"}`} role="toolbar" aria-label="Drawing tools">
           {TOOLS.map((t) => (
@@ -602,7 +631,7 @@ export default function HighStrikeChart({ ticker, userId, levels, height }: Prop
           )}
         </div>
 
-        <div className="relative min-w-0 flex-1">
+        <div ref={areaRef} className={`relative min-w-0 flex-1 ${fill ? "min-h-0" : ""}`}>
           {!data && !failed && <div className="animate-pulse rounded-lg bg-panel-2" style={{ height: priceH + TIME_H }} />}
           {(failed || (data && bars.length === 0)) && (
             <div className="grid place-items-center rounded-lg border border-dashed border-line-strong text-center" style={{ height: priceH + TIME_H }}>

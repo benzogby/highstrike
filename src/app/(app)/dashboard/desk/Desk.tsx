@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore, useTransition } from "react";
 import HighStrikeChart from "@/components/chart/HighStrikeChart";
 import { useQuotes } from "@/components/useQuotes";
 import type { PaperState } from "@/lib/paper";
@@ -17,11 +17,49 @@ export type DeskLesson = { href: string; title: string; label: string; done: num
 
 const EVERY_MS = 15_000;
 const TICKER = /^[A-Z][A-Z0-9.]{0,7}$/;
+const WIDE = "(min-width: 1280px)";
+
+/** Whether the screen is wide enough for the full-screen desk (Tailwind's xl). */
+function useWide() {
+  return useSyncExternalStore(
+    (cb) => {
+      const m = window.matchMedia(WIDE);
+      m.addEventListener("change", cb);
+      return () => m.removeEventListener("change", cb);
+    },
+    () => window.matchMedia(WIDE).matches,
+    () => false
+  );
+}
+
+/** Which floating panels are open, remembered in this browser. */
+function usePanels() {
+  const [open, setOpen] = useState({ watch: true, side: true, dock: true });
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("hs-desk-panels") ?? "null");
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- restores the member's panel layout once, from this browser
+      if (saved && typeof saved === "object") setOpen((o) => ({ ...o, ...saved }));
+    } catch {}
+  }, []);
+  const toggle = (k: keyof typeof open) =>
+    setOpen((o) => {
+      const next = { ...o, [k]: !o[k] };
+      try {
+        localStorage.setItem("hs-desk-panels", JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  return [open, toggle] as const;
+}
+
+const FLOAT = "rounded-xl border border-line-strong bg-panel/[0.92] shadow-[0_18px_40px_-12px_rgb(0_0_0/0.7)] backdrop-blur-md";
 
 /**
- * Home, the trading desk (Ben, 2026-11-18: "the /dashboard page become the paper trading charts and execution hub"):
- * the paper account across the top; the watchlist down the left; the chart, the option chain and the positions in the
- * middle; the order ticket, today's ideas and the next lesson on the right. Dark, dense and HighStrike's own.
+ * Home, the trading desk (Ben, 2026-11-18: "the /dashboard page become the paper trading charts and execution hub";
+ * "make the chart fullscreen… with the widgets overlaid on the edges"). On a wide screen the chart fills the page and the
+ * panels float over its edges (watchlist left; ticket, ideas and lesson right; option chain and positions docked along
+ * the bottom), each one collapsible, the chart widening into the room. On smaller screens everything stacks.
  */
 export default function Desk({
   userId,
@@ -38,6 +76,9 @@ export default function Desk({
   lesson: DeskLesson;
   budget: number | null;
 }) {
+  const wide = useWide();
+  const [panels, toggle] = usePanels();
+  const [dockTab, setDockTab] = useState<"chain" | "account">("chain");
   const [state, setState] = useState(initial);
   const [ticker, setTicker] = useState(initial.positions[0]?.underlying ?? watch[0] ?? "SPY");
   const [pick, setPick] = useState<Pick | null>(null);
@@ -64,6 +105,10 @@ export default function Desk({
     setTicker(c ? c.underlying : symbol);
     setPick(null);
   };
+  const choose = (p: Pick) => {
+    setPick(p);
+    if (wide && !panels.side) toggle("side");
+  };
   const held = (symbol: string) => state.positions.find((p) => p.symbol === symbol)?.qty ?? 0;
 
   const target: TicketTarget = pick
@@ -80,6 +125,57 @@ export default function Desk({
     });
   };
 
+  // ---- The pieces, laid out below for wide or small screens ----------------------------------------------------------
+
+  const totalPct = state.start ? (state.totalPnl / state.start) * 100 : null;
+  const stat = (label: string, value: React.ReactNode, cls = "text-ink") => (
+    <div className="min-w-0">
+      <p className="text-[11px] leading-none text-ink-3">{label}</p>
+      <p className={`mt-1 truncate font-mono-nums text-[14px] font-semibold leading-none ${cls}`}>{value}</p>
+    </div>
+  );
+  const accountBar = (
+    <div className="flex flex-wrap items-center gap-x-7 gap-y-3">
+      <div className="flex items-center gap-2">
+        <span className="rounded-md bg-accent-soft px-2 py-0.5 text-[11px] font-medium text-accent-ink">Paper</span>
+        <span className="flex items-center gap-1.5 text-[11px] text-ink-3">
+          <span className={`size-1.5 rounded-full ${state.open ? "bg-up" : "bg-ink-3"}`} aria-hidden="true" />
+          {state.open ? "Market open" : "Market closed"}
+        </span>
+      </div>
+      {stat("Account value", usd(state.equity))}
+      {stat(
+        "Total P&L",
+        <>
+          {signed(state.totalPnl)} <span className="text-[12px] font-normal">{pct(totalPct)}</span>
+        </>,
+        tone(state.totalPnl)
+      )}
+      {stat("Open P&L", signed(state.openPnl), tone(state.openPnl))}
+      {stat("Cash", usd(state.cash))}
+      {stat("Buying power", usd(state.cash), "text-ink-2")}
+      <button type="button" onClick={reset} disabled={resetting} className="ml-auto rounded-md px-2.5 py-1 text-[12px] font-medium text-ink-3 transition hover:bg-panel-2 hover:text-ink">
+        {resetting ? "Resetting…" : "Reset to $25,000"}
+      </button>
+    </div>
+  );
+
+  const symbolHead = (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pb-2">
+      <h1 className="font-mono-nums text-[22px] font-semibold leading-none text-ink">{ticker}</h1>
+      <span className={`font-mono-nums text-[17px] ${flash[ticker] === "up" ? "text-up" : flash[ticker] === "down" ? "text-down" : "text-ink"}`}>{usd(q?.price ?? null)}</span>
+      <span className={`font-mono-nums text-[13px] ${tone(q?.changePct ?? null)}`}>{pct(q?.changePct ?? null)}</span>
+      <span className="ml-auto flex gap-3 text-[12px]">
+        <Link href={`/plan?t=${ticker}`} className="text-ink-2 hover:text-accent">
+          Plan &amp; grade
+        </Link>
+        <Link href={`/symbol/${ticker}`} className="text-ink-2 hover:text-accent">
+          Stock page
+        </Link>
+      </span>
+    </div>
+  );
+
   const ticket = (
     <div className="flex flex-col gap-2">
       <OrderTicket key={`${target.symbol}:${target.side}`} target={target} cash={state.cash} budget={budget} open={state.open} onDone={refresh} />
@@ -91,170 +187,252 @@ export default function Desk({
     </div>
   );
 
-  const stat = (label: string, value: React.ReactNode, cls = "text-ink") => (
-    <div className="min-w-0">
-      <p className="text-[11px] text-ink-3">{label}</p>
-      <p className={`mt-0.5 truncate font-mono-nums text-[15px] font-semibold ${cls}`}>{value}</p>
-    </div>
+  const searchBox = (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        const t = search.trim().toUpperCase().replace(/^\$/, "");
+        if (!TICKER.test(t)) return toastError("Type a ticker, like AAPL.");
+        select(t);
+        setSearch("");
+      }}
+    >
+      <input
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Symbol"
+        aria-label="Open a symbol"
+        className="h-8 w-full rounded-lg border border-line-strong bg-bg px-3 font-mono-nums text-sm uppercase text-ink outline-none placeholder:normal-case placeholder:text-ink-3 focus:border-accent focus:ring-2 focus:ring-accent/20"
+      />
+    </form>
   );
-  const totalPct = state.start ? (state.totalPnl / state.start) * 100 : null;
+
+  const watchRows = (
+    <ul className="py-1">
+      {list.map((t) => {
+        const lq = quotes[t];
+        const on = t === ticker;
+        return (
+          <li key={t}>
+            <button type="button" onClick={() => select(t)} className={`flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left transition ${on ? "bg-panel-3" : "hover:bg-panel-2"}`}>
+              <span className={`font-mono-nums text-[13px] font-semibold ${on ? "text-accent-ink" : "text-ink"}`}>{t}</span>
+              <span className="text-right font-mono-nums text-[12px] leading-tight">
+                <span className={`block ${flash[t] === "up" ? "text-up" : flash[t] === "down" ? "text-down" : "text-ink-2"}`}>{lq ? lq.price.toFixed(2) : "—"}</span>
+                <span className={`block text-[11px] ${tone(lq?.changePct ?? null)}`}>{pct(lq?.changePct ?? null)}</span>
+              </span>
+            </button>
+          </li>
+        );
+      })}
+    </ul>
+  );
+
+  const ideasPanel = (
+    <section className="rounded-xl border border-line bg-panel p-3">
+      <div className="flex items-baseline justify-between">
+        <h2 className="text-[13px] font-medium text-ink">Today&apos;s ideas</h2>
+        <Link href="/ideas" className="text-[12px] text-accent hover:underline">
+          All →
+        </Link>
+      </div>
+      {ideas.length === 0 ? (
+        <p className="mt-2 text-[12px] text-ink-3">The next ideas land before the open.</p>
+      ) : (
+        <ul className="mt-2 divide-y divide-line">
+          {ideas.map((i) => (
+            <li key={i.id} className="py-2">
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={() => select(i.ticker)} className="font-mono-nums text-[13px] font-semibold text-ink hover:text-accent">
+                  {i.ticker}
+                </button>
+                <span className={`text-[11px] ${i.direction === "long" ? "text-up" : "text-down"}`}>{i.direction === "long" ? "Long" : "Short"}</span>
+                <Link href={`/ideas/${i.id}`} className="ml-auto text-[11px] text-ink-3 hover:text-ink">
+                  Open
+                </Link>
+              </div>
+              <p className="mt-0.5 line-clamp-2 text-[12px] leading-snug text-ink-2">{i.headline}</p>
+              {i.option && <p className="mt-0.5 font-mono-nums text-[11px] text-ink-3">{i.option}</p>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+
+  const lessonPanel = lesson && (
+    <section className="rounded-xl border border-line bg-panel p-3">
+      <div className="flex items-baseline justify-between">
+        <h2 className="text-[13px] font-medium text-ink">Keep learning</h2>
+        <span className="font-mono-nums text-[11px] text-ink-3">
+          {lesson.done}/{lesson.total}
+        </span>
+      </div>
+      <div className="mt-2 h-1 overflow-hidden rounded-full bg-panel-2" aria-hidden="true">
+        <div className="h-full rounded-full bg-accent" style={{ width: `${Math.round((lesson.done / Math.max(1, lesson.total)) * 100)}%` }} />
+      </div>
+      <p className="mt-2 text-[11px] text-ink-3">{lesson.label}</p>
+      <Link href={lesson.href} className="mt-0.5 block text-[13px] font-medium text-ink hover:text-accent">
+        {lesson.title} →
+      </Link>
+    </section>
+  );
+
+  const disclaimer = (
+    <>
+      Paper trading with practice money: nothing here is a real order or investment advice. Stocks fill at the live price.{" "}
+      {state.optionPrices === "quote" ? "Options fill at the 15-minute-delayed bid and ask." : "Options fill at estimated prices from the live stock price and each contract's implied volatility, marked est."}
+    </>
+  );
+
+  // ---- Wide: the full-screen chart with floating panels ---------------------------------------------------------------
+
+  if (wide) {
+    const DOCK = "32vh";
+    const dockSpace = panels.dock ? `calc(${DOCK} + 12px)` : "52px";
+    const working = state.orders.filter((o) => o.status === "working").length;
+    return (
+      <div className="fixed bottom-0 left-60 right-0 top-14 z-20 flex flex-col bg-bg">
+        <div className="border-b border-line px-4 py-2.5">{accountBar}</div>
+        <div className="relative min-h-0 flex-1">
+          {/* The chart fills the room the open panels leave. */}
+          <div
+            className="absolute inset-0 flex flex-col pt-3 transition-[padding] duration-300 ease-out"
+            style={{ paddingLeft: panels.watch ? 228 : 56, paddingRight: panels.side ? 352 : 56, paddingBottom: dockSpace }}
+          >
+            {symbolHead}
+            <div className="min-h-0 flex-1">
+              <HighStrikeChart ticker={ticker} userId={userId} fill />
+            </div>
+          </div>
+
+          {/* Left: search and watchlist */}
+          {panels.watch ? (
+            <aside className={`${FLOAT} absolute left-3 top-3 flex w-[204px] flex-col overflow-hidden`} style={{ bottom: dockSpace }}>
+              <div className="flex items-center justify-between gap-2 border-b border-line px-3 py-2">
+                <h2 className="text-[13px] font-medium text-ink">Watchlist</h2>
+                <span className="flex items-center gap-2">
+                  <Link href="/watchlists" className="text-[11px] text-ink-3 hover:text-ink">
+                    Edit
+                  </Link>
+                  <PanelButton label="Hide the watchlist" onClick={() => toggle("watch")} d="M15 6l-6 6 6 6" />
+                </span>
+              </div>
+              <div className="p-2">{searchBox}</div>
+              <div className="min-h-0 flex-1 overflow-y-auto">{watchRows}</div>
+            </aside>
+          ) : (
+            <EdgeTab label="Watchlist" className="left-3 top-3" onClick={() => toggle("watch")} d="M9 6l6 6-6 6" />
+          )}
+
+          {/* Right: the ticket, today's ideas and the lesson */}
+          {panels.side ? (
+            <aside className={`${FLOAT} absolute right-3 top-3 flex w-[328px] flex-col overflow-hidden`} style={{ bottom: dockSpace }}>
+              <div className="flex items-center justify-between border-b border-line px-3 py-2">
+                <h2 className="text-[13px] font-medium text-ink">Trade</h2>
+                <PanelButton label="Hide the trade panel" onClick={() => toggle("side")} d="M9 6l6 6-6 6" />
+              </div>
+              <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-2">
+                {ticket}
+                {ideasPanel}
+                {lessonPanel}
+              </div>
+            </aside>
+          ) : (
+            <EdgeTab label="Trade" className="right-3 top-3" onClick={() => toggle("side")} d="M15 6l-6 6 6 6" />
+          )}
+
+          {/* Bottom: the option chain and the account's positions and orders */}
+          <section className={`${FLOAT} absolute bottom-3 left-3 right-3 flex flex-col overflow-hidden`} style={{ height: panels.dock ? DOCK : 40 }}>
+            <div className="flex h-10 flex-none items-center gap-1 border-b border-line px-2">
+              {(
+                [
+                  ["chain", `Option chain · ${ticker}`],
+                  ["account", `Positions ${state.positions.length}${working ? ` · ${working} working` : ""}`],
+                ] as const
+              ).map(([k, label]) => (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => {
+                    setDockTab(k);
+                    if (!panels.dock) toggle("dock");
+                  }}
+                  className={`rounded-md px-3 py-1 text-[13px] font-medium transition ${dockTab === k && panels.dock ? "bg-panel-3 text-ink ring-1 ring-inset ring-line-strong" : "text-ink-3 hover:text-ink"}`}
+                >
+                  {label}
+                </button>
+              ))}
+              <p className="ml-auto hidden max-w-[50%] truncate px-2 text-[11px] text-ink-3 2xl:block">{disclaimer}</p>
+              <PanelButton label={panels.dock ? "Lower the dock" : "Raise the dock"} onClick={() => toggle("dock")} d={panels.dock ? "M6 9l6 6 6-6" : "M6 15l6-6 6 6"} />
+            </div>
+            {panels.dock && (
+              <div className="min-h-0 flex-1 overflow-hidden">
+                {dockTab === "chain" ? (
+                  <OptionChain ticker={ticker} picked={pick?.contract ?? null} onPick={choose} fill />
+                ) : (
+                  <div className="h-full overflow-y-auto">
+                    <Blotter state={state} onSelect={select} onChange={refresh} />
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+        </div>
+      </div>
+    );
+  }
+
+  // ---- Small screens: stacked ------------------------------------------------------------------------------------------
 
   return (
     <div className="flex flex-col gap-3">
-      {/* The account */}
-      <section className="flex flex-wrap items-center gap-x-8 gap-y-3 rounded-xl border border-line bg-panel px-4 py-3">
-        <div className="flex items-center gap-2">
-          <span className="rounded-md bg-accent-soft px-2 py-0.5 text-[11px] font-medium text-accent-ink">Paper</span>
-          <span className="flex items-center gap-1.5 text-[11px] text-ink-3">
-            <span className={`size-1.5 rounded-full ${state.open ? "bg-up" : "bg-ink-3"}`} aria-hidden="true" />
-            {state.open ? "Market open" : "Market closed"}
-          </span>
-        </div>
-        {stat("Account value", usd(state.equity))}
-        {stat(
-          "Total P&L",
-          <>
-            {signed(state.totalPnl)} <span className="text-[12px] font-normal">{pct(totalPct)}</span>
-          </>,
-          tone(state.totalPnl)
-        )}
-        {stat("Open P&L", signed(state.openPnl), tone(state.openPnl))}
-        {stat("Cash", usd(state.cash))}
-        {stat("Buying power", usd(state.cash), "text-ink-2")}
-        <button type="button" onClick={reset} disabled={resetting} className="ml-auto rounded-md px-2.5 py-1 text-[12px] font-medium text-ink-3 transition hover:bg-panel-2 hover:text-ink">
-          {resetting ? "Resetting…" : "Reset to $25,000"}
-        </button>
+      <section className="rounded-xl border border-line bg-panel px-4 py-3">{accountBar}</section>
+      <section className="rounded-xl border border-line bg-panel p-3">
+        {symbolHead}
+        <HighStrikeChart ticker={ticker} userId={userId} height={320} />
       </section>
-
-      <div className="grid gap-3 xl:grid-cols-[210px_minmax(0,1fr)_320px]">
-        {/* Middle: the symbol, the chart, the chain, the blotter */}
-        <div className="order-1 flex min-w-0 flex-col gap-3 xl:order-2">
-          <section className="rounded-xl border border-line bg-panel p-3">
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-1 pb-2">
-              <h1 className="font-mono-nums text-[22px] font-semibold leading-none text-ink">{ticker}</h1>
-              <span className={`font-mono-nums text-[17px] ${flash[ticker] === "up" ? "text-up" : flash[ticker] === "down" ? "text-down" : "text-ink"}`}>{usd(q?.price ?? null)}</span>
-              <span className={`font-mono-nums text-[13px] ${tone(q?.changePct ?? null)}`}>{pct(q?.changePct ?? null)}</span>
-              <span className="ml-auto flex gap-3 text-[12px]">
-                <Link href={`/plan?t=${ticker}`} className="text-ink-2 hover:text-accent">
-                  Plan &amp; grade
-                </Link>
-                <Link href={`/symbol/${ticker}`} className="text-ink-2 hover:text-accent">
-                  Stock page
-                </Link>
-              </span>
-            </div>
-            <HighStrikeChart ticker={ticker} userId={userId} height={360} />
-          </section>
-          {/* On a phone the ticket sits right under the chart; from xl it's in the right column. */}
-          <div className="xl:hidden">{ticket}</div>
-          <OptionChain ticker={ticker} picked={pick?.contract ?? null} onPick={setPick} />
-          <Blotter state={state} onSelect={select} onChange={refresh} />
+      {ticket}
+      <OptionChain ticker={ticker} picked={pick?.contract ?? null} onPick={setPick} />
+      <Blotter state={state} onSelect={select} onChange={refresh} />
+      <section className="rounded-xl border border-line bg-panel">
+        <div className="flex items-baseline justify-between border-b border-line px-3 py-2">
+          <h2 className="text-[13px] font-medium text-ink">Watchlist</h2>
+          <Link href="/watchlists" className="text-[11px] text-ink-3 hover:text-ink">
+            Edit
+          </Link>
         </div>
-
-        {/* Right: the ticket, today's ideas, the next lesson */}
-        <div className="order-2 flex flex-col gap-3 xl:order-3">
-          <div className="hidden xl:block">{ticket}</div>
-          <section className="rounded-xl border border-line bg-panel p-3">
-            <div className="flex items-baseline justify-between">
-              <h2 className="text-[13px] font-medium text-ink">Today&apos;s ideas</h2>
-              <Link href="/ideas" className="text-[12px] text-accent hover:underline">
-                All →
-              </Link>
-            </div>
-            {ideas.length === 0 ? (
-              <p className="mt-2 text-[12px] text-ink-3">The next ideas land before the open.</p>
-            ) : (
-              <ul className="mt-2 divide-y divide-line">
-                {ideas.map((i) => (
-                  <li key={i.id} className="py-2">
-                    <div className="flex items-center gap-2">
-                      <button type="button" onClick={() => select(i.ticker)} className="font-mono-nums text-[13px] font-semibold text-ink hover:text-accent">
-                        {i.ticker}
-                      </button>
-                      <span className={`text-[11px] ${i.direction === "long" ? "text-up" : "text-down"}`}>{i.direction === "long" ? "Long" : "Short"}</span>
-                      <Link href={`/ideas/${i.id}`} className="ml-auto text-[11px] text-ink-3 hover:text-ink">
-                        Open
-                      </Link>
-                    </div>
-                    <p className="mt-0.5 line-clamp-2 text-[12px] leading-snug text-ink-2">{i.headline}</p>
-                    {i.option && <p className="mt-0.5 font-mono-nums text-[11px] text-ink-3">{i.option}</p>}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-          {lesson && (
-            <section className="rounded-xl border border-line bg-panel p-3">
-              <div className="flex items-baseline justify-between">
-                <h2 className="text-[13px] font-medium text-ink">Keep learning</h2>
-                <span className="font-mono-nums text-[11px] text-ink-3">
-                  {lesson.done}/{lesson.total}
-                </span>
-              </div>
-              <div className="mt-2 h-1 overflow-hidden rounded-full bg-panel-2" aria-hidden="true">
-                <div className="h-full rounded-full bg-accent" style={{ width: `${Math.round((lesson.done / Math.max(1, lesson.total)) * 100)}%` }} />
-              </div>
-              <p className="mt-2 text-[11px] text-ink-3">{lesson.label}</p>
-              <Link href={lesson.href} className="mt-0.5 block text-[13px] font-medium text-ink hover:text-accent">
-                {lesson.title} →
-              </Link>
-            </section>
-          )}
-        </div>
-
-        {/* Left: find a symbol, and the watchlist */}
-        <aside className="order-3 flex flex-col gap-3 xl:order-1">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              const t = search.trim().toUpperCase().replace(/^\$/, "");
-              if (!TICKER.test(t)) return toastError("Type a ticker, like AAPL.");
-              select(t);
-              setSearch("");
-            }}
-          >
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Symbol"
-              aria-label="Open a symbol"
-              className="h-9 w-full rounded-lg border border-line-strong bg-bg px-3 font-mono-nums text-sm uppercase text-ink outline-none placeholder:normal-case placeholder:text-ink-3 focus:border-accent focus:ring-2 focus:ring-accent/20"
-            />
-          </form>
-          <section className="rounded-xl border border-line bg-panel">
-            <div className="flex items-baseline justify-between border-b border-line px-3 py-2">
-              <h2 className="text-[13px] font-medium text-ink">Watchlist</h2>
-              <Link href="/watchlists" className="text-[11px] text-ink-3 hover:text-ink">
-                Edit
-              </Link>
-            </div>
-            <ul className="max-h-[640px] overflow-y-auto py-1">
-              {list.map((t) => {
-                const lq = quotes[t];
-                const on = t === ticker;
-                return (
-                  <li key={t}>
-                    <button
-                      type="button"
-                      onClick={() => select(t)}
-                      className={`flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left transition ${on ? "bg-panel-3" : "hover:bg-panel-2"}`}
-                    >
-                      <span className={`font-mono-nums text-[13px] font-semibold ${on ? "text-accent-ink" : "text-ink"}`}>{t}</span>
-                      <span className="text-right font-mono-nums text-[12px] leading-tight">
-                        <span className={`block ${flash[t] === "up" ? "text-up" : flash[t] === "down" ? "text-down" : "text-ink-2"}`}>{lq ? lq.price.toFixed(2) : "—"}</span>
-                        <span className={`block text-[11px] ${tone(lq?.changePct ?? null)}`}>{pct(lq?.changePct ?? null)}</span>
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        </aside>
-      </div>
-      <p className="text-[11px] leading-relaxed text-ink-3">
-        Paper trading with practice money: nothing here is a real order or investment advice. Stocks fill at the live price. {state.optionPrices === "quote" ? "Options fill at the 15-minute-delayed bid and ask." : "Options fill at estimated prices from the live stock price and each contract's implied volatility, marked est."}
-      </p>
+        <div className="p-2">{searchBox}</div>
+        {watchRows}
+      </section>
+      {ideasPanel}
+      {lessonPanel}
+      <p className="text-[11px] leading-relaxed text-ink-3">{disclaimer}</p>
     </div>
+  );
+}
+
+function PanelButton({ label, onClick, d }: { label: string; onClick: () => void; d: string }) {
+  return (
+    <button type="button" onClick={onClick} aria-label={label} title={label} className="grid size-7 place-items-center rounded-md text-ink-3 transition hover:bg-panel-3 hover:text-ink">
+      <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d={d} />
+      </svg>
+    </button>
+  );
+}
+
+/** A collapsed panel: a small tab on the chart's edge that opens it again. */
+function EdgeTab({ label, className, onClick, d }: { label: string; className: string; onClick: () => void; d: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`${FLOAT} absolute flex items-center gap-1.5 px-2.5 py-1.5 text-[12px] font-medium text-ink-2 transition hover:text-ink ${className}`}
+    >
+      <svg viewBox="0 0 24 24" className="size-3.5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d={d} />
+      </svg>
+      {label}
+    </button>
   );
 }
