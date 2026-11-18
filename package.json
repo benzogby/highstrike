@@ -10,7 +10,8 @@
     "sql": "node scripts/supabase.mjs sql",
     "supabase:token": "node scripts/supabase.mjs token",
     "dns": "node scripts/cloudflare.mjs dns",
-    "cloudflare:token": "node scripts/cloudflare.mjs token"
+    "cloudflare:token": "node scripts/cloudflare.mjs token",
+    "massive:key": "node scripts/massive.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.121.0",
