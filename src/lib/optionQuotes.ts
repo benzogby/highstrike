@@ -223,3 +223,121 @@ export async function realOption(
     return null;
   }
 }
+
+/** "O:AAPL261218C00350000" → its parts, or null. */
+export function parseContract(c: string): { underlying: string; type: "call" | "put"; strike: number; expiry: string } | null {
+  const m = /^O:([A-Z.]{1,8})(\d{2})(\d{2})(\d{2})([CP])(\d{8})$/.exec(c);
+  if (!m) return null;
+  return { underlying: m[1], expiry: `20${m[2]}-${m[3]}-${m[4]}`, type: m[5] === "C" ? "call" : "put", strike: Number(m[6]) / 1000 };
+}
+
+/** The contract ticker for its parts. */
+export function contractTicker(underlying: string, type: "call" | "put", strike: number, expiry: string) {
+  return `O:${underlying}${expiry.slice(2, 4)}${expiry.slice(5, 7)}${expiry.slice(8, 10)}${type === "call" ? "C" : "P"}${String(Math.round(strike * 1000)).padStart(8, "0")}`;
+}
+
+/** One named contract's price (delayed quote with Options Starter, else the last close and the IV solved from it). */
+export async function contractQuote(contract: string, spotOn: (day: string) => number | null): Promise<OptionQuote | null> {
+  const p = parseContract(contract);
+  const key = await massiveKey();
+  if (!p || !key) return null;
+  const c: Listed = { ticker: contract, strike: p.strike, expiry: p.expiry };
+  try {
+    return await cached<OptionQuote>(`quote:${contract}`, priceAge(), async () => (await fromSnapshot(p.underlying, c, p.type, key)) ?? (await fromClose(c, p.type, spotOn, key)));
+  } catch (e) {
+    if (!(e instanceof Busy)) console.error("optionQuotes:", contract, e instanceof Error ? e.message : e);
+    return null;
+  }
+}
+
+/** Whether the Massive plan has option snapshots (delayed quotes), as last checked. */
+export const hasOptionQuotes = () => Boolean(proMemo?.ok);
+
+export type ChainRow = { contract: string; strike: number; bid: number | null; ask: number | null; mid: number | null; iv: number | null; delta: number | null; volume: number | null; oi: number | null };
+
+/** Listed expiries within ~4 months (from contracts near the price), kept 12 hours. */
+export async function expiriesFor(underlying: string, spot: number): Promise<string[]> {
+  const key = await massiveKey();
+  if (!key) return [];
+  const today = new Date().toISOString().slice(0, 10);
+  const rows = await cached<string[]>(`expiries:${underlying}:${today}`, 12 * 3_600_000, async () => {
+    const q = new URLSearchParams({
+      underlying_ticker: underlying,
+      contract_type: "call",
+      "expiration_date.gte": today,
+      "expiration_date.lte": new Date(Date.now() + 130 * DAY).toISOString().slice(0, 10),
+      "strike_price.gte": String(Math.floor(spot * 0.98)),
+      "strike_price.lte": String(Math.ceil(spot * 1.02)),
+      sort: "expiration_date",
+      order: "asc",
+      limit: "1000",
+    });
+    const { body } = await get<{ results?: { expiration_date: string }[] }>(`/v3/reference/options/contracts?${q}`, key);
+    return body ? [...new Set((body.results ?? []).map((r) => r.expiration_date))] : null;
+  }).catch(() => null);
+  return rows ?? [];
+}
+
+/** One expiry's listed strikes within 20% of the price, both kinds, kept 12 hours. */
+export async function strikesFor(underlying: string, expiry: string, spot: number): Promise<{ call: Map<number, string>; put: Map<number, string> }> {
+  const key = await massiveKey();
+  const out = { call: new Map<number, string>(), put: new Map<number, string>() };
+  if (!key) return out;
+  const lo = Math.floor(spot * 0.8);
+  const hi = Math.ceil(spot * 1.2);
+  const rows = await cached<{ t: string; k: number; s: "call" | "put" }[]>(`strikes:${underlying}:${expiry}:${lo}-${hi}`, 12 * 3_600_000, async () => {
+    const q = new URLSearchParams({ underlying_ticker: underlying, expiration_date: expiry, "strike_price.gte": String(lo), "strike_price.lte": String(hi), limit: "1000" });
+    const { body } = await get<{ results?: { ticker: string; strike_price: number; contract_type: "call" | "put" }[] }>(`/v3/reference/options/contracts?${q}`, key);
+    return body ? (body.results ?? []).map((r) => ({ t: r.ticker, k: r.strike_price, s: r.contract_type })) : null;
+  }).catch(() => null);
+  for (const r of rows ?? []) out[r.s].set(r.k, r.t);
+  return out;
+}
+
+type ChainSnapshot = {
+  results?: {
+    details?: { ticker: string; contract_type: "call" | "put"; strike_price: number };
+    day?: { volume?: number };
+    last_quote?: { bid?: number; ask?: number; midpoint?: number };
+    implied_volatility?: number;
+    greeks?: { delta?: number };
+    open_interest?: number;
+  }[];
+};
+
+/** With Options Starter: one expiry's whole chain, delayed quotes and all, kept a minute. Null without it. */
+export async function chainSnapshot(underlying: string, expiry: string, spot: number): Promise<ChainRow[] | null> {
+  const key = await massiveKey();
+  if (!key || (proMemo && !proMemo.ok && Date.now() - proMemo.at < PRO_RECHECK_MS)) return null;
+  const q = new URLSearchParams({ expiration_date: expiry, "strike_price.gte": String(Math.floor(spot * 0.8)), "strike_price.lte": String(Math.ceil(spot * 1.2)), limit: "250" });
+  try {
+    return await cached<ChainRow[]>(`chain:${underlying}:${expiry}`, 60_000, async () => {
+      const { status, body } = await get<ChainSnapshot>(`/v3/snapshot/options/${encodeURIComponent(underlying)}?${q}`, key);
+      if (status === 401 || status === 403) {
+        proMemo = { ok: false, at: Date.now() };
+        return null;
+      }
+      if (!body) return null;
+      proMemo = { ok: true, at: Date.now() };
+      return (body.results ?? []).flatMap((r) =>
+        r.details
+          ? [
+              {
+                contract: r.details.ticker,
+                strike: r.details.strike_price,
+                bid: r.last_quote?.bid ?? null,
+                ask: r.last_quote?.ask ?? null,
+                mid: r.last_quote?.midpoint ?? null,
+                iv: r.implied_volatility ?? null,
+                delta: r.greeks?.delta ?? null,
+                volume: r.day?.volume ?? null,
+                oi: r.open_interest ?? null,
+              },
+            ]
+          : []
+      );
+    });
+  } catch {
+    return null;
+  }
+}

@@ -34,7 +34,7 @@ house ideas 37.9% wins / avg +6.2% / avg −6.9% over 214 closed (loses on balan
 6. **Earnings calendar + IV crush** warnings for their watchlist and every idea.
 7. **Setup backtester** — pick a setup + ticker → last 1–2 years: win rate, avg win/loss, every trade on the chart.
    Then use it on our own engine to fix the daily ideas' rules before the record comes back.
-8. **Paper trading** with real option prices.
+8. **Paper trading** (LIVE 2026-11-18: Home is the trading desk; $25,000 resettable; stocks at live prices, options est. from IV until Options Starter gives bid/ask; no shorting or selling to open yet).
 9. Scanner + Trading School tie-ins: lessons linked from grades ("why this got a D → watch lesson 4.2").
 
 ## Needs from Ben

@@ -1,22 +1,17 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import MemberGate, { type Gate } from "@/components/join/MemberGate";
 import { lessonHref, librarySummary, moduleLabel, myProgress, outline } from "@/lib/education";
-import { IDEA_COLUMNS, SOURCES, STYLES, headlineOf, type Idea } from "@/lib/ideas";
+import { IDEA_COLUMNS, headlineOf, type Idea } from "@/lib/ideas";
 import { asOption, optionLine } from "@/lib/optionIdea";
+import { memberWatchlists, STARTERS } from "@/lib/watchlists";
+import { paperState } from "@/lib/paper";
+import { profileOf, riskBudget } from "@/lib/tradingProfile";
+import Desk from "./desk/Desk";
 import { billingReady, billingState, healMembership, publishableKey, weekUsedFor } from "@/lib/billing";
 import { memberContext } from "@/lib/membership";
-import { Gauge } from "@/components/TerminalMockup";
-import { NowDateLong, NowGreeting } from "@/components/Now";
-import { Suspense } from "react";
-import MarketNews, { MarketNewsBones } from "./MarketNews";
-import WatchlistPanel, { WatchlistPanelBones } from "./WatchlistPanel";
-import ActivityFeed from "./ActivityFeed";
-import FirstRunTour from "./FirstRunTour";
-import { Badge, PageHeader } from "@/components/ui";
 
 export const metadata: Metadata = {
-  title: "Dashboard — HighStrike",
+  title: "Trading desk — HighStrike",
 };
 
 
@@ -34,26 +29,23 @@ export default async function DashboardPage() {
     return <MemberGate email={user.email ?? ""} gate={gate} publishableKey={publishableKey()} library={library} />;
   }
 
-  const firstName = profile?.name || (user.email ?? "trader").split("@")[0];
-
-  // The latest weather report, today's ideas and the member's own open ones, and where they are in Trading School
-  // (Ben, 2026-11-03: "revert the dashboard back to the trade ideas and learning theme").
-  const [{ data: weather }, { data: mine }, course, progress] = await Promise.all([
-    supabase
-      .from("weather_reports")
-      .select("report_date, volatility, opportunity, direction, summary, model")
-      .order("report_date", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-    supabase.from("setups").select(IDEA_COLUMNS).eq("owner_id", user.id).eq("status", "open").order("report_date", { ascending: false }).limit(5),
+  // Home is the paper trading desk (Ben, 2026-11-18: "the /dashboard page become the paper trading charts and execution
+  // hub"): the paper account (src/lib/paper.ts), the member's watchlist, today's ideas and the next lesson.
+  const [paper, watchlists, { data: weather }, course, progress] = await Promise.all([
+    paperState(user.id),
+    memberWatchlists(supabase, user.id).catch(() => ({ lists: [], names: {}, trends: {} })),
+    supabase.from("weather_reports").select("report_date").order("report_date", { ascending: false }).limit(1).maybeSingle(),
     outline(supabase),
     myProgress(supabase, user.id),
   ]);
-  const { data: todays, count: todayCount } = weather
-    ? await supabase.from("setups").select(IDEA_COLUMNS, { count: "exact" }).eq("report_date", weather.report_date).is("owner_id", null).order("flow_score", { ascending: false }).limit(6)
-    : { data: [], count: 0 };
-  const ideas = (todays ?? []) as Idea[];
-  const own = (mine ?? []) as Idea[];
+  const { data: todays } = weather
+    ? await supabase.from("setups").select(IDEA_COLUMNS).eq("report_date", weather.report_date).is("owner_id", null).order("flow_score", { ascending: false }).limit(6)
+    : { data: [] };
+  const ideas = ((todays ?? []) as Idea[]).map((i) => {
+    const o = asOption(i.option);
+    return { id: i.id, ticker: i.ticker, direction: i.direction, headline: headlineOf(i), option: o ? optionLine(o) : null };
+  });
+  const watch = [...new Set([...watchlists.lists.flatMap((l) => l.tickers), ...STARTERS])];
 
   // The lesson to pick up: one started and not finished, else the first not done, in library order.
   const done = course.lessons.filter((l) => progress.get(l.id)?.completedAt).length;
@@ -62,186 +54,8 @@ export default async function DashboardPage() {
     course.lessons.find((l) => !progress.get(l.id)?.completedAt) ??
     null;
   const nextModule = next ? course.modules.find((m) => m.id === next.moduleId) : null;
+  const lesson = next ? { href: lessonHref(next.id), title: next.title, label: nextModule ? moduleLabel(nextModule.title).eyebrow : "Trading School", done, total: course.lessons.length } : null;
+  const p = profileOf(profile);
 
-  const reportLabel = weather
-    ? new Date(`${weather.report_date}T12:00:00Z`).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        timeZone: "UTC",
-      })
-    : null;
-
-  return (
-    <>
-      
-          {/* Greeting */}
-          <PageHeader
-            className="anim-rise"
-            title={
-              <>
-                <NowGreeting />, {firstName}
-              </>
-            }
-            subtitle={<NowDateLong />}
-          />
-
-          <FirstRunTour userId={user.id} show={!profile?.tour_done} />
-
-          {/* Weather strip */}
-          <section id="tour-weather" className="anim-rise mt-8" style={{ "--rise-delay": "80ms" } as React.CSSProperties}>
-            <div className="flex items-baseline justify-between">
-              <h2 className="font-display text-[15px] text-ink">
-                {reportLabel ? `Weather report — ${reportLabel}` : "Weather report"}
-              </h2>
-              <span className="text-xs text-ink-3 font-medium">
-                {weather
-                  ? weather.model === "heuristic"
-                    ? "Generated from market data"
-                    : "Generated by the smart scanner"
-                  : "Pending"}
-              </span>
-            </div>
-            {weather ? (
-              <>
-                <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                  <Gauge label="Volatility" value={weather.volatility} />
-                  <Gauge label="Opportunity" value={weather.opportunity} />
-                  <Gauge label="Direction" value={weather.direction} />
-                </div>
-                {weather.summary && (
-                  <p className="mt-3 rounded-xl border border-line bg-panel px-4 py-3 text-sm leading-relaxed text-ink-2">
-                    {weather.summary}
-                  </p>
-                )}
-              </>
-            ) : (
-              <p className="mt-3 rounded-xl border border-line bg-panel px-4 py-6 text-center text-sm text-ink-3">
-                Today&apos;s report generates before the open (8:30 AM ET).
-              </p>
-            )}
-          </section>
-
-          <div className="mt-10 grid gap-8 xl:grid-cols-3">
-            {/* Today's ideas */}
-            <section id="tour-setups" className="anim-rise xl:col-span-2" style={{ "--rise-delay": "160ms" } as React.CSSProperties}>
-              <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <h2 className="font-display text-[15px] text-ink">{reportLabel ? `Today's ideas — ${reportLabel}` : "Today's ideas"}</h2>
-                <span className="flex gap-3 text-[13px]">
-                  <Link href="/ideas/paste" className="text-ink-2 hover:text-ink">
-                    Paste an idea
-                  </Link>
-                  <Link href="/ideas/build" className="text-ink-2 hover:text-ink">
-                    Build an idea
-                  </Link>
-                  <Link href="/ideas" className="font-medium text-accent hover:underline">
-                    All {todayCount ? `${todayCount} ` : ""}ideas →
-                  </Link>
-                </span>
-              </div>
-              {ideas.length === 0 && (
-                <p className="mt-3 rounded-xl border border-line bg-panel px-4 py-6 text-center text-sm text-ink-3">
-                  No ideas published yet — the next batch lands before the open.
-                </p>
-              )}
-              <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {ideas.map((i) => {
-                  const pct = i.status === "open" ? i.current_pct : i.result_pct;
-                  const o = asOption(i.option);
-                  return (
-                    <Link key={i.id} href={`/ideas/${i.id}`} className="flex flex-col rounded-xl border border-line bg-panel p-4 transition hover:border-line-strong hover:bg-panel-2">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono-nums text-[15px] font-semibold text-ink">{i.ticker}</span>
-                        <Badge tone={i.direction === "long" ? "up" : "down"}>{i.direction === "long" ? "Long" : "Short"}</Badge>
-                        <span className="ml-auto text-xs text-ink-3">{STYLES[i.style] ?? i.style}</span>
-                      </div>
-                      <p className="mt-2 flex-1 text-sm leading-snug text-ink-2">{headlineOf(i)}</p>
-                      {o && <p className="mt-2 font-mono-nums text-xs text-ink-2">{optionLine(o)}</p>}
-                      <div className="mt-3 flex items-center justify-between border-t border-line pt-2 font-mono-nums text-xs">
-                        <span className="text-ink-3">
-                          {i.entry_price != null ? `$${i.entry_price.toFixed(2)}` : "—"} → {i.target_price != null ? `$${Number(i.target_price).toFixed(2)}` : i.price_target}
-                        </span>
-                        {pct != null && <span className={pct >= 0 ? "text-up" : "text-down"}>{`${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%`}</span>}
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-
-              {own.length > 0 && (
-                <div className="mt-6">
-                  <h3 className="text-sm font-medium text-ink">Your open ideas</h3>
-                  <ul className="mt-2 divide-y divide-line rounded-xl border border-line bg-panel">
-                    {own.map((i) => {
-                      const o = asOption(i.option);
-                      return (
-                        <li key={i.id}>
-                          <Link href={`/ideas/${i.id}`} className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-panel-2">
-                            <span className="w-14 font-mono-nums font-semibold text-ink">{i.ticker}</span>
-                            <Badge tone={i.direction === "long" ? "up" : "down"}>{i.direction === "long" ? "Long" : "Short"}</Badge>
-                            <span className="min-w-0 flex-1 truncate text-ink-2">{headlineOf(i)}</span>
-                            {o && <span className="hidden shrink-0 font-mono-nums text-xs text-ink-3 lg:inline">{optionLine(o)}</span>}
-                            <span className="hidden text-xs text-ink-3 sm:inline">{SOURCES[i.source] ?? i.source}</span>
-                            {i.current_pct != null && <span className={`font-mono-nums text-xs ${i.current_pct >= 0 ? "text-up" : "text-down"}`}>{`${i.current_pct >= 0 ? "+" : ""}${Number(i.current_pct).toFixed(1)}%`}</span>}
-                          </Link>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              )}
-
-              {/* Watchlist, compact: the whole thing is on /watchlists */}
-              <Suspense fallback={<WatchlistPanelBones />}>
-                <WatchlistPanel />
-              </Suspense>
-            </section>
-
-            {/* Right rail */}
-            <section id="tour-activity" className="anim-rise" style={{ "--rise-delay": "240ms" } as React.CSSProperties}>
-              {/* Keep learning */}
-              {course.lessons.length > 0 && (
-                <div className="mb-6 rounded-xl border border-line bg-panel p-5">
-                  <div className="flex items-baseline justify-between">
-                    <h2 className="font-display text-[15px] text-ink">Keep learning</h2>
-                    <span className="font-mono-nums text-xs text-ink-3">
-                      {done}/{course.lessons.length} lessons
-                    </span>
-                  </div>
-                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-panel-2" aria-hidden="true">
-                    <div className="h-full rounded-full bg-accent" style={{ width: `${Math.round((done / course.lessons.length) * 100)}%` }} />
-                  </div>
-                  {next ? (
-                    <>
-                      <p className="mt-3 text-xs text-ink-3">{nextModule ? moduleLabel(nextModule.title).eyebrow : "Trading School"}</p>
-                      <p className="mt-0.5 text-sm font-medium text-ink">{next.title}</p>
-                      <Link href={lessonHref(next.id)} className="mt-3 inline-flex rounded-lg bg-accent px-3.5 py-2 text-xs font-medium text-on-accent transition hover:bg-accent-2">
-                        {(progress.get(next.id)?.positionSec ?? 0) > 0 ? "Continue lesson" : done ? "Next lesson" : "Start Trading School"}
-                      </Link>
-                    </>
-                  ) : (
-                    <p className="mt-3 text-sm text-ink-2">You&apos;ve finished every lesson. Rewatch any of them in Trading School.</p>
-                  )}
-                  <Link href="/education" className="ml-3 text-xs text-ink-2 hover:text-ink">
-                    All modules
-                  </Link>
-                </div>
-              )}
-              <div className="flex items-baseline justify-between">
-                <h2 className="font-display text-[15px] text-ink">
-                  Activity
-                </h2>
-                <span className="text-xs text-ink-3 font-medium">
-                  Live feed
-                </span>
-              </div>
-              <ActivityFeed />
-
-              <Suspense fallback={<MarketNewsBones />}>
-                <MarketNews />
-              </Suspense>
-
-            </section>
-          </div>
-    </>
-  );
+  return <Desk userId={user.id} initial={paper} watch={watch} ideas={ideas} lesson={lesson} budget={p ? riskBudget(p) : null} />;
 }

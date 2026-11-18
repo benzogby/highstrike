@@ -3,6 +3,7 @@ import { checkAlerts } from "@/lib/alerts";
 import { checkTrades } from "@/lib/tradeAlerts";
 import { marketOpen } from "@/lib/marketCalendar";
 import { supabaseService } from "@/lib/stripe";
+import { sweepPaper } from "@/lib/paper";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -18,7 +19,10 @@ export async function GET(request: Request) {
   if (!cron) return NextResponse.json({ error: "Cron only." }, { status: 401 });
   if (!marketOpen(Date.now(), 5)) return NextResponse.json({ skipped: "The market's closed." });
   const failed = (e: unknown) => ({ error: e instanceof Error ? e.message : "failed" });
-  const [alerts, trades] = await Promise.all([checkAlerts().catch(failed), checkTrades().catch(failed)]);
+  // Paper trading's working orders and expired options are swept on the same minute (src/lib/paper.ts).
+  const [alerts, trades, paper] = await Promise.all([checkAlerts().catch(failed), checkTrades().catch(failed), sweepPaper().catch(failed)]);
+  if ("error" in paper) console.error("check-alerts: paper sweep:", paper.error);
+  else if (paper.filled || paper.settled) console.log("check-alerts: paper:", JSON.stringify(paper));
   const broke = "error" in alerts || "error" in trades;
   if (broke) console.error("check-alerts:", JSON.stringify({ alerts, trades }));
   else {
