@@ -19,6 +19,7 @@ const GROUPS = [
       { href: "/admin/growth", label: "Growth" },
       { href: "/admin/traffic", label: "Traffic" },
       { href: "/admin/waitlist", label: "Waitlist" },
+      { href: "/admin/inbox", label: "Inbox" },
       { href: "/admin/emails", label: "Emails" },
     ],
   },

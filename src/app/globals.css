@@ -28,6 +28,22 @@
   --color-down-soft: rgb(255 107 97 / 0.12);
   --color-warn: #f2b84b;
   --color-warn-soft: rgb(242 184 75 / 0.12);
+  /* Admin → Inbox's label colours (Gmail's twelve hues, as getripping.com's Inbox draws them), set for the dark ground. */
+  --color-glyph-0: #f2555a;
+  --color-glyph-1: #ff8b3e;
+  --color-glyph-2: #f2b84b;
+  --color-glyph-3: #8fcf3a;
+  --color-glyph-4: #2fd08f;
+  --color-glyph-5: #2cc7b6;
+  --color-glyph-6: #33bfe0;
+  --color-glyph-7: #5b9cff;
+  --color-glyph-8: #8a83ff;
+  --color-glyph-9: #b07cff;
+  --color-glyph-10: #e070f0;
+  --color-glyph-11: #ff6aa8;
+  /* Its menus and the compose window float on these. */
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.45), 0 24px 48px -24px rgb(0 0 0 / 0.6);
+  --shadow-pop: 0 1px 2px rgb(0 0 0 / 0.5), 0 16px 40px -12px rgb(0 0 0 / 0.65);
 
   /* Space Grotesk was only a fallback here, downloaded on every page for nothing; dropped 2026-11-02. */
   --font-display: var(--font-cal-sans), system-ui, sans-serif;
@@ -587,5 +603,15 @@ body {
   .sys-stage.on .sys-row { opacity: 1; }
   .sys-stage.on .sys-arc { stroke-dashoffset: 46; }
   .sys-stage.on .sys-bar { width: var(--bar-w); }
+}
+
+/*
+ * Admin → Inbox (features/inbox) and its menus, dialogs and sheets (components/kit, marked data-slot) were drawn for a
+ * page where a bare border is the quiet rule colour (getripping.com's base layer); here they get HighStrike's.
+ */
+@layer base {
+  :where(.hs-inbox, .hs-inbox *, [data-slot], [data-slot] *) {
+    border-color: var(--color-line);
+  }
 }
 
