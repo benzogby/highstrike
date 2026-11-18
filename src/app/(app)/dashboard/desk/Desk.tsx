@@ -34,7 +34,7 @@ function useWide() {
 
 /** Which floating panels are open, remembered in this browser. */
 function usePanels() {
-  const [open, setOpen] = useState({ watch: true, side: true, dock: true });
+  const [open, setOpen] = useState({ watch: true, side: true });
   useEffect(() => {
     try {
       const saved = JSON.parse(localStorage.getItem("hs-desk-panels") ?? "null");
@@ -78,7 +78,7 @@ export default function Desk({
 }) {
   const wide = useWide();
   const [panels, toggle] = usePanels();
-  const [dockTab, setDockTab] = useState<"account" | "ideas">("account");
+  const [over, setOver] = useState<"account" | "ideas" | null>(null);
   const [state, setState] = useState(initial);
   const [ticker, setTicker] = useState(initial.positions[0]?.underlying ?? watch[0] ?? "SPY");
   const [pick, setPick] = useState<Pick | null>(null);
@@ -288,11 +288,12 @@ export default function Desk({
 
   if (wide) {
     // Ben, 2026-11-18: "Put options chain on the right and execution box above it". The right column runs the full
-    // height: the ticket, then the chain filling the rest. The dock along the bottom (left of it) holds the positions
-    // and today's ideas.
-    const DOCK = "30vh";
+    // height: the ticket, then the chain filling the rest. Positions and today's ideas are a panel toggled over the
+    // chart from the buttons at its foot ("Get rid of the positions and make it a toggle-over"), so the chart keeps the
+    // whole height.
     const SIDE = 452;
-    const dockSpace = panels.dock ? `calc(${DOCK} + 12px)` : "52px";
+    const leftEdge = panels.watch ? 228 : 56;
+    const rightEdge = panels.side ? SIDE + 24 : 56;
     const working = state.orders.filter((o) => o.status === "working").length;
     return (
       <div className="fixed bottom-0 left-60 right-0 top-14 z-20 flex flex-col bg-bg">
@@ -301,7 +302,7 @@ export default function Desk({
           {/* The chart fills the room the open panels leave. */}
           <div
             className="absolute inset-0 flex flex-col pt-3 transition-[padding] duration-300 ease-out"
-            style={{ paddingLeft: panels.watch ? 228 : 56, paddingRight: panels.side ? SIDE + 24 : 56, paddingBottom: dockSpace }}
+            style={{ paddingLeft: leftEdge, paddingRight: rightEdge, paddingBottom: 56 }}
           >
             {symbolHead}
             <div className="min-h-0 flex-1">
@@ -311,7 +312,7 @@ export default function Desk({
 
           {/* Left: search and watchlist */}
           {panels.watch ? (
-            <aside className={`${FLOAT} absolute left-3 top-3 flex w-[204px] flex-col overflow-hidden`} style={{ bottom: dockSpace }}>
+            <aside className={`${FLOAT} absolute bottom-3 left-3 top-3 flex w-[204px] flex-col overflow-hidden`}>
               <div className="flex items-center justify-between gap-2 border-b border-line px-3 py-2">
                 <h2 className="text-[13px] font-medium text-ink">Watchlist</h2>
                 <span className="flex items-center gap-2">
@@ -349,36 +350,38 @@ export default function Desk({
             <EdgeTab label="Trade" className="right-3 top-3" onClick={() => toggle("side")} d="M15 6l-6 6 6 6" />
           )}
 
-          {/* Bottom, left of the trade panel: positions and orders, today's ideas */}
-          <section
-            className={`${FLOAT} absolute bottom-3 left-3 flex flex-col overflow-hidden transition-[right] duration-300 ease-out`}
-            style={{ height: panels.dock ? DOCK : 40, right: panels.side ? SIDE + 24 : 12 }}
-          >
-            <div className="flex h-10 flex-none items-center gap-1 border-b border-line px-2">
-              {(
-                [
-                  ["account", `Positions ${state.positions.length}${working ? ` · ${working} working` : ""}`],
-                  ["ideas", `Today's ideas ${ideas.length}`],
-                ] as const
-              ).map(([k, label]) => (
-                <button
-                  key={k}
-                  type="button"
-                  onClick={() => {
-                    setDockTab(k);
-                    if (!panels.dock) toggle("dock");
-                  }}
-                  className={`rounded-md px-3 py-1 text-[13px] font-medium transition ${dockTab === k && panels.dock ? "bg-panel-3 text-ink ring-1 ring-inset ring-line-strong" : "text-ink-3 hover:text-ink"}`}
-                >
-                  {label}
-                </button>
-              ))}
-              <p className="ml-auto hidden max-w-[45%] truncate px-2 text-[11px] text-ink-3 2xl:block">{disclaimer}</p>
-              <PanelButton label={panels.dock ? "Lower the dock" : "Raise the dock"} onClick={() => toggle("dock")} d={panels.dock ? "M6 9l6 6 6-6" : "M6 15l6-6 6 6"} />
-            </div>
-            {panels.dock && (
+          {/* The toggles at the chart's foot, and the panel they open over it: positions and orders, today's ideas */}
+          <div className="absolute bottom-3 flex gap-1.5 transition-[left] duration-300 ease-out" style={{ left: leftEdge }}>
+            {(
+              [
+                ["account", `Positions ${state.positions.length}${working ? ` · ${working} working` : ""}`],
+                ["ideas", `Today's ideas ${ideas.length}`],
+              ] as const
+            ).map(([k, label]) => (
+              <button
+                key={k}
+                type="button"
+                aria-pressed={over === k}
+                onClick={() => setOver((o) => (o === k ? null : k))}
+                className={`${FLOAT} px-3 py-1.5 text-[13px] font-medium transition ${over === k ? "text-ink ring-1 ring-inset ring-accent/50" : "text-ink-2 hover:text-ink"}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {over && (
+            <section
+              className={`${FLOAT} anim-pop absolute bottom-14 flex flex-col overflow-hidden transition-[left,right] duration-300 ease-out`}
+              style={{ left: leftEdge, right: rightEdge, height: "min(46vh, 460px)" }}
+              aria-label={over === "account" ? "Positions and orders" : "Today's ideas"}
+            >
+              <div className="flex h-10 flex-none items-center gap-2 border-b border-line px-3">
+                <h2 className="text-[13px] font-medium text-ink">{over === "account" ? "Positions and orders" : "Today's ideas"}</h2>
+                <p className="ml-auto hidden max-w-[60%] truncate text-[11px] text-ink-3 2xl:block">{disclaimer}</p>
+                <PanelButton label="Close" onClick={() => setOver(null)} d="M6 6l12 12M18 6L6 18" />
+              </div>
               <div className="min-h-0 flex-1 overflow-y-auto">
-                {dockTab === "account" ? (
+                {over === "account" ? (
                   <Blotter state={state} onSelect={select} onChange={refresh} />
                 ) : (
                   <div className="grid gap-2 p-2 lg:grid-cols-[minmax(0,1fr)_280px]">
@@ -387,8 +390,8 @@ export default function Desk({
                   </div>
                 )}
               </div>
-            )}
-          </section>
+            </section>
+          )}
         </div>
       </div>
     );
