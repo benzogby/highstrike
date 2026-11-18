@@ -77,6 +77,10 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
   const [areaH, setAreaH] = useState(0);
   const areaRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<{ end: number; count: number } | null>(null);
+  // Ben, 2026-11-18: "Allow me to scale the axes by clicking and dragging". A price range set by dragging the price
+  // axis (for this ticker and timeframe only); null fits the visible bars. Double-click an axis to go back to automatic.
+  const [yRange, setYRange] = useState<{ key: string; lo: number; hi: number } | null>(null);
+  const [overAxis, setOverAxis] = useState<"price" | "time" | null>(null);
   const [drawings, setDrawings] = useState<Drawing[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [tool, setTool] = useState<Tool>("cursor");
@@ -90,7 +94,9 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
   const svgRef = useRef<SVGSVGElement>(null);
   const drag = useRef<
     | null
-    | { mode: "pan"; startX: number; end: number; moved: boolean }
+    | { mode: "pan"; startX: number; startY: number; end: number; moved: boolean; lo: number; hi: number }
+    | { mode: "yscale"; startY: number; lo: number; hi: number }
+    | { mode: "xscale"; startX: number; end: number; count: number }
     | { mode: "move"; id: string; start: Anchor; orig: Anchor[]; moved: boolean }
     | { mode: "handle"; id: string; h: number }
     | { mode: "draw"; startX: number; startY: number }
@@ -222,7 +228,9 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
   const invX = (px: number) => px / barW - 0.5 + left;
 
   // Price range over the visible bars (and the idea's levels, so they're always on screen).
-  const { lo, hi } = useMemo(() => {
+  const rangeKey = `${ticker}:${settings.weekly ? "w" : "d"}`;
+  const manual = yRange && yRange.key === rangeKey ? yRange : null;
+  const auto = useMemo(() => {
     let l = Infinity;
     let h = -Infinity;
     const from = Math.max(0, Math.floor(left));
@@ -242,6 +250,7 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
     const pad = (h - l) * 0.07 || h * 0.02 || 1;
     return { lo: l - pad, hi: h + pad };
   }, [bars, left, v.end, levels]);
+  const { lo, hi } = manual ?? auto;
   const y = (p: number) => ((hi - p) / (hi - lo)) * priceH;
   const invY = (py: number) => hi - (py / priceH) * (hi - lo);
 
@@ -360,6 +369,17 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
   const onPointerDown = (e: React.PointerEvent<SVGSVGElement>) => {
     if (!bars.length) return;
     const { px, py } = local(e);
+    // The price axis (right of the plot) stretches prices; the time axis (under it) stretches time.
+    if (!draft && px > plotW && py <= priceH) {
+      svgRef.current?.setPointerCapture(e.pointerId);
+      drag.current = { mode: "yscale", startY: py, lo, hi };
+      return;
+    }
+    if (!draft && px <= plotW && py > priceH && py <= priceH + TIME_H) {
+      svgRef.current?.setPointerCapture(e.pointerId);
+      drag.current = { mode: "xscale", startX: px, end: v.end, count: v.count };
+      return;
+    }
     if (py > priceH || px > plotW) return;
     svgRef.current?.setPointerCapture(e.pointerId);
     const a = anchorAt(px, py);
@@ -412,13 +432,29 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
       return;
     }
     setSelected(null);
-    drag.current = { mode: "pan", startX: px, end: v.end, moved: false };
+    drag.current = { mode: "pan", startX: px, startY: py, end: v.end, moved: false, lo, hi };
   };
 
   const onPointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
     const { px, py } = local(e);
     setHover(px <= plotW && py <= totalH ? { x: px, y: py } : null);
+    const axis = px > plotW && py <= priceH ? "price" : px <= plotW && py > priceH && py <= priceH + TIME_H ? "time" : null;
+    if (axis !== overAxis) setOverAxis(axis);
     const g = drag.current;
+    if (g?.mode === "yscale") {
+      // Down widens the range (smaller candles), up narrows it (taller candles), about the middle.
+      const k = Math.exp((py - g.startY) * 0.006);
+      const mid = (g.lo + g.hi) / 2;
+      const half = Math.max(((g.hi - g.lo) / 2) * k, mid * 0.0005);
+      setYRange({ key: rangeKey, lo: mid - half, hi: mid + half });
+      return;
+    }
+    if (g?.mode === "xscale") {
+      // Right shows fewer bars (wider), left more (narrower), keeping the right edge where it is.
+      const count = Math.max(15, Math.min(Math.max(60, bars.length + 40), g.count * Math.exp(-(px - g.startX) * 0.005)));
+      setView({ end: g.end, count });
+      return;
+    }
     if (draft && (!g || g.mode === "draw")) {
       setDraft({ ...draft, pts: [draft.pts[0], anchorAt(px, py)] });
       return;
@@ -428,6 +464,11 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
       const dx = px - g.startX;
       if (Math.abs(dx) > 2) g.moved = true;
       setView({ end: g.end - dx / barW, count: v.count });
+      // With a price range of its own the chart pans up and down as well.
+      if (manual) {
+        const dp = ((py - g.startY) / priceH) * (g.hi - g.lo);
+        setYRange({ key: rangeKey, lo: g.lo + dp, hi: g.hi + dp });
+      }
       return;
     }
     if (g.mode === "handle") {
@@ -544,7 +585,7 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
     new Date(`${t}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
 
   const all = draft ? [...drawings, draft] : drawings;
-  const cursor = tool !== "cursor" || draft ? "crosshair" : "default";
+  const cursor = overAxis === "price" ? "ns-resize" : overAxis === "time" ? "ew-resize" : tool !== "cursor" || draft ? "crosshair" : "default";
 
   return (
     <div ref={boxRef} className={`relative select-none ${fill ? "flex h-full flex-col" : ""}`}>
@@ -571,7 +612,24 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
           )}
           <IconButton label="Zoom out" onClick={() => zoom(1.25)} d="M5 12h14" />
           <IconButton label="Zoom in" onClick={() => zoom(0.8)} d="M12 5v14M5 12h14" />
-          <IconButton label="Reset view" onClick={() => setView(null)} d="M4 4v6h6M20 20v-6h-6M5 15a7 7 0 0012 3M19 9A7 7 0 007 6" />
+          {manual && (
+            <button
+              type="button"
+              onClick={() => setYRange(null)}
+              title="Fit prices to the bars again (or double-click the price axis)"
+              className="mr-1 rounded-md border border-accent/40 bg-accent-soft px-2 py-0.5 text-[11px] font-medium text-accent-ink"
+            >
+              Auto scale
+            </button>
+          )}
+          <IconButton
+            label="Reset view"
+            onClick={() => {
+              setView(null);
+              setYRange(null);
+            }}
+            d="M4 4v6h6M20 20v-6h-6M5 15a7 7 0 0012 3M19 9A7 7 0 007 6"
+          />
         </span>
       </div>
 
@@ -678,7 +736,17 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
                 onPointerDown={onPointerDown}
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}
-                onPointerLeave={() => setHover(null)}
+                onPointerLeave={() => {
+                  setHover(null);
+                  setOverAxis(null);
+                }}
+                onDoubleClick={(e) => {
+                  const r = svgRef.current!.getBoundingClientRect();
+                  const px = e.clientX - r.left;
+                  const py = e.clientY - r.top;
+                  if (px > plotW && py <= priceH) setYRange(null);
+                  else if (py > priceH && py <= priceH + TIME_H) setView(null);
+                }}
                 role="img"
                 aria-label={`${ticker} ${settings.weekly ? "weekly" : "daily"} candle chart`}
               >
