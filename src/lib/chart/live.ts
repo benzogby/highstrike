@@ -37,6 +37,11 @@ export function withLive(bars: Candle[], ticks: Tick[], minutes: number | null, 
   // Weekly bars are stamped with their first trading day, which can be after the Monday: compare by week.
   const weekOf = (t: string) => periodOf(Date.parse(`${t.slice(0, 10)}T17:00:00Z`), null, true);
   for (const tk of ticks) {
+    // Daily and weekly bars are the regular session: prices before the open or after the close don't move them.
+    if (!minutes) {
+      const hm = nyStamp(tk.at).slice(11, 16);
+      if (hm < "09:30" || hm >= "16:00") continue;
+    }
     const period = periodOf(tk.at, minutes, weekly);
     if (!period) continue;
     const last = out[out.length - 1];

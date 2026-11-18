@@ -2,6 +2,7 @@ import { supabaseService } from "@/lib/stripe";
 import { massiveKey } from "@/lib/candles";
 import { marketOpen, newYorkDate } from "@/lib/marketCalendar";
 import { bs } from "@/lib/options/pricing";
+import { alpacaKeys, listedContracts, optionSnapshots } from "@/lib/alpaca";
 
 // Real option prices (docs/plans/offer-overhaul.md item 5) from Massive, formerly Polygon. Two levels, picked by what
 // the account allows:
@@ -27,7 +28,7 @@ export type OptionQuote = {
   ask: number | null;
   /** Yearly, as a fraction; and where it came from. */
   iv: number | null;
-  ivFrom: "massive" | "price" | null;
+  ivFrom: "massive" | "alpaca" | "price" | null;
   delta: number | null;
   volume: number | null;
   openInterest: number | null;
@@ -211,6 +212,11 @@ export async function realOption(
   strike: number,
   spotOn: (day: string) => number | null
 ): Promise<OptionQuote | null> {
+  // Alpaca first when its keys are in: its contract list and free indicative quote, no 5-a-minute limit.
+  if (await alpacaKeys()) {
+    const q = await realOptionAlpaca(underlying, type, from, strike).catch(() => null);
+    if (q) return q;
+  }
   const key = await massiveKey();
   if (!key) return null;
   try {
@@ -340,4 +346,52 @@ export async function chainSnapshot(underlying: string, expiry: string, spot: nu
   } catch {
     return null;
   }
+}
+
+/** The listed contract nearest the plan (Alpaca's contract list) and its indicative quote, IV, delta, volume and open interest. */
+async function realOptionAlpaca(underlying: string, type: "call" | "put", from: string, strike: number): Promise<OptionQuote | null> {
+  const to = new Date(Date.parse(`${from}T12:00:00Z`) + 75 * DAY).toISOString().slice(0, 10);
+  const rows = await listedContracts(underlying, { expiryFrom: from, expiryTo: to, type, strikeFrom: Math.floor(strike * 0.8), strikeTo: Math.ceil(strike * 1.2) });
+  const c = chooseContract(
+    rows.map((r) => ({ ticker: `O:${r.symbol}`, strike: r.strike, expiry: r.expiry })),
+    type,
+    strike
+  );
+  if (!c) return null;
+  const snap = (await optionSnapshots(underlying, { expiryFrom: c.expiry, expiryTo: c.expiry, strikeFrom: c.strike, strikeTo: c.strike })).find((s) => `O:${s.symbol}` === c.ticker);
+  const price = snap ? (snap.bid != null && snap.ask != null && snap.ask > 0 ? (snap.bid + snap.ask) / 2 : snap.last) : null;
+  if (!snap || !(price && price > 0)) return null;
+  return {
+    contract: c.ticker,
+    type,
+    strike: c.strike,
+    expiry: c.expiry,
+    price: Math.round(price * 100) / 100,
+    priceKind: "mid",
+    asOf: new Date().toISOString(),
+    bid: snap.bid,
+    ask: snap.ask,
+    iv: snap.iv,
+    ivFrom: snap.iv != null ? "alpaca" : null,
+    delta: snap.delta,
+    volume: snap.volume,
+    openInterest: rows.find((r) => `O:${r.symbol}` === c.ticker)?.oi ?? null,
+  };
+}
+
+const listedMemo = new Map<string, { at: number; value: Promise<Awaited<ReturnType<typeof listedContracts>>> }>();
+/** Alpaca's listed contracts within ~4 months and 20% of the price, kept 10 minutes per stock (the desk's chain). */
+export function alpacaListed(underlying: string, spot: number) {
+  const k = `${underlying}:${Math.round(spot)}`;
+  const hit = listedMemo.get(k);
+  if (hit && Date.now() - hit.at < 10 * 60_000) return hit.value;
+  const today = new Date().toISOString().slice(0, 10);
+  const value = listedContracts(underlying, {
+    expiryFrom: today,
+    expiryTo: new Date(Date.now() + 130 * DAY).toISOString().slice(0, 10),
+    strikeFrom: Math.floor(spot * 0.8),
+    strikeTo: Math.ceil(spot * 1.2),
+  }).catch(() => []);
+  listedMemo.set(k, { at: Date.now(), value });
+  return value;
 }

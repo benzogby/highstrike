@@ -76,8 +76,8 @@ export type ScanSnapshot = {
   asOf: string;
   /** The last completed session. */
   session: string;
-  stocksFrom: "snapshot" | "close+live" | "close";
-  optionsFrom: "snapshot" | null;
+  stocksFrom: "snapshot" | "alpaca" | "close+live" | "close";
+  optionsFrom: "snapshot" | "alpaca" | null;
   historyDays: number;
   breadth: { up: number; down: number };
   stocks: StockRow[];

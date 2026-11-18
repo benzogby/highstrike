@@ -133,3 +133,161 @@ export async function indicativeChain(underlying: string, expiry: string): Promi
     return out.size ? out : null;
   }
 }
+
+// ---- Paced requests ------------------------------------------------------------------------------------------------
+// The free plan allows about 200 requests a minute per key; the Scanner's sweep paces itself to ~3 a second.
+
+let nextSlot = 0;
+async function paced<T>(fn: () => Promise<T>, perSecond = 3): Promise<T> {
+  const now = Date.now();
+  const at = Math.max(now, nextSlot);
+  nextSlot = at + 1000 / perSecond;
+  if (at > now) await new Promise((r) => setTimeout(r, at - now));
+  try {
+    return await fn();
+  } catch (e) {
+    if (!(e instanceof AlpacaBusy)) throw e;
+    await new Promise((r) => setTimeout(r, 1500));
+    return fn();
+  }
+}
+
+// ---- Stocks: live prices and today's whole-market bar ----------------------------------------------------------------
+
+export type LiveStock = { price: number; at: string };
+
+/** Real-time last trades (IEX) for up to ~100 symbols per call. */
+export async function latestTrades(symbols: string[], keys?: { id: string; secret: string } | null): Promise<Map<string, LiveStock>> {
+  const k = keys ?? (await alpacaKeys());
+  const out = new Map<string, LiveStock>();
+  if (!k) return out;
+  for (let i = 0; i < symbols.length; i += 100) {
+    const chunk = symbols.slice(i, i + 100);
+    const body = await paced(() => get<{ trades?: Record<string, { p: number; t: string }> }>(`/v2/stocks/trades/latest?symbols=${chunk.map(encodeURIComponent).join(",")}&feed=iex`, k));
+    for (const [s, t] of Object.entries(body.trades ?? {})) if (t?.p > 0) out.set(s, { price: t.p, at: t.t });
+  }
+  return out;
+}
+
+export type DayBar = { o: number; h: number; l: number; c: number; v: number; date: string };
+
+/** Each symbol's last two whole-market daily bars up to 16 minutes ago: today's so far (or the last session's) and the one before. */
+export async function recentDailyBars(symbols: string[], keys?: { id: string; secret: string } | null): Promise<Map<string, DayBar[]>> {
+  const k = keys ?? (await alpacaKeys());
+  const out = new Map<string, DayBar[]>();
+  if (!k) return out;
+  const start = new Date(Date.now() - 8 * 86_400_000).toISOString();
+  const end = new Date(Date.now() - SIP_DELAY_MS).toISOString();
+  for (let i = 0; i < symbols.length; i += 100) {
+    const chunk = symbols.slice(i, i + 100);
+    let token: string | null = null;
+    for (let page = 0; page < 10; page++) {
+      const q = new URLSearchParams({ symbols: chunk.join(","), timeframe: "1Day", start, end, feed: "sip", limit: "10000", adjustment: "split" });
+      if (token) q.set("page_token", token);
+      const body: { bars?: Record<string, Bar[]>; next_page_token?: string | null } = await paced(() => get(`/v2/stocks/bars?${q}`, k));
+      for (const [s, list] of Object.entries(body.bars ?? {})) {
+        const bars = [...(out.get(s) ?? []), ...list.map((b) => ({ o: b.o, h: b.h, l: b.l, c: b.c, v: b.v, date: nyStamp(Date.parse(b.t)).slice(0, 10) }))];
+        out.set(s, bars);
+      }
+      token = body.next_page_token ?? null;
+      if (!token) break;
+    }
+  }
+  for (const [s, list] of out) out.set(s, list.sort((a, b) => a.date.localeCompare(b.date)).slice(-2));
+  return out;
+}
+
+// ---- Options: listed contracts (with open interest) and indicative snapshots -------------------------------------
+
+const TRADING = process.env.ALPACA_TRADING_URL?.trim() || "https://paper-api.alpaca.markets";
+
+export type ListedContract = { symbol: string; type: "call" | "put"; strike: number; expiry: string; oi: number | null };
+
+/** Listed contracts from Alpaca's trading API (open interest included), filtered like Alpaca's own query. */
+export async function listedContracts(
+  underlying: string,
+  f: { expiryFrom?: string; expiryTo?: string; expiry?: string; strikeFrom?: number; strikeTo?: number; type?: "call" | "put" }
+): Promise<ListedContract[]> {
+  const k = await alpacaKeys();
+  if (!k) return [];
+  const out: ListedContract[] = [];
+  let token: string | null = null;
+  for (let page = 0; page < 10; page++) {
+    const q = new URLSearchParams({ underlying_symbols: underlying, limit: "10000", status: "active" });
+    if (f.expiry) q.set("expiration_date", f.expiry);
+    if (f.expiryFrom) q.set("expiration_date_gte", f.expiryFrom);
+    if (f.expiryTo) q.set("expiration_date_lte", f.expiryTo);
+    if (f.strikeFrom != null) q.set("strike_price_gte", String(f.strikeFrom));
+    if (f.strikeTo != null) q.set("strike_price_lte", String(f.strikeTo));
+    if (f.type) q.set("type", f.type);
+    if (token) q.set("page_token", token);
+    const res = await paced(() =>
+      fetch(`${TRADING}/v2/options/contracts?${q}`, { headers: { "APCA-API-KEY-ID": k.id, "APCA-API-SECRET-KEY": k.secret }, cache: "no-store", signal: AbortSignal.timeout(10_000) })
+    );
+    if (res.status === 429) throw new AlpacaBusy("alpaca 429");
+    if (!res.ok) throw new Error(`alpaca contracts ${res.status}`);
+    const body = (await res.json()) as { option_contracts?: { symbol: string; type: "call" | "put"; strike_price: string; expiration_date: string; open_interest?: string | null }[]; next_page_token?: string | null };
+    for (const c of body.option_contracts ?? []) {
+      out.push({ symbol: c.symbol, type: c.type, strike: Number(c.strike_price), expiry: c.expiration_date, oi: c.open_interest != null ? Number(c.open_interest) : null });
+    }
+    token = body.next_page_token ?? null;
+    if (!token) break;
+  }
+  return out;
+}
+
+export type OptionSnap = {
+  symbol: string;
+  bid: number | null;
+  ask: number | null;
+  last: number | null;
+  iv: number | null;
+  delta: number | null;
+  /** Today's volume (0 when the latest daily bar isn't today's). */
+  volume: number;
+};
+
+/** Indicative snapshots for one stock's options, filtered (expiry and strike ranges), every page. */
+export async function optionSnapshots(underlying: string, f: { expiryFrom?: string; expiryTo?: string; strikeFrom?: number; strikeTo?: number }): Promise<OptionSnap[]> {
+  const k = await alpacaKeys();
+  if (!k) return [];
+  const today = nyStamp(Date.now()).slice(0, 10);
+  const out: OptionSnap[] = [];
+  let token: string | null = null;
+  for (let page = 0; page < 8; page++) {
+    const q = new URLSearchParams({ feed: "indicative", limit: "1000" });
+    if (f.expiryFrom) q.set("expiration_date_gte", f.expiryFrom);
+    if (f.expiryTo) q.set("expiration_date_lte", f.expiryTo);
+    if (f.strikeFrom != null) q.set("strike_price_gte", String(f.strikeFrom));
+    if (f.strikeTo != null) q.set("strike_price_lte", String(f.strikeTo));
+    if (token) q.set("page_token", token);
+    const body: {
+      snapshots?: Record<
+        string,
+        { latestQuote?: { bp?: number; ap?: number }; latestTrade?: { p?: number }; dailyBar?: { v?: number; t?: string }; impliedVolatility?: number; greeks?: { delta?: number } }
+      >;
+      next_page_token?: string | null;
+    } = await paced(() => get(`/v1beta1/options/snapshots/${encodeURIComponent(underlying)}?${q}`, k));
+    for (const [symbol, s] of Object.entries(body.snapshots ?? {})) {
+      const day = s.dailyBar?.t ? nyStamp(Date.parse(s.dailyBar.t)).slice(0, 10) : null;
+      out.push({
+        symbol,
+        bid: s.latestQuote?.bp ?? null,
+        ask: s.latestQuote?.ap && s.latestQuote.ap > 0 ? s.latestQuote.ap : null,
+        last: s.latestTrade?.p ?? null,
+        iv: s.impliedVolatility ?? null,
+        delta: s.greeks?.delta ?? null,
+        volume: day === today ? (s.dailyBar?.v ?? 0) : 0,
+      });
+    }
+    token = body.next_page_token ?? null;
+    if (!token) break;
+  }
+  return out;
+}
+
+/** "AAPL261218C00350000" → its parts. */
+export function parseOcc(sym: string): { underlying: string; type: "call" | "put"; strike: number; expiry: string } | null {
+  const m = /^([A-Z.]{1,8})(\d{2})(\d{2})(\d{2})([CP])(\d{8})$/.exec(sym);
+  return m ? { underlying: m[1], expiry: `20${m[2]}-${m[3]}-${m[4]}`, type: m[5] === "C" ? "call" : "put", strike: Number(m[6]) / 1000 } : null;
+}

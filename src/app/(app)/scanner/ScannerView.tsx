@@ -61,7 +61,7 @@ export default function ScannerView({ snap, tab, q, admin }: { snap: ScanSnapsho
   const ranked = [...sectors.entries()].map(([g, v]) => ({ g, m: v.m / v.w })).sort((a, b) => b.m - a.m);
   const breadth = snap.breadth.up + snap.breadth.down > 0 ? Math.round((snap.breadth.up / (snap.breadth.up + snap.breadth.down)) * 100) : 50;
   const live = snap.stocksFrom !== "close";
-  const asOf = snap.stocksFrom === "snapshot" ? `${TIME.format(new Date(snap.asOf))} ET, 15 min delayed` : snap.stocksFrom === "close+live" ? `${TIME.format(new Date(snap.asOf))} ET · live for the busiest names, last close for the rest` : `the close on ${day(snap.session)}`;
+  const asOf = snap.stocksFrom === "alpaca" ? `${TIME.format(new Date(snap.asOf))} ET · live prices, volume 15 min behind${snap.optionsFrom === "alpaca" ? " · options indicative" : ""}` : snap.stocksFrom === "snapshot" ? `${TIME.format(new Date(snap.asOf))} ET, 15 min delayed` : snap.stocksFrom === "close+live" ? `${TIME.format(new Date(snap.asOf))} ET · live for the busiest names, last close for the rest` : `the close on ${day(snap.session)}`;
   const topFlow = snap.unusual[0];
 
   return (

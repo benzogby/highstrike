@@ -5,6 +5,7 @@ import { addDays, isSession, marketOpen, newYorkDate, sessionBefore } from "@/li
 import { volatility } from "@/lib/options/pricing";
 import { SCAN_UNIVERSE } from "./sectors";
 import type { EarningsRow, OptionRow, ScanSnapshot, StockRow, TickerOptions } from "./types";
+import { alpacaKeys, latestTrades, listedContracts, optionSnapshots, parseOcc, recentDailyBars } from "@/lib/alpaca";
 
 // The Scanner's data (Ben, 2026-11-18: "super comprehensive and pull in a lot of data, and really easy to read and get
 // contract ideas from"), built by /api/cron/scan-refresh every 5 minutes in market hours and kept as one row in
@@ -174,6 +175,34 @@ export async function buildScan(deadline = Date.now() + 240_000, db: Store = cac
       }
     }
   }
+  // Alpaca (src/lib/alpaca.ts), when its keys are in: real-time last trades (IEX) for every name, and today's
+  // whole-market bar up to 15 minutes back for the open, high, low and volume.
+  const alpacaOn = Boolean(await alpacaKeys());
+  if (stocksFrom === "close" && alpacaOn) {
+    try {
+      const [trades, days] = await Promise.all([latestTrades(TICKERS), recentDailyBars(TICKERS)]);
+      const todayNY = newYorkDate(Date.now());
+      for (const t of TICKERS) {
+        const tr = trades.get(t);
+        if (!tr) continue;
+        const d = days.get(t) ?? [];
+        const todays = d.at(-1)?.date === todayNY ? d.at(-1)! : null;
+        const prevC = (todays ? d.at(-2) : d.at(-1))?.c ?? lastBars[t]?.[0] ?? null;
+        now.set(t, {
+          price: tr.price,
+          chg: prevC ? ((tr.price - prevC) / prevC) * 100 : 0,
+          open: todays?.o ?? null,
+          high: todays ? Math.max(todays.h, tr.price) : null,
+          low: todays ? Math.min(todays.l, tr.price) : null,
+          vol: todays?.v ?? null,
+          live: true,
+        });
+      }
+      if (now.size) stocksFrom = "alpaca";
+    } catch (e) {
+      notes.push(`Alpaca prices didn't answer (${e instanceof Error ? e.message : "error"}).`);
+    }
+  }
   if (stocksFrom === "close" && marketOpen(Date.now(), 5)) {
     const busiest = SCAN_UNIVERSE.filter((u) => u.tier === 1).map((u) => u.ticker);
     const quotes = await fetchQuotes(busiest).catch(() => []);
@@ -227,7 +256,32 @@ export async function buildScan(deadline = Date.now() + 240_000, db: Store = cac
   const byTicker: TickerOptions[] = [];
   const price = new Map(stocks.map((s) => [s.t, s.price]));
   const today = newYorkDate(Date.now());
-  if (key) {
+  /** One name's contracts into the hot and unusual lists, and its summary: call and put volume, ATM IV, the move. */
+  const summarize = (u: string, spot: number, rows: OptionRow[]) => {
+    if (!rows.length) return;
+    contracts.push(...rows.filter((r) => r.vol > 0));
+    const callVol = rows.filter((r) => r.type === "call").reduce((a, r) => a + r.vol, 0);
+    const putVol = rows.filter((r) => r.type === "put").reduce((a, r) => a + r.vol, 0);
+    // At the money, about a month out: the contracts nearest the price in the expiry nearest 30 days.
+    const expiries = [...new Set(rows.map((r) => r.expiry))];
+    const month = expiries.reduce((best, e) => (Math.abs(Date.parse(e) - Date.now() - 30 * 86_400_000) < Math.abs(Date.parse(best) - Date.now() - 30 * 86_400_000) ? e : best), expiries[0]);
+    const atm = rows.filter((r) => r.expiry === month && r.iv != null).sort((a, b) => Math.abs(a.strike - spot) - Math.abs(b.strike - spot)).slice(0, 4);
+    const atmIv = atm.length ? atm.reduce((a, r) => a + (r.iv as number), 0) / atm.length : null;
+    const hv = stocks.find((s) => s.t === u)?.hv20 ?? null;
+    const dte = atm[0]?.dte ?? 30;
+    byTicker.push({
+      u,
+      callVol,
+      putVol,
+      pcr: callVol > 0 ? Math.round((putVol / callVol) * 100) / 100 : null,
+      atmIv: atmIv != null ? Math.round(atmIv * 1000) / 1000 : null,
+      ivHv: atmIv != null && hv ? Math.round((atmIv / hv) * 100) / 100 : null,
+      moveExpiry: atmIv != null ? month : null,
+      movePct: atmIv != null ? Math.round(atmIv * Math.sqrt(Math.max(1, dte) / 365) * 1000) / 10 : null,
+      premium: rows.reduce((a, r) => a + (r.premium ?? 0), 0),
+    });
+  };
+  if (key || alpacaOn) {
     if (plan?.options) {
       optionsFrom = "snapshot";
       await pool(NAMES_WITH_CHAINS, 8, async (u) => {
@@ -277,28 +331,54 @@ export async function buildScan(deadline = Date.now() + 240_000, db: Store = cac
           }
           next = res.body?.next_url ?? null;
         }
-        if (!rows.length) return;
-        contracts.push(...rows.filter((r) => r.vol > 0));
-        const callVol = rows.filter((r) => r.type === "call").reduce((a, r) => a + r.vol, 0);
-        const putVol = rows.filter((r) => r.type === "put").reduce((a, r) => a + r.vol, 0);
-        // At the money, about a month out: the contracts nearest the price in the expiry nearest 30 days.
-        const expiries = [...new Set(rows.map((r) => r.expiry))];
-        const month = expiries.reduce((best, e) => (Math.abs(Date.parse(e) - Date.now() - 30 * 86_400_000) < Math.abs(Date.parse(best) - Date.now() - 30 * 86_400_000) ? e : best), expiries[0]);
-        const atm = rows.filter((r) => r.expiry === month && r.iv != null).sort((a, b) => Math.abs(a.strike - spot) - Math.abs(b.strike - spot)).slice(0, 4);
-        const atmIv = atm.length ? atm.reduce((a, r) => a + (r.iv as number), 0) / atm.length : null;
-        const hv = stocks.find((s) => s.t === u)?.hv20 ?? null;
-        const dte = atm[0]?.dte ?? 30;
-        byTicker.push({
-          u,
-          callVol,
-          putVol,
-          pcr: callVol > 0 ? Math.round((putVol / callVol) * 100) / 100 : null,
-          atmIv: atmIv != null ? Math.round(atmIv * 1000) / 1000 : null,
-          ivHv: atmIv != null && hv ? Math.round((atmIv / hv) * 100) / 100 : null,
-          moveExpiry: atmIv != null ? month : null,
-          movePct: atmIv != null ? Math.round(atmIv * Math.sqrt(Math.max(1, dte) / 365) * 1000) / 10 : null,
-          premium: rows.reduce((a, r) => a + (r.premium ?? 0), 0),
-        });
+        summarize(u, spot, rows);
+      });
+    } else if (alpacaOn) {
+      // Alpaca's free indicative snapshots (today's volume, quotes, IV, delta) and its contract list (open interest),
+      // three names at a time, paced inside its 200 requests a minute.
+      optionsFrom = "alpaca";
+      const until = addDays(today, OPTION_DAYS);
+      await pool(NAMES_WITH_CHAINS, 3, async (u) => {
+        if (Date.now() > deadline) return;
+        const spot = price.get(u);
+        if (!spot) return;
+        const range = { expiryFrom: today, expiryTo: until, strikeFrom: Math.floor(spot * 0.85), strikeTo: Math.ceil(spot * 1.15) };
+        let snaps: Awaited<ReturnType<typeof optionSnapshots>>;
+        let listed: Awaited<ReturnType<typeof listedContracts>>;
+        try {
+          [snaps, listed] = await Promise.all([optionSnapshots(u, range), listedContracts(u, range)]);
+        } catch {
+          return;
+        }
+        const oiOf = new Map(listed.map((c) => [c.symbol, c.oi]));
+        const rows: OptionRow[] = [];
+        for (const s of snaps) {
+          const p = parseOcc(s.symbol);
+          if (!p) continue;
+          const mid = s.bid != null && s.ask != null ? (s.bid + s.ask) / 2 : s.last;
+          const oi = oiOf.get(s.symbol) ?? 0;
+          const dte = Math.max(0, Math.round((Date.parse(`${p.expiry}T12:00:00Z`) - Date.parse(`${today}T12:00:00Z`)) / 86_400_000));
+          rows.push({
+            c: `O:${s.symbol}`,
+            u,
+            type: p.type,
+            strike: p.strike,
+            expiry: p.expiry,
+            dte,
+            vol: s.volume,
+            oi,
+            volOi: oi > 0 ? Math.round((s.volume / oi) * 100) / 100 : null,
+            iv: s.iv,
+            delta: s.delta,
+            mid: mid != null ? Math.round(mid * 100) / 100 : null,
+            bid: s.bid,
+            ask: s.ask,
+            premium: mid != null ? Math.round(s.volume * mid * 100) : null,
+            otm: Math.round(((p.type === "call" ? p.strike - spot : spot - p.strike) / spot) * 1000) / 10,
+            spot,
+          });
+        }
+        summarize(u, spot, rows);
       });
     } else notes.push("Option chains aren't on this Massive plan (Options Starter adds them).");
   }

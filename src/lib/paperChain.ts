@@ -1,6 +1,7 @@
 import { getCandles } from "@/lib/candles";
 import { bs, volatility } from "@/lib/options/pricing";
-import { chainSnapshot, contractQuote, expiriesFor, strikesFor } from "@/lib/optionQuotes";
+import { alpacaListed, chainSnapshot, contractQuote, expiriesFor, strikesFor } from "@/lib/optionQuotes";
+import { alpacaKeys } from "@/lib/alpaca";
 import { liveStock } from "@/lib/paper";
 import { indicativeChain } from "@/lib/alpaca";
 
@@ -28,11 +29,19 @@ export async function chainView(underlying: string, wanted?: string | null): Pro
   const spot = live?.price ?? candles.at(-1)?.c ?? null;
   const empty: ChainView = { underlying: u, spot, expiries: [], expiry: null, rows: [], source: "none", iv: null };
   if (!spot) return empty;
-  const expiries = await expiriesFor(u, spot);
+  // The listed expiries and strikes: Alpaca's contract list when its keys are in (no 5-a-minute limit), else Massive's.
+  const listed = (await alpacaKeys()) ? await alpacaListed(u, spot) : [];
+  const expiries = listed.length ? [...new Set(listed.map((r) => r.expiry))].sort() : await expiriesFor(u, spot);
   if (!expiries.length) return empty;
   const soon = new Date(Date.now() + 5 * 86_400_000).toISOString().slice(0, 10);
   const expiry = wanted && expiries.includes(wanted) ? wanted : (expiries.find((e) => e >= soon) ?? expiries[0]);
-  const strikes = await strikesFor(u, expiry, spot);
+  const strikes = listed.length
+    ? (() => {
+        const out = { call: new Map<number, string>(), put: new Map<number, string>() };
+        for (const r of listed) if (r.expiry === expiry) out[r.type].set(r.strike, `O:${r.symbol}`);
+        return out;
+      })()
+    : await strikesFor(u, expiry, spot);
   const all = [...new Set([...strikes.call.keys(), ...strikes.put.keys()])].sort((a, b) => a - b);
   // The 15 strikes either side of the price.
   const at = all.findIndex((k) => k >= spot);
@@ -52,7 +61,15 @@ export async function chainView(underlying: string, wanted?: string | null): Pro
   // Alpaca's free indicative quotes (src/lib/alpaca.ts), where it has them; the rest estimated as below.
   const ind = await indicativeChain(u, expiry);
   if (ind && ind.size) {
-    const fallback = await estimator(u, spot, expiry, keep, strikes, candles);
+    // The estimate is only worked out when some contract has no indicative quote (it can cost a Massive request).
+    const missing = keep.some((k) =>
+      (["call", "put"] as const).some((t) => {
+        const c = strikes[t].get(k);
+        const q = c ? ind.get(c) : undefined;
+        return c != null && (q?.ask == null || q?.bid == null);
+      })
+    );
+    const fallback = missing ? await estimator(u, spot, expiry, keep, strikes, candles) : { est: () => null, iv: null };
     const pick = (type: "call" | "put", k: number, c: string | undefined): Side | null => {
       if (!c) return null;
       const q = ind.get(c);
