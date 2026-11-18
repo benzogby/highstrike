@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { requireMember } from "@/lib/membership";
 import RecordView, { type RecordRow, type RecordStats } from "./RecordView";
 
@@ -8,9 +9,12 @@ export const metadata: Metadata = { title: "Track record — HighStrike" };
  * Ideas' Track record tab (Ben, 2026-11-03: Setups merged into Ideas; /setups redirects here): the scoreboard and every
  * idea HighStrike has published, by day, each opening its idea page. Only the house's ideas (owner_id null), the same
  * ones get_setup_stats() counts; a member's own pasted or built ideas aren't part of the record.
+ * Admins only since 2026-11-17 (Ben: "Hide the record for now", docs/plans/offer-overhaul.md) while the idea rules are
+ * fixed; members land on the feed.
  */
 export default async function TrackRecordPage() {
-  const { supabase } = await requireMember("/ideas/record");
+  const { supabase, profile } = await requireMember("/ideas/record");
+  if (!profile?.is_admin) redirect("/ideas");
 
   const [{ data, error }, { data: stats }] = await Promise.all([
     supabase

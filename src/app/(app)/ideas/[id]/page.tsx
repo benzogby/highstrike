@@ -7,7 +7,7 @@ import { Badge, CARD } from "@/components/ui";
 import { IDEA_COLUMNS, SOURCES, STATUS, STYLES, headlineOf, type Idea } from "@/lib/ideas";
 import { caseFor, quickAnswers, type Signals } from "@/lib/ideaCase";
 import { asOption, contractName } from "@/lib/optionIdea";
-import PriceChart from "../../symbol/[ticker]/PriceChart";
+import HighStrikeChart from "@/components/chart/HighStrikeChart";
 import BullBear from "./BullBear";
 import PositionSizer from "./PositionSizer";
 import QuickAnswers from "./QuickAnswers";
@@ -115,7 +115,21 @@ export default async function IdeaPage({ params }: { params: Promise<{ id: strin
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <div className="flex min-w-0 flex-col gap-6">
           <section className={`${CARD} p-4`}>
-            <PriceChart ticker={idea.ticker} />
+            <HighStrikeChart
+              ticker={idea.ticker}
+              userId={user.id}
+              levels={
+                idea.entry_price != null
+                  ? {
+                      entry: Number(idea.entry_price),
+                      target: idea.target_price != null ? Number(idea.target_price) : null,
+                      stop: idea.stop_price != null ? Number(idea.stop_price) : null,
+                      direction: idea.direction,
+                      from: idea.report_date,
+                    }
+                  : null
+              }
+            />
           </section>
           <section className={`${CARD} grid gap-4 p-4 sm:grid-cols-2`}>
             <div>

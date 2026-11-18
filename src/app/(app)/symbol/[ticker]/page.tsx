@@ -4,9 +4,9 @@ import { notFound } from "next/navigation";
 import { requireMember } from "@/lib/membership";
 import { fetchQuotes } from "@/lib/quotes";
 import { fetchCompanyNews, newsTime } from "@/lib/news";
-import PriceChart from "./PriceChart";
+import HighStrikeChart from "@/components/chart/HighStrikeChart";
 import AlertPanel from "./AlertPanel";
-import { PageHeader } from "@/components/ui";
+import { CARD, PageHeader } from "@/components/ui";
 
 export async function generateMetadata({
   params,
@@ -91,8 +91,8 @@ export default async function SymbolPage({
       />
 
       {/* Chart */}
-      <div className="anim-rise mt-6" style={{ "--rise-delay": "90ms" } as React.CSSProperties}>
-        <PriceChart ticker={ticker} />
+      <div className={`anim-rise mt-6 ${CARD} p-3 sm:p-4`} style={{ "--rise-delay": "90ms" } as React.CSSProperties}>
+        <HighStrikeChart ticker={ticker} userId={user.id} />
       </div>
 
       <AlertPanel
@@ -107,12 +107,14 @@ export default async function SymbolPage({
           <h2 className="font-display text-[15px] text-ink">
             Setup history — ${ticker}
           </h2>
-          <Link
-            href="/ideas/record"
-            className="text-xs font-semibold text-accent transition hover:text-accent-2"
-          >
-            Track record →
-          </Link>
+          {profile?.is_admin && (
+            <Link
+              href="/ideas/record"
+              className="text-xs font-semibold text-accent transition hover:text-accent-2"
+            >
+              Track record →
+            </Link>
+          )}
         </div>
         {(history ?? []).length === 0 ? (
           <p className="mt-3 rounded-xl border border-line bg-panel px-5 py-8 text-center text-sm text-ink-3">

@@ -12,7 +12,6 @@ type Cmd = PageCmd | SymbolCmd;
 const PAGES: Omit<PageCmd, "kind">[] = [
   { label: "Home", hint: "Weather, today's ideas, your watchlist", href: "/dashboard", also: "dashboard" },
   { label: "Ideas", hint: "Every trade idea, filtered your way", href: "/ideas" },
-  { label: "Track record", hint: "Every idea graded: wins and losses", href: "/ideas/record", also: "setups scoreboard history results win rate" },
   { label: "Check a trade idea", hint: "Paste an idea from anywhere", href: "/ideas/paste", also: "paste" },
   { label: "Build an idea", hint: "Say what you want, see what fits", href: "/ideas/build", also: "builder" },
   { label: "Scanner", hint: "Every stock ranked by flow score", href: "/scanner" },
@@ -38,7 +37,11 @@ export default function CommandBar({ isAdmin }: { isAdmin: boolean }) {
   const pages: PageCmd[] = [
     ...PAGES.map((p) => ({ ...p, kind: "page" as const })),
     ...(isAdmin
-      ? [{ kind: "page" as const, label: "Admin panel", hint: "Members, traffic, content, site", href: "/admin" }]
+      ? [
+          { kind: "page" as const, label: "Admin panel", hint: "Members, traffic, content, site", href: "/admin" },
+          // Admins only while the record is hidden from members (2026-11-17).
+          { kind: "page" as const, label: "Track record", hint: "Every idea graded: wins and losses", href: "/ideas/record", also: "setups scoreboard history results win rate" },
+        ]
       : []),
   ];
 

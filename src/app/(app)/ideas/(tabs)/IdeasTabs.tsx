@@ -9,11 +9,13 @@ const TABS = [
 ];
 
 /** Ideas' tabs, underlined in green, as links: each tab is its own URL, so it can be shared, bookmarked and cached. */
-export default function IdeasTabs() {
+export default function IdeasTabs({ showRecord }: { showRecord: boolean }) {
   const path = usePathname();
+  // The Track record is admins' only for now (Ben, 2026-11-17: "Hide the record for now").
+  const tabs = showRecord ? TABS : TABS.filter((t) => t.href !== "/ideas/record");
   return (
     <nav aria-label="Ideas" className="mt-5 flex gap-5 border-b border-line">
-      {TABS.map((t) => {
+      {tabs.map((t) => {
         // The feed is /ideas itself (an idea's own page has no tabs); the record owns anything under it.
         const on = path === t.href || (t.href !== "/ideas" && path.startsWith(`${t.href}/`));
         return (
