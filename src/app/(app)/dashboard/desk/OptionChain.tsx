@@ -81,7 +81,7 @@ export default function OptionChain({ ticker, picked, onPick, fill = false }: { 
         <p className="px-4 py-10 text-center text-sm text-ink-3">No option chain for {ticker} right now.</p>
       ) : (
         <div className={fill ? "min-h-0 flex-1 overflow-auto" : "max-h-[420px] overflow-auto"}>
-          <table className="w-full min-w-[460px] text-[12px]">
+          <table className={`w-full text-[12px] ${fill ? "" : "min-w-[460px]"}`}>
             <thead className="sticky top-0 bg-panel-2 text-[11px] text-ink-3">
               <tr>
                 <th className="px-2 py-1.5 text-right font-medium">Δ</th>

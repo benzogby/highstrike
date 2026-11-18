@@ -78,7 +78,7 @@ export default function Desk({
 }) {
   const wide = useWide();
   const [panels, toggle] = usePanels();
-  const [dockTab, setDockTab] = useState<"chain" | "account">("chain");
+  const [dockTab, setDockTab] = useState<"account" | "ideas">("account");
   const [state, setState] = useState(initial);
   const [ticker, setTicker] = useState(initial.positions[0]?.underlying ?? watch[0] ?? "SPY");
   const [pick, setPick] = useState<Pick | null>(null);
@@ -287,7 +287,11 @@ export default function Desk({
   // ---- Wide: the full-screen chart with floating panels ---------------------------------------------------------------
 
   if (wide) {
-    const DOCK = "32vh";
+    // Ben, 2026-11-18: "Put options chain on the right and execution box above it". The right column runs the full
+    // height: the ticket, then the chain filling the rest. The dock along the bottom (left of it) holds the positions
+    // and today's ideas.
+    const DOCK = "30vh";
+    const SIDE = 452;
     const dockSpace = panels.dock ? `calc(${DOCK} + 12px)` : "52px";
     const working = state.orders.filter((o) => o.status === "working").length;
     return (
@@ -297,7 +301,7 @@ export default function Desk({
           {/* The chart fills the room the open panels leave. */}
           <div
             className="absolute inset-0 flex flex-col pt-3 transition-[padding] duration-300 ease-out"
-            style={{ paddingLeft: panels.watch ? 228 : 56, paddingRight: panels.side ? 352 : 56, paddingBottom: dockSpace }}
+            style={{ paddingLeft: panels.watch ? 228 : 56, paddingRight: panels.side ? SIDE + 24 : 56, paddingBottom: dockSpace }}
           >
             {symbolHead}
             <div className="min-h-0 flex-1">
@@ -324,30 +328,37 @@ export default function Desk({
             <EdgeTab label="Watchlist" className="left-3 top-3" onClick={() => toggle("watch")} d="M9 6l6 6-6 6" />
           )}
 
-          {/* Right: the ticket, today's ideas and the lesson */}
+          {/* Right, full height: the order ticket, and the option chain under it */}
           {panels.side ? (
-            <aside className={`${FLOAT} absolute right-3 top-3 flex w-[328px] flex-col overflow-hidden`} style={{ bottom: dockSpace }}>
+            <aside className={`${FLOAT} absolute bottom-3 right-3 top-3 flex flex-col overflow-hidden`} style={{ width: SIDE }}>
               <div className="flex items-center justify-between border-b border-line px-3 py-2">
                 <h2 className="text-[13px] font-medium text-ink">Trade</h2>
                 <PanelButton label="Hide the trade panel" onClick={() => toggle("side")} d="M9 6l6 6-6 6" />
               </div>
-              <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-2">
-                {ticket}
-                {ideasPanel}
-                {lessonPanel}
+              <div className="max-h-[55%] flex-none overflow-y-auto p-2">{ticket}</div>
+              <div className="flex min-h-0 flex-1 flex-col border-t border-line">
+                <p className="px-3 pt-2 text-[13px] font-medium text-ink">
+                  Option chain <span className="font-mono-nums text-ink-3">{ticker}</span>
+                </p>
+                <div className="min-h-0 flex-1">
+                  <OptionChain ticker={ticker} picked={pick?.contract ?? null} onPick={choose} fill />
+                </div>
               </div>
             </aside>
           ) : (
             <EdgeTab label="Trade" className="right-3 top-3" onClick={() => toggle("side")} d="M15 6l-6 6 6 6" />
           )}
 
-          {/* Bottom: the option chain and the account's positions and orders */}
-          <section className={`${FLOAT} absolute bottom-3 left-3 right-3 flex flex-col overflow-hidden`} style={{ height: panels.dock ? DOCK : 40 }}>
+          {/* Bottom, left of the trade panel: positions and orders, today's ideas */}
+          <section
+            className={`${FLOAT} absolute bottom-3 left-3 flex flex-col overflow-hidden transition-[right] duration-300 ease-out`}
+            style={{ height: panels.dock ? DOCK : 40, right: panels.side ? SIDE + 24 : 12 }}
+          >
             <div className="flex h-10 flex-none items-center gap-1 border-b border-line px-2">
               {(
                 [
-                  ["chain", `Option chain · ${ticker}`],
                   ["account", `Positions ${state.positions.length}${working ? ` · ${working} working` : ""}`],
+                  ["ideas", `Today's ideas ${ideas.length}`],
                 ] as const
               ).map(([k, label]) => (
                 <button
@@ -362,16 +373,17 @@ export default function Desk({
                   {label}
                 </button>
               ))}
-              <p className="ml-auto hidden max-w-[50%] truncate px-2 text-[11px] text-ink-3 2xl:block">{disclaimer}</p>
+              <p className="ml-auto hidden max-w-[45%] truncate px-2 text-[11px] text-ink-3 2xl:block">{disclaimer}</p>
               <PanelButton label={panels.dock ? "Lower the dock" : "Raise the dock"} onClick={() => toggle("dock")} d={panels.dock ? "M6 9l6 6 6-6" : "M6 15l6-6 6 6"} />
             </div>
             {panels.dock && (
-              <div className="min-h-0 flex-1 overflow-hidden">
-                {dockTab === "chain" ? (
-                  <OptionChain ticker={ticker} picked={pick?.contract ?? null} onPick={choose} fill />
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                {dockTab === "account" ? (
+                  <Blotter state={state} onSelect={select} onChange={refresh} />
                 ) : (
-                  <div className="h-full overflow-y-auto">
-                    <Blotter state={state} onSelect={select} onChange={refresh} />
+                  <div className="grid gap-2 p-2 lg:grid-cols-[minmax(0,1fr)_280px]">
+                    {ideasPanel}
+                    {lessonPanel}
                   </div>
                 )}
               </div>
