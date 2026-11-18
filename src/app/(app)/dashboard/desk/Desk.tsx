@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore, useTransition } from "react";
-import HighStrikeChart from "@/components/chart/HighStrikeChart";
+import HighStrikeChart, { type Timeframe } from "@/components/chart/HighStrikeChart";
 import { useQuotes } from "@/components/useQuotes";
 import type { PaperState } from "@/lib/paper";
 import type { Candle } from "@/lib/chart/types";
@@ -69,6 +69,7 @@ export default function Desk({
   ideas,
   lesson,
   budget,
+  start,
 }: {
   userId: string;
   initial: PaperState;
@@ -76,12 +77,28 @@ export default function Desk({
   ideas: DeskIdea[];
   lesson: DeskLesson;
   budget: number | null;
+  /** What the URL asked for (?t=NVDA&tf=4h&panel=positions). */
+  start: { ticker: string | null; tf: Timeframe | null; panel: "watch" | "account" | "ideas" | null };
 }) {
   const wide = useWide();
   const [panels, toggle] = usePanels();
-  const [over, setOver] = useState<"watch" | "account" | "ideas" | null>(null);
+  const [over, setOver] = useState<"watch" | "account" | "ideas" | null>(start.panel);
   const [state, setState] = useState(initial);
-  const [ticker, setTicker] = useState(initial.positions[0]?.underlying ?? watch[0] ?? "SPY");
+  const [ticker, setTicker] = useState(start.ticker ?? initial.positions[0]?.underlying ?? watch[0] ?? "SPY");
+  const [tf, setTf] = useState<Timeframe | null>(start.tf);
+
+  // The view in the URL (Ben, 2026-11-18: "store the ticker in the URL as well as any other relevant parameters"):
+  // ?t=NVDA&tf=4h&panel=positions, replaced in place as they change, so a reload or a shared link opens the same view.
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    q.set("t", ticker);
+    if (tf) q.set("tf", tf);
+    const panel = over === "watch" ? "watchlist" : over === "account" ? "positions" : over === "ideas" ? "ideas" : null;
+    if (panel) q.set("panel", panel);
+    else q.delete("panel");
+    const next = `${window.location.pathname}?${q}`;
+    if (next !== `${window.location.pathname}${window.location.search}`) window.history.replaceState(window.history.state, "", next);
+  }, [ticker, tf, over]);
   const [pick, setPick] = useState<Pick | null>(null);
   const [search, setSearch] = useState("");
   const [resetting, startReset] = useTransition();
@@ -392,7 +409,7 @@ export default function Desk({
             style={{ paddingLeft: leftEdge, paddingRight: rightEdge, paddingBottom: 56 }}
           >
             <div className="min-h-0 flex-1">
-              <HighStrikeChart ticker={ticker} userId={userId} fill onLive={onLive} />
+              <HighStrikeChart ticker={ticker} userId={userId} fill onLive={onLive} initialTimeframe={start.tf} onTimeframe={setTf} />
             </div>
           </div>
 
@@ -505,7 +522,7 @@ export default function Desk({
       <section className="rounded-xl border border-line bg-panel px-4 py-3">{accountBar}</section>
       <section className="rounded-xl border border-line bg-panel p-3">
         {symbolHead}
-        <HighStrikeChart ticker={ticker} userId={userId} height={320} onLive={onLive} />
+        <HighStrikeChart ticker={ticker} userId={userId} height={320} onLive={onLive} initialTimeframe={start.tf} onTimeframe={setTf} />
       </section>
       {ticket}
       <OptionChain ticker={ticker} picked={pick?.contract ?? null} onPick={setPick} />

@@ -13,7 +13,11 @@ import type { Candle } from "@/lib/chart/types";
 
 const FRESH_OPEN_MS = 20 * 60_000;
 
-export type CandleSet = { candles: Candle[]; source: "massive" | "none"; stale: boolean; fetchedAt: string | null };
+/** `busy`: the data plan's requests-a-minute ran out (the free plan has 5); the chart tries again shortly. */
+export type CandleSet = { candles: Candle[]; source: "massive" | "none"; stale: boolean; fetchedAt: string | null; busy?: boolean };
+
+/** Massive refused for its requests-a-minute limit: no point asking its other host, which shares the limit. */
+class RateLimited extends Error {}
 
 let keyMemo: { value: string; at: number } | null = null;
 
@@ -41,11 +45,13 @@ async function fromMassive(ticker: string, key: string): Promise<Candle[]> {
   for (const host of ["https://api.massive.com", "https://api.polygon.io"]) {
     try {
       const res = await fetch(`${host}${path}`, { headers: { Authorization: `Bearer ${key}` }, cache: "no-store", signal: AbortSignal.timeout(6000) });
+      if (res.status === 429) throw new RateLimited(`${host} 429`);
       if (!res.ok) throw new Error(`${host} ${res.status}`);
       const json = (await res.json()) as { results?: { t: number; o: number; h: number; l: number; c: number; v: number }[] };
       // Bars are stamped at midnight New York time, which is the previous day in UTC: +12h lands on the right date.
       return (json.results ?? []).map((r) => ({ t: day(r.t + 12 * 3_600_000), o: r.o, h: r.h, l: r.l, c: r.c, v: r.v ?? 0 }));
     } catch (e) {
+      if (e instanceof RateLimited) throw e;
       lastError = e;
     }
   }
@@ -94,13 +100,15 @@ export async function getCandles(raw: string): Promise<CandleSet> {
 
   let candles: Candle[] = [];
   let source: CandleSet["source"] = "none";
+  let busy = false;
   const key = await massiveKey();
   if (key) {
     try {
       candles = await fromMassive(ticker, key);
       source = "massive";
     } catch (e) {
-      console.error("candles: massive failed for", ticker, e instanceof Error ? e.message : e);
+      busy = e instanceof RateLimited;
+      if (!busy) console.error("candles: massive failed for", ticker, e instanceof Error ? e.message : e);
     }
   }
 
@@ -112,7 +120,7 @@ export async function getCandles(raw: string): Promise<CandleSet> {
   if (cached && (cached.candles as Candle[]).length > 0) {
     return { candles: await withToday(ticker, cached.candles as Candle[]), source: cached.source as CandleSet["source"], stale: true, fetchedAt: cached.fetched_at };
   }
-  return { candles: [], source: "none", stale: false, fetchedAt: null };
+  return { candles: [], source: "none", stale: false, fetchedAt: null, busy };
 }
 
 // ---- Intraday (Ben, 2026-11-18: "More timeframes. Down to 1m") -------------------------------------------------------
@@ -128,8 +136,8 @@ export const INTRADAY = {
   "5m": { mult: 5, span: "minute", days: 28, group: 1, pages: 1 },
   "15m": { mult: 15, span: "minute", days: 60, group: 1, pages: 1 },
   "30m": { mult: 30, span: "minute", days: 72, group: 1, pages: 1 },
-  "1h": { mult: 30, span: "minute", days: 150, group: 2, pages: 2 },
-  "4h": { mult: 30, span: "minute", days: 365, group: 8, pages: 5 },
+  "1h": { mult: 30, span: "minute", days: 75, group: 2, pages: 1 },
+  "4h": { mult: 30, span: "minute", days: 150, group: 8, pages: 2 },
 } as const;
 export type Intraday = keyof typeof INTRADAY;
 
@@ -155,6 +163,7 @@ async function intradayFromMassive(ticker: string, tf: Intraday, key: string): P
         const res: Response = await fetch(url, { headers: { Authorization: `Bearer ${key}` }, cache: "no-store", signal: AbortSignal.timeout(8000) });
         if (!res.ok) {
           if (page > 0) break; // keep what the first pages gave
+          if (res.status === 429) throw new RateLimited(`${host} 429`);
           throw new Error(`${host} ${res.status}`);
         }
         const json = (await res.json()) as { results?: { t: number; o: number; h: number; l: number; c: number; v: number }[]; next_url?: string };
@@ -169,6 +178,7 @@ async function intradayFromMassive(ticker: string, tf: Intraday, key: string): P
       bars.sort((a, b) => (a.t < b.t ? -1 : a.t > b.t ? 1 : 0));
       return spec.group > 1 ? groupBars(bars, spec.group) : bars;
     } catch (e) {
+      if (e instanceof RateLimited) throw e;
       lastError = e;
     }
   }
@@ -217,11 +227,13 @@ export async function getIntraday(raw: string, tf: Intraday): Promise<CandleSet>
   }
   const key = await massiveKey();
   let candles: Candle[] = [];
+  let busy = false;
   if (key) {
     try {
       candles = await intradayFromMassive(ticker, tf, key);
     } catch (e) {
-      console.error("candles: massive intraday failed for", ticker, tf, e instanceof Error ? e.message : e);
+      busy = e instanceof RateLimited;
+      if (!busy) console.error("candles: massive intraday failed for", ticker, tf, e instanceof Error ? e.message : e);
     }
   }
   if (candles.length > 0) {
@@ -230,5 +242,5 @@ export async function getIntraday(raw: string, tf: Intraday): Promise<CandleSet>
     return { candles, source: "massive", stale: false, fetchedAt };
   }
   if (cached && (cached.body as Candle[]).length > 0) return { candles: cached.body as Candle[], source: "massive", stale: true, fetchedAt: cached.fetched_at };
-  return { candles: [], source: "none", stale: false, fetchedAt: null };
+  return { candles: [], source: "none", stale: false, fetchedAt: null, busy };
 }

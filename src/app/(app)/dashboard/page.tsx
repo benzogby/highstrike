@@ -7,6 +7,7 @@ import { memberWatchlists, STARTERS } from "@/lib/watchlists";
 import { paperState } from "@/lib/paper";
 import { profileOf, riskBudget } from "@/lib/tradingProfile";
 import Desk from "./desk/Desk";
+import { TIMEFRAMES, type Timeframe } from "@/lib/chart/timeframes";
 import { billingReady, billingState, healMembership, publishableKey, weekUsedFor } from "@/lib/billing";
 import { memberContext } from "@/lib/membership";
 
@@ -15,8 +16,11 @@ export const metadata: Metadata = {
 };
 
 
-export default async function DashboardPage() {
+type Query = { t?: string; tf?: string; panel?: string };
+
+export default async function DashboardPage({ searchParams }: { searchParams: Promise<Query> }) {
   const { supabase, user, profile, member } = await memberContext("/dashboard");
+  const q = await searchParams;
 
   // Not a member: the paywall, over a shell with nothing in it, and nothing read for it. A first payment that went
   // through without its browser coming back to /welcome turns access on here first. The paywall offers the $14 week,
@@ -57,5 +61,13 @@ export default async function DashboardPage() {
   const lesson = next ? { href: lessonHref(next.id), title: next.title, label: nextModule ? moduleLabel(nextModule.title).eyebrow : "Trading School", done, total: course.lessons.length } : null;
   const p = profileOf(profile);
 
-  return <Desk userId={user.id} initial={paper} watch={watch} ideas={ideas} lesson={lesson} budget={p ? riskBudget(p) : null} />;
+  // The view the URL asks for: ?t=NVDA&tf=4h&panel=watchlist|positions|ideas.
+  const t = (q.t ?? "").trim().toUpperCase().replace(/^\$/, "");
+  const start = {
+    ticker: /^[A-Z][A-Z0-9.]{0,7}$/.test(t) ? t : null,
+    tf: (TIMEFRAMES as readonly string[]).includes(q.tf ?? "") ? (q.tf as Timeframe) : null,
+    panel: q.panel === "watchlist" ? ("watch" as const) : q.panel === "positions" ? ("account" as const) : q.panel === "ideas" ? ("ideas" as const) : null,
+  };
+
+  return <Desk userId={user.id} initial={paper} watch={watch} ideas={ideas} lesson={lesson} budget={p ? riskBudget(p) : null} start={start} />;
 }

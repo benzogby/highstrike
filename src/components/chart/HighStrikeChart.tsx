@@ -6,6 +6,8 @@ import type { Anchor, Candle, Drawing, DrawingKind, HouseLevels } from "@/lib/ch
 import { FIB_LEVELS, niceTicks, priceLabel, rsi, sma, timeScale, toWeekly, volumeLabel } from "@/lib/chart/math";
 import { planNumbers } from "@/lib/chart/plan";
 import { withLive, type Tick } from "@/lib/chart/live";
+import { TIMEFRAMES, type Timeframe } from "@/lib/chart/timeframes";
+export type { Timeframe };
 
 // HighStrike Chart (Ben, 2026-11-17: "Our own custom charts, with our UI, and deep markup ability"): 1m to weekly
 // candles from /api/candles, the 9/21/50/200 moving averages, volume and RSI, and markup the member draws on it: levels,
@@ -41,8 +43,6 @@ const HIT = 7;
 
 // Timeframes (Ben, 2026-11-18: "More timeframes. Down to 1m"): intraday bars from /api/candles?tf=…, regular hours;
 // daily from /api/candles, weekly rolled from daily here.
-const TIMEFRAMES = ["1m", "5m", "15m", "30m", "1h", "4h", "D", "W"] as const;
-type Timeframe = (typeof TIMEFRAMES)[number];
 const MINUTES: Partial<Record<Timeframe, number>> = { "1m": 1, "5m": 5, "15m": 15, "30m": 30, "1h": 60, "4h": 240 };
 type Settings = { tf: Timeframe; mas: number[]; volume: boolean; rsi: boolean };
 const DEFAULT_SETTINGS: Settings = { tf: "D", mas: [21, 50, 200], volume: true, rsi: true };
@@ -74,11 +74,15 @@ type Props = {
   fill?: boolean;
   /** Each live price as it arrives (the desk's price bar follows it). */
   onLive?: (tick: { price: number; open: number | null; high: number | null; low: number | null; prevClose: number | null }) => void;
+  /** A timeframe to open on (the desk's URL), over the one remembered in this browser. */
+  initialTimeframe?: Timeframe | null;
+  /** Each timeframe change (the desk keeps it in its URL). */
+  onTimeframe?: (tf: Timeframe) => void;
 };
 
-export default function HighStrikeChart({ ticker, userId, levels, height, fill = false, onLive }: Props) {
-  const [data, setData] = useState<{ candles: Candle[]; source: string; stale: boolean } | null>(null);
-  const [failed, setFailed] = useState(false);
+export default function HighStrikeChart({ ticker, userId, levels, height, fill = false, onLive, initialTimeframe, onTimeframe }: Props) {
+  // Daily candles, kept with their ticker so another ticker's never show (or a failure sticks) while a new one loads.
+  const [daily, setDaily] = useState<{ ticker: string; candles: Candle[] | null; source?: string; stale?: boolean; waiting?: boolean; failed?: boolean } | null>(null);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [width, setWidth] = useState(0);
   // With `fill`: the height of the plot area, measured.
@@ -115,14 +119,21 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
   useEffect(() => {
     try {
       const raw = localStorage.getItem(SETTINGS_KEY);
-      if (raw) {
-        const saved = JSON.parse(raw) as Partial<Settings> & { weekly?: boolean };
-        const tf = saved.tf && TIMEFRAMES.includes(saved.tf) ? saved.tf : saved.weekly ? "W" : "D";
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- reading the browser's saved settings once, on mount
-        setSettings({ ...DEFAULT_SETTINGS, ...saved, tf });
-      }
+      const saved = raw ? (JSON.parse(raw) as Partial<Settings> & { weekly?: boolean }) : {};
+      const remembered = saved.tf && TIMEFRAMES.includes(saved.tf) ? saved.tf : saved.weekly ? "W" : "D";
+      const tf = initialTimeframe && TIMEFRAMES.includes(initialTimeframe) ? initialTimeframe : remembered;
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reading the browser's saved settings once, on mount
+      setSettings({ ...DEFAULT_SETTINGS, ...saved, tf });
     } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on mount
   }, []);
+  const onTimeframeRef = useRef(onTimeframe);
+  useEffect(() => {
+    onTimeframeRef.current = onTimeframe;
+  }, [onTimeframe]);
+  useEffect(() => {
+    onTimeframeRef.current?.(settings.tf);
+  }, [settings.tf]);
   const changeSettings = (s: Partial<Settings>) => {
     setSettings((prev) => {
       const next = { ...prev, ...s };
@@ -134,31 +145,73 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
     if (s.tf !== undefined) setView(null);
   };
 
-  // Candles.
+  // Candles. The free data plan allows 5 requests a minute: when it's used up (`busy`) or the answer doesn't come, ask
+  // again every 15 seconds for a few minutes, saying so, rather than giving up.
   useEffect(() => {
     let alive = true;
-    fetch(`/api/candles?symbol=${encodeURIComponent(ticker)}`)
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-      .then((d) => alive && setData({ candles: d.candles ?? [], source: d.source, stale: d.stale }))
-      .catch(() => alive && setFailed(true));
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let tries = 0;
+    const load = () =>
+      fetch(`/api/candles?symbol=${encodeURIComponent(ticker)}`)
+        .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+        .then((d: { candles?: Candle[]; source?: string; stale?: boolean; busy?: boolean }) => {
+          if (!alive) return;
+          if (!d.candles?.length && d.busy && tries++ < 16) {
+            setDaily({ ticker, candles: null, waiting: true });
+            timer = setTimeout(load, 15_000);
+            return;
+          }
+          setDaily({ ticker, candles: d.candles ?? [], source: d.source, stale: d.stale });
+        })
+        .catch(() => {
+          if (!alive) return;
+          if (tries++ < 4) {
+            setDaily({ ticker, candles: null, waiting: true });
+            timer = setTimeout(load, 15_000);
+          } else setDaily({ ticker, candles: null, failed: true });
+        });
+    load();
     return () => {
       alive = false;
+      clearTimeout(timer);
     };
   }, [ticker]);
+  const dailyNow = daily?.ticker === ticker ? daily : null;
+  const data = useMemo(() => (dailyNow?.candles ? { candles: dailyNow.candles, source: dailyNow.source ?? "", stale: Boolean(dailyNow.stale) } : null), [dailyNow]);
+  const failed = Boolean(dailyNow?.failed);
 
-  // Intraday bars for the chosen timeframe, kept per ticker and timeframe.
-  const [intra, setIntra] = useState<{ key: string; candles: Candle[] | null; failed: boolean } | null>(null);
+  // Intraday bars for the chosen timeframe, kept per ticker and timeframe, retried the same way.
+  const [intra, setIntra] = useState<{ key: string; candles: Candle[] | null; failed: boolean; waiting?: boolean } | null>(null);
   const intraKey = MINUTES[settings.tf] ? `${ticker}:${settings.tf}` : null;
   useEffect(() => {
     if (!intraKey) return;
     let alive = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let tries = 0;
     const [sym, tf] = intraKey.split(":");
-    fetch(`/api/candles?symbol=${encodeURIComponent(sym)}&tf=${tf}`)
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-      .then((d) => alive && setIntra({ key: intraKey, candles: d.candles ?? [], failed: false }))
-      .catch(() => alive && setIntra({ key: intraKey, candles: null, failed: true }));
+    const load = () =>
+      fetch(`/api/candles?symbol=${encodeURIComponent(sym)}&tf=${tf}`)
+        .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+        .then((d: { candles?: Candle[]; busy?: boolean }) => {
+          if (!alive) return;
+          if (!d.candles?.length && d.busy && tries++ < 16) {
+            setIntra({ key: intraKey, candles: null, failed: false, waiting: true });
+            timer = setTimeout(load, 15_000);
+            return;
+          }
+          setIntra({ key: intraKey, candles: d.candles ?? [], failed: false });
+        })
+        .catch(() => {
+          if (!alive) return;
+          if (tries++ < 4) {
+            setIntra({ key: intraKey, candles: null, failed: false, waiting: true });
+            timer = setTimeout(load, 15_000);
+          } else setIntra({ key: intraKey, candles: null, failed: true });
+        });
+    load();
     return () => {
       alive = false;
+      clearTimeout(timer);
     };
   }, [intraKey]);
 
@@ -273,7 +326,8 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
   }, [minutes, intraNow, data, weekly, liveTicks]);
   const ts = useMemo(() => timeScale(bars, minutes ?? weekly), [bars, minutes, weekly]);
   // Loaded, failed: for the timeframe on screen.
-  const loaded = minutes ? Boolean(intraNow && !intraNow.failed) : Boolean(data);
+  const loaded = minutes ? Boolean(intraNow?.candles) : Boolean(data);
+  const waiting = minutes ? Boolean(intraNow?.waiting) : Boolean(dailyNow?.waiting);
   const failedNow = minutes ? Boolean(intraNow?.failed) : failed;
   const maLines = useMemo(() => MAS.filter((m) => settings.mas.includes(m.n)).map((m) => ({ ...m, values: sma(bars, m.n) })), [bars, settings.mas]);
   const rsiValues = useMemo(() => (settings.rsi ? rsi(bars) : []), [bars, settings.rsi]);
@@ -801,7 +855,15 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
         </div>
 
         <div ref={areaRef} className={`relative min-w-0 flex-1 ${fill ? "min-h-0" : ""}`}>
-          {!loaded && !failedNow && <div className="animate-pulse rounded-lg bg-panel-2" style={{ height: priceH + TIME_H }} />}
+          {!loaded && !failedNow && (
+            <div className="grid animate-pulse place-items-center rounded-lg bg-panel-2" style={{ height: priceH + TIME_H }}>
+              {waiting && (
+                <p className="max-w-xs px-4 text-center text-xs text-ink-2">
+                  Getting {ticker}&apos;s prices. The data plan allows a few requests a minute, so this can take up to a minute.
+                </p>
+              )}
+            </div>
+          )}
           {(failedNow || (loaded && bars.length === 0)) && (
             <div className="grid place-items-center rounded-lg border border-dashed border-line-strong text-center" style={{ height: priceH + TIME_H }}>
               <div className="max-w-xs px-4">
