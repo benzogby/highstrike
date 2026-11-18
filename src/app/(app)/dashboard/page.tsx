@@ -14,6 +14,7 @@ import WatchlistPanel, { WatchlistPanelBones } from "./WatchlistPanel";
 import ActivityFeed from "./ActivityFeed";
 import FirstRunTour from "./FirstRunTour";
 import { Badge, PageHeader } from "@/components/ui";
+import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "Dashboard — HighStrike",
@@ -33,6 +34,10 @@ export default async function DashboardPage() {
       state?.kind === "owed" ? "owed" : (state?.kind === "none" && state.ended) || (await weekUsedFor(user)) ? "full" : "new";
     return <MemberGate email={user.email ?? ""} gate={gate} publishableKey={publishableKey()} library={library} />;
   }
+
+  // A new member answers the three first questions and gets their first idea, sized, before anything else (Skip there
+  // marks them seen). docs/plans/offer-overhaul.md item 3.
+  if (!profile?.onboarded_at) redirect("/start");
 
   const firstName = profile?.name || (user.email ?? "trader").split("@")[0];
 

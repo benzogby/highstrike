@@ -13,6 +13,7 @@ import PositionSizer from "./PositionSizer";
 import QuickAnswers from "./QuickAnswers";
 import SuggestedOption from "./SuggestedOption";
 import TakeIdea from "./TakeIdea";
+import { profileOf } from "@/lib/tradingProfile";
 
 export const metadata: Metadata = { title: "Idea — HighStrike" };
 
@@ -26,7 +27,8 @@ const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigi
  */
 export default async function IdeaPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { supabase, user } = await requireMember(`/ideas/${id}`);
+  const { supabase, user, profile } = await requireMember(`/ideas/${id}`);
+  const mine = profileOf(profile);
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const { data } = await supabase.from("setups").select(IDEA_COLUMNS).eq("id", id).maybeSingle();
   if (!data) notFound();
@@ -149,7 +151,7 @@ export default async function IdeaPage({ params }: { params: Promise<{ id: strin
         </div>
         <div className="flex min-w-0 flex-col gap-6">
           <QuickAnswers items={quickAnswers(idea, signals)} />
-          <PositionSizer entry={live ? live.price : idea.entry_price} side={idea.direction} optionPrice={option?.premium ?? null} />
+          <PositionSizer entry={live ? live.price : idea.entry_price} side={idea.direction} optionPrice={option?.premium ?? null} account={mine?.account} riskPct={mine?.riskPct} stopPrice={idea.stop_price != null ? Number(idea.stop_price) : null} />
         </div>
       </div>
 

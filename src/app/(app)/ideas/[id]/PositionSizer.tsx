@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { CARD, HINT, INPUT, LABEL } from "@/components/ui";
 
@@ -15,10 +16,26 @@ const num = (s: string) => {
  * since a bought option can lose its whole premium. The option's price starts at the idea's option's estimate, when it
  * has one. Kept in this browser only; nothing is saved.
  */
-export default function PositionSizer({ entry, side, optionPrice = null }: { entry: number | null; side: "long" | "short"; optionPrice?: number | null }) {
-  const defaultStop = entry ? +(side === "long" ? entry * 0.92 : entry * 1.08).toFixed(2) : 0;
-  const [account, setAccount] = useState("10000");
-  const [risk, setRisk] = useState("1");
+export default function PositionSizer({
+  entry,
+  side,
+  optionPrice = null,
+  account: savedAccount,
+  riskPct: savedRisk,
+  stopPrice = null,
+}: {
+  entry: number | null;
+  side: "long" | "short";
+  optionPrice?: number | null;
+  /** The member's own answers (src/lib/tradingProfile.ts), when they gave them. */
+  account?: number;
+  riskPct?: number;
+  /** The idea's own stop, when it has one. */
+  stopPrice?: number | null;
+}) {
+  const defaultStop = stopPrice ?? (entry ? +(side === "long" ? entry * 0.92 : entry * 1.08).toFixed(2) : 0);
+  const [account, setAccount] = useState(String(savedAccount ?? 10000));
+  const [risk, setRisk] = useState(String(savedRisk ?? 1));
   const [price, setPrice] = useState(entry ? String(entry) : "");
   const [stop, setStop] = useState(defaultStop ? String(defaultStop) : "");
   const [premium, setPremium] = useState(optionPrice ? optionPrice.toFixed(2) : "");
@@ -47,12 +64,17 @@ export default function PositionSizer({ entry, side, optionPrice = null }: { ent
       <h2 id="size-title" className="text-[15px] font-medium text-ink">
         Position size
       </h2>
-      <p className={`${HINT} mt-0.5`}>How much to put on so a loss costs only what you choose.</p>
+      <p className={`${HINT} mt-0.5`}>
+        How much to put on so a loss costs only what you choose.{" "}
+        <Link href="/start" className="text-ink-2 hover:text-ink">
+          {savedAccount ? "Your answers" : "Save your account and risk"}
+        </Link>
+      </p>
       <div className="mt-4 grid grid-cols-2 gap-3">
         {field("Account size ($)", account, setAccount)}
         {field("Risk per trade (%)", risk, setRisk, "1% is a common rule")}
         {field("Entry price ($)", price, setPrice)}
-        {field("Stop price ($)", stop, setStop, "Defaults to 8% against you")}
+        {field("Stop price ($)", stop, setStop, stopPrice != null ? "The idea's stop" : "Defaults to 8% against you")}
       </div>
       <div className="mt-4 rounded-lg bg-bg/60 p-3 text-sm">
         <p className="flex justify-between text-ink-2">

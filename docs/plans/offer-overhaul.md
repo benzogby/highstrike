@@ -26,7 +26,7 @@ house ideas 37.9% wins / avg +6.2% / avg −6.9% over 214 closed (loses on balan
    and each idea page. Data: Polygon/Massive daily aggregates cached in Supabase (needs Ben's key); until then the
    chart runs on our own closes.
 2. **Hide Track record** for members (tab, links, homepage/popup mentions); admins keep it.
-3. **Onboarding to a first sized idea** — 3 questions saved to the profile; every idea, plan and size uses them.
+3. **Onboarding to a first sized idea** (LIVE 2026-11-18) — 3 questions saved to the profile (/start → /start/idea); every idea, plan and size uses them.
 4. **Trade Planner + A–F grade** — ticker → chart → direction/option → contracts for their account and stop → grade
    (trend, reward:risk, IV level, earnings risk, liquidity, size vs account) with reasons → save plan + alerts.
 5. **Real option chains + IV** (Polygon Options Starter): real prices replace "est.", IV rank, expected move, P&L

@@ -51,7 +51,7 @@ export const viewer = cache(async () => {
     user_metadata: claims.user_metadata ?? {},
     app_metadata: claims.app_metadata ?? {},
   };
-  const columns = "plan, plan_until, is_admin, name, bio, avatar_url, tour_done";
+  const columns = "plan, plan_until, is_admin, name, bio, avatar_url, tour_done, account_size, risk_pct, trade_style, onboarded_at";
   let { data: profile } = await supabase.from("profiles").select(columns).eq("id", user.id).maybeSingle();
   if (stale(profile)) {
     const { recheckMember } = await import("@/lib/billing");
