@@ -73,9 +73,19 @@ export default async function IdeaPage({ params }: { params: Promise<{ id: strin
 
   return (
     <div className="flex flex-col gap-6">
-      <Link href="/ideas" className="text-[13px] text-ink-3 hover:text-ink">
-        ← Ideas
-      </Link>
+      <div className="flex items-center justify-between gap-3">
+        <Link href="/ideas" className="text-[13px] text-ink-3 hover:text-ink">
+          ← Ideas
+        </Link>
+        {idea.status === "open" && idea.entry_price != null && idea.target_price != null && (
+          <Link
+            href={`/plan?${new URLSearchParams({ t: idea.ticker, side: idea.direction, style: idea.style, e: String(live?.price ?? idea.entry_price), s: String(idea.stop_price ?? +(idea.entry_price * (idea.direction === "long" ? 0.92 : 1.08)).toFixed(2)), tg: String(idea.target_price) })}`}
+            className="text-[13px] font-medium text-accent hover:underline"
+          >
+            Grade it in the Planner →
+          </Link>
+        )}
+      </div>
 
       <header className="anim-rise">
         <div className="flex flex-wrap items-center gap-2">

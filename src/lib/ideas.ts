@@ -11,6 +11,7 @@ export const SOURCES = {
   builder: "Idea builder",
   member: "Members",
   pro: "Pro traders",
+  planner: "Your plans",
 } as const;
 export type Source = keyof typeof SOURCES;
 

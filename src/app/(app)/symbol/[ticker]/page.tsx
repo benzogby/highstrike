@@ -93,6 +93,11 @@ export default async function SymbolPage({
       {/* Chart */}
       <div className={`anim-rise mt-6 ${CARD} p-3 sm:p-4`} style={{ "--rise-delay": "90ms" } as React.CSSProperties}>
         <HighStrikeChart ticker={ticker} userId={user.id} />
+        <div className="mt-3 flex justify-end">
+          <Link href={`/plan?t=${encodeURIComponent(ticker)}`} className="rounded-lg bg-accent px-3.5 py-2 text-[13px] font-medium text-on-accent transition hover:bg-accent-2">
+            Plan a trade and grade it
+          </Link>
+        </div>
       </div>
 
       <AlertPanel

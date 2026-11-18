@@ -11,7 +11,7 @@ const money = (n: number) => `$${n.toFixed(2)}`;
 
 export type OwnIdea = {
   ownerId: string;
-  source: Extract<Source, "pasted" | "builder" | "watchlist">;
+  source: Extract<Source, "pasted" | "builder" | "watchlist" | "planner">;
   ticker: string;
   direction: "long" | "short";
   style: Style;
@@ -32,7 +32,7 @@ export async function saveOwnIdea(i: OwnIdea): Promise<{ id: string } | { error:
   const db = supabaseService();
   const since = new Date(Date.now() - 86_400_000).toISOString();
   // The limit is on what members save themselves; the morning's watchlist ideas don't count against it.
-  const { count } = i.source === "watchlist" ? { count: 0 } : await db.from("setups").select("id", { count: "exact", head: true }).eq("owner_id", i.ownerId).in("source", ["pasted", "builder"]).gte("created_at", since);
+  const { count } = i.source === "watchlist" ? { count: 0 } : await db.from("setups").select("id", { count: "exact", head: true }).eq("owner_id", i.ownerId).in("source", ["pasted", "builder", "planner"]).gte("created_at", since);
   if ((count ?? 0) >= OWN_PER_DAY) return { error: `That's ${OWN_PER_DAY} of your own ideas in a day. Save more tomorrow.` };
   const long = i.direction === "long";
   if (long ? i.target <= i.entry : i.target >= i.entry) return { error: `For a ${i.direction}, the target should be ${long ? "above" : "below"} the entry.` };
