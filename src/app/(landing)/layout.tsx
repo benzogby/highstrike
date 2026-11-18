@@ -55,7 +55,7 @@ export default function LandingLayout({ children }: Readonly<{ children: React.R
           <Link href="/" className="hs-brand" aria-label="HighStrike, home">
             <Bull />
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img className="hs-brand__word" src="/brand/wordmark.png" alt="" width={85} height={17} />
+            <img className="hs-brand__word" src="/api/site/asset/wordmark" alt="" width={85} height={17} />
           </Link>
           <nav className="hs-bar__links" aria-label="Main">
             <a href="#find">Find</a>
@@ -80,7 +80,7 @@ export default function LandingLayout({ children }: Readonly<{ children: React.R
               <Link href="/" className="hs-brand" aria-label="HighStrike, home">
                 <Bull />
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img className="hs-brand__word" src="/brand/wordmark.png" alt="" width={85} height={17} />
+                <img className="hs-brand__word" src="/api/site/asset/wordmark" alt="" width={85} height={17} />
               </Link>
               <p>
                 The options trading platform: ideas from the smart scanner, 12 pro tools and Trading School, since 2018. {TRIAL_PRICE} for your first week, then {MONTHLY_PRICE}/month.

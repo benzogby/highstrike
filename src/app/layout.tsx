@@ -33,13 +33,15 @@ export const metadata: Metadata = {
   title: TITLE,
   description: DESCRIPTION,
   metadataBase: new URL("https://www.highstrike.com"),
-  icons: { icon: "/api/site/favicon", apple: "/app-icons/apple-icon.png" },
+  // Set in Admin → Site → Images (src/lib/siteImages.ts); each address redirects to the current image.
+  icons: { icon: "/api/site/asset/favicon", apple: "/api/site/asset/app_icon" },
   // Added to the home screen, HighStrike opens full screen like an app (src/app/manifest.ts).
   appleWebApp: { capable: true, title: "HighStrike", statusBarStyle: "black" },
   openGraph: {
     title: TITLE,
     description: DESCRIPTION,
     type: "website",
+    images: ["/api/site/asset/og_image"],
   },
 };
 

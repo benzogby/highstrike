@@ -3,12 +3,14 @@ import { useEffect, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { SITE_DEFAULTS, invalidateSiteContent } from "@/lib/siteContent";
 import { SUPABASE_URL } from "@/lib/supabaseConfig";
+import ImagesSection from "./ImagesSection";
 
 // Admin ▸ Site: everything that shapes the public site in one place — the hero
 // badges, the scoreboard numbers, and the legal disclaimer. Same hub-of-
 // sections pattern as zogby.io's Site tab, with pill sub-navigation.
 
 const SECTIONS = [
+  { key: "images", label: "Images" },
   { key: "hero", label: "Hero" },
   { key: "proof", label: "Proof" },
   { key: "quotes", label: "Quotes" },
@@ -45,7 +47,7 @@ async function loadRaw(keys: string[]): Promise<Record<string, string>> {
 }
 
 export default function SiteTab() {
-  const [section, setSection] = useState<SectionKey>("hero");
+  const [section, setSection] = useState<SectionKey>("images");
   return (
     <div>
       <div className="mb-6 flex flex-wrap gap-2">
@@ -64,7 +66,7 @@ export default function SiteTab() {
           </button>
         ))}
       </div>
-      {section === "hero" ? <HeroSection /> : section === "proof" ? <ProofSection /> : section === "quotes" ? <QuotesSection /> : section === "scoreboard" ? <ScoreboardSection /> : <LegalSection />}
+      {section === "images" ? <ImagesSection /> : section === "hero" ? <HeroSection /> : section === "proof" ? <ProofSection /> : section === "quotes" ? <QuotesSection /> : section === "scoreboard" ? <ScoreboardSection /> : <LegalSection />}
     </div>
   );
 }

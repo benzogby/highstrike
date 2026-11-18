@@ -14,9 +14,10 @@ export default function manifest(): MetadataRoute.Manifest {
     background_color: "#0a0f12",
     theme_color: "#0a0f12",
     icons: [
+      // The app icon from Admin → Site → Images (512×512 PNG), or the built-in bull.
+      { src: "/api/site/asset/app_icon", sizes: "512x512", type: "image/png" },
+      { src: "/api/site/asset/app_icon", sizes: "512x512", type: "image/png", purpose: "maskable" },
       { src: "/app-icons/icon-192.png", sizes: "192x192", type: "image/png" },
-      { src: "/app-icons/icon-512.png", sizes: "512x512", type: "image/png" },
-      { src: "/app-icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
   };
 }

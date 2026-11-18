@@ -2,39 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase/client";
-import { invalidateBrandCache } from "@/components/BrandMark";
 import { SUPABASE_URL } from "@/lib/supabaseConfig";
 
 const BUCKET = "site-assets";
-
-type Slot = {
-  key: string;
-  title: string;
-  hint: string;
-};
-
-const SLOTS: Slot[] = [
-  {
-    key: "logo",
-    title: "Logo — light theme",
-    hint: "Shown in the header and app sidebar on light backgrounds. SVG or PNG with transparency, ~4:1 wide.",
-  },
-  {
-    key: "logo_dark",
-    title: "Logo — dark theme",
-    hint: "Optional. Used on dark backgrounds; falls back to the light logo if unset.",
-  },
-  {
-    key: "og_image",
-    title: "Social share image",
-    hint: "Used when links are shared (Open Graph). 1200×630 recommended.",
-  },
-  {
-    key: "favicon",
-    title: "Favicon",
-    hint: "Browser-tab icon. Square SVG, PNG, or ICO — 64×64 or larger. Updates within ~5 minutes for repeat visitors.",
-  },
-];
 
 type LibraryItem = { name: string; url: string; createdAt: string };
 
@@ -47,7 +17,6 @@ function cleanName(name: string) {
 }
 
 export default function ContentManager() {
-  const [settings, setSettings] = useState<Record<string, string>>({});
   const [library, setLibrary] = useState<LibraryItem[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -56,16 +25,10 @@ export default function ContentManager() {
 
   const load = useCallback(async () => {
     const supabase = supabaseBrowser();
-    const [{ data: rows }, { data: files }] = await Promise.all([
-      supabase.from("site_settings").select("key, value"),
-      supabase.storage.from(BUCKET).list("library", {
+    const { data: files } = await supabase.storage.from(BUCKET).list("library", {
         limit: 100,
         sortBy: { column: "created_at", order: "desc" },
-      }),
-    ]);
-    setSettings(
-      Object.fromEntries((rows ?? []).filter((r) => r.value).map((r) => [r.key, r.value]))
-    );
+      });
     setLibrary(
       (files ?? [])
         .filter((f) => f.name !== ".emptyFolderPlaceholder")
@@ -80,49 +43,6 @@ export default function ContentManager() {
   useEffect(() => {
     load();
   }, [load]);
-
-  async function uploadToSlot(slot: Slot, file: File) {
-    setBusy(slot.key);
-    setError("");
-    try {
-      const supabase = supabaseBrowser();
-      const path = `${slot.key}/${Date.now()}-${cleanName(file.name)}`;
-      const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, file, {
-        cacheControl: "3600",
-        upsert: false,
-      });
-      if (upErr) throw upErr;
-      const { error: setErr } = await supabase
-        .from("site_settings")
-        .upsert({ key: slot.key, value: publicUrl(path), updated_at: new Date().toISOString() });
-      if (setErr) throw setErr;
-      invalidateBrandCache();
-      await load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Upload failed");
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  async function clearSlot(slot: Slot) {
-    setBusy(slot.key);
-    setError("");
-    try {
-      const supabase = supabaseBrowser();
-      const { error: delErr } = await supabase
-        .from("site_settings")
-        .delete()
-        .eq("key", slot.key);
-      if (delErr) throw delErr;
-      invalidateBrandCache();
-      await load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't clear");
-    } finally {
-      setBusy(null);
-    }
-  }
 
   async function uploadToLibrary(file: File) {
     setBusy("library");
@@ -177,62 +97,12 @@ export default function ContentManager() {
         </p>
       )}
 
-      {/* Brand slots */}
-      <h2 className="font-display text-[15px] text-ink">
-        Brand assets
-      </h2>
-      <div className="mt-3 grid gap-4 lg:grid-cols-3">
-        {SLOTS.map((slot) => {
-          const current = settings[slot.key];
-          return (
-            <div key={slot.key} className="flex flex-col rounded-xl border border-line bg-panel p-5">
-              <h3 className="font-display text-sm font-semibold">{slot.title}</h3>
-              <p className="mt-1 flex-1 text-xs leading-relaxed text-ink-2">{slot.hint}</p>
-              <div
-                className={`mt-4 flex h-24 items-center justify-center rounded-xl border border-dashed border-line-strong ${
-                  slot.key === "logo_dark" ? "bg-[#0a0b0d]" : "bg-panel-2"
-                }`}
-              >
-                {current ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={current} alt={slot.title} className="max-h-16 max-w-[85%] object-contain" />
-                ) : (
-                  <span className="text-xs text-ink-3">Nothing uploaded</span>
-                )}
-              </div>
-              <div className="mt-4 flex gap-2">
-                <label className="flex-1 cursor-pointer rounded-lg bg-accent py-2 text-center text-xs font-medium text-on-accent transition hover:bg-accent-2">
-                  {busy === slot.key ? "Working…" : current ? "Replace" : "Upload"}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    disabled={busy !== null}
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) uploadToSlot(slot, f);
-                      e.target.value = "";
-                    }}
-                  />
-                </label>
-                {current && (
-                  <button
-                    type="button"
-                    disabled={busy !== null}
-                    onClick={() => clearSlot(slot)}
-                    className="rounded-lg border border-line-strong px-3 py-2 text-xs font-medium text-ink-2 transition hover:border-down/50 hover:text-down"
-                  >
-                    Remove
-                  </button>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      <p className="mb-6 rounded-lg border border-line bg-panel px-4 py-3 text-sm text-ink-2">
+        The favicon, logo, app icon and share image are in <a href="/admin/site" className="font-medium text-accent hover:text-accent-2">Site → Images</a> now.
+      </p>
 
       {/* Photo library */}
-      <div className="mt-10 flex items-center justify-between">
+      <div className="flex items-center justify-between">
         <h2 className="font-display text-[15px] text-ink">
           Photo library
         </h2>

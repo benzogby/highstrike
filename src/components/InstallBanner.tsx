@@ -53,7 +53,7 @@ export default function InstallBanner() {
   if (!show) return null;
   return (
     <div role="region" aria-label="Add HighStrike to your home screen" className="anim-rise mb-5 flex items-start gap-3 rounded-xl border border-line-strong bg-panel-2 px-4 py-3 lg:hidden">
-      <img src="/app-icons/icon-192.png" alt="" width={36} height={36} className="mt-0.5 size-9 flex-none rounded-lg" />
+      <img src="/api/site/asset/app_icon" alt="" width={36} height={36} className="mt-0.5 size-9 flex-none rounded-lg" />
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-ink">Add HighStrike to your home screen</p>
         <p className="mt-0.5 text-[13px] leading-snug text-ink-2">

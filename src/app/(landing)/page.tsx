@@ -31,7 +31,8 @@ const DESCRIPTION =
 export const metadata: Metadata = {
   title: TITLE,
   description: DESCRIPTION,
-  openGraph: { title: TITLE, description: DESCRIPTION, type: "website" },
+  openGraph: { title: TITLE, description: DESCRIPTION, type: "website", images: ["/api/site/asset/og_image"] },
+  twitter: { card: "summary_large_image", images: ["/api/site/asset/og_image"] },
 };
 
 function faqsFor(library: Library | null, names: number) {
@@ -1041,7 +1042,7 @@ export default async function Home() {
             <span className="hs-end__pool" aria-hidden="true" />
             <Bull className="hs-bull--xl" />
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img className="hs-end__word" src="/brand/wordmark.png" alt="HighStrike" width={169} height={34} />
+            <img className="hs-end__word" src="/api/site/asset/wordmark" alt="HighStrike" width={169} height={34} />
             <h2 id="hs-close-title" className="hs-display hs-h2" data-reveal="">
               Your next options trade deserves a plan.
             </h2>
