@@ -150,15 +150,20 @@ export default function Desk({
       alive = false;
     };
   }, [ticker]);
+  // The chart's live price (every few seconds while the market's open), which the price summary follows.
+  const [live, setLive] = useState<{ ticker: string; price: number; open: number | null; high: number | null; low: number | null; prevClose: number | null } | null>(null);
+  const onLive = useCallback((t: { price: number; open: number | null; high: number | null; low: number | null; prevClose: number | null }) => setLive({ ticker, ...t }), [ticker]);
+  const liveNow = live?.ticker === ticker ? live : null;
   const bars = daily?.ticker === ticker ? daily.candles : [];
   const lastBar = bars.at(-1) ?? null;
   const prevBar = bars.at(-2) ?? null;
   const yearBars = bars.slice(-252);
   const hi52 = yearBars.length ? Math.max(...yearBars.map((b) => b.h)) : null;
   const lo52 = yearBars.length ? Math.min(...yearBars.map((b) => b.l)) : null;
-  const lastPrice = q?.price ?? lastBar?.c ?? null;
-  const change = lastPrice != null && prevBar ? lastPrice - prevBar.c : null;
-  const changePct = q?.changePct ?? (change != null && prevBar ? (change / prevBar.c) * 100 : null);
+  const lastPrice = liveNow?.price ?? q?.price ?? lastBar?.c ?? null;
+  const prevClose = liveNow?.prevClose ?? prevBar?.c ?? null;
+  const change = lastPrice != null && prevClose ? lastPrice - prevClose : null;
+  const changePct = liveNow && change != null && prevClose ? (change / prevClose) * 100 : (q?.changePct ?? (change != null && prevClose ? (change / prevClose) * 100 : null));
   const vol = (n: number | null | undefined) => (n == null || n <= 0 ? "—" : n >= 1e9 ? `${(n / 1e9).toFixed(2)}B` : n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${Math.round(n / 1e3)}K` : String(n));
   const searchBox = (
     <form
@@ -190,10 +195,10 @@ export default function Desk({
           {change != null ? `${change >= 0 ? "+" : "−"}${Math.abs(change).toFixed(2)}` : "—"} ({pct(changePct)})
         </span>
       </div>
-      {stat("Open", usd(lastBar?.o ?? null), "text-ink-2")}
-      {stat("High", usd(lastBar?.h ?? null), "text-ink-2")}
-      {stat("Low", usd(lastBar?.l ?? null), "text-ink-2")}
-      {stat("Prev close", usd(prevBar?.c ?? null), "text-ink-2")}
+      {stat("Open", usd(liveNow?.open ?? lastBar?.o ?? null), "text-ink-2")}
+      {stat("High", usd(liveNow?.high ?? lastBar?.h ?? null), "text-ink-2")}
+      {stat("Low", usd(liveNow?.low ?? lastBar?.l ?? null), "text-ink-2")}
+      {stat("Prev close", usd(prevClose), "text-ink-2")}
       {stat("Volume", vol(lastBar?.v), "text-ink-2")}
       {stat("52-week range", hi52 != null && lo52 != null ? `${lo52.toFixed(2)} – ${hi52.toFixed(2)}` : "—", "text-ink-2")}
       <span className="ml-auto flex items-center gap-4 text-[12px]">
@@ -387,7 +392,7 @@ export default function Desk({
             style={{ paddingLeft: leftEdge, paddingRight: rightEdge, paddingBottom: 56 }}
           >
             <div className="min-h-0 flex-1">
-              <HighStrikeChart ticker={ticker} userId={userId} fill />
+              <HighStrikeChart ticker={ticker} userId={userId} fill onLive={onLive} />
             </div>
           </div>
 
@@ -500,7 +505,7 @@ export default function Desk({
       <section className="rounded-xl border border-line bg-panel px-4 py-3">{accountBar}</section>
       <section className="rounded-xl border border-line bg-panel p-3">
         {symbolHead}
-        <HighStrikeChart ticker={ticker} userId={userId} height={320} />
+        <HighStrikeChart ticker={ticker} userId={userId} height={320} onLive={onLive} />
       </section>
       {ticket}
       <OptionChain ticker={ticker} picked={pick?.contract ?? null} onPick={setPick} />

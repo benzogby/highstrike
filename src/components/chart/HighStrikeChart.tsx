@@ -5,6 +5,7 @@ import { supabaseBrowser } from "@/lib/supabase/client";
 import type { Anchor, Candle, Drawing, DrawingKind, HouseLevels } from "@/lib/chart/types";
 import { FIB_LEVELS, niceTicks, priceLabel, rsi, sma, timeScale, toWeekly, volumeLabel } from "@/lib/chart/math";
 import { planNumbers } from "@/lib/chart/plan";
+import { withLive, type Tick } from "@/lib/chart/live";
 
 // HighStrike Chart (Ben, 2026-11-17: "Our own custom charts, with our UI, and deep markup ability"): 1m to weekly
 // candles from /api/candles, the 9/21/50/200 moving averages, volume and RSI, and markup the member draws on it: levels,
@@ -71,9 +72,11 @@ type Props = {
   height?: number;
   /** Fill the box's height (the desk's full-screen chart) instead of a fixed height. */
   fill?: boolean;
+  /** Each live price as it arrives (the desk's price bar follows it). */
+  onLive?: (tick: { price: number; open: number | null; high: number | null; low: number | null; prevClose: number | null }) => void;
 };
 
-export default function HighStrikeChart({ ticker, userId, levels, height, fill = false }: Props) {
+export default function HighStrikeChart({ ticker, userId, levels, height, fill = false, onLive }: Props) {
   const [data, setData] = useState<{ candles: Candle[]; source: string; stale: boolean } | null>(null);
   const [failed, setFailed] = useState(false);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
@@ -159,6 +162,41 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
     };
   }, [intraKey]);
 
+  // Live prices while the market's open (src/lib/chart/live.ts): every 3 seconds while the page is in view; every
+  // 30 seconds when the market's shut, to notice the open. Kept per ticker, the last 3,000.
+  const [liveFeed, setLiveFeed] = useState<{ ticker: string; list: Tick[] } | null>(null);
+  const [liveOn, setLiveOn] = useState(false);
+  const onLiveRef = useRef(onLive);
+  useEffect(() => {
+    onLiveRef.current = onLive;
+  }, [onLive]);
+  useEffect(() => {
+    let alive = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const poll = async () => {
+      let next = 30_000;
+      if (document.visibilityState === "visible") {
+        try {
+          const r = await fetch(`/api/live?symbol=${encodeURIComponent(ticker)}`, { cache: "no-store" });
+          const j = r.ok ? ((await r.json()) as { price: number | null; open?: number | null; high?: number | null; low?: number | null; prevClose?: number | null; at?: number; marketOpen?: boolean }) : null;
+          if (alive && j?.price && j.marketOpen) {
+            const tick: Tick = { price: j.price, at: Date.now(), open: j.open ?? null, high: j.high ?? null, low: j.low ?? null };
+            setLiveFeed((cur) => ({ ticker, list: [...(cur?.ticker === ticker ? cur.list : []), tick].slice(-3000) }));
+            setLiveOn(true);
+            onLiveRef.current?.({ price: j.price, open: j.open ?? null, high: j.high ?? null, low: j.low ?? null, prevClose: j.prevClose ?? null });
+            next = 3000;
+          } else if (alive) setLiveOn(false);
+        } catch {}
+      } else next = 3000;
+      if (alive) timer = setTimeout(poll, next);
+    };
+    poll();
+    return () => {
+      alive = false;
+      clearTimeout(timer);
+    };
+  }, [ticker]);
+
   // The member's drawings on this ticker.
   useEffect(() => {
     if (!userId) return;
@@ -228,10 +266,11 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
   const weekly = settings.tf === "W";
   const minutes = MINUTES[settings.tf] ?? null;
   const intraNow = intraKey && intra?.key === intraKey ? intra : null;
-  const bars = useMemo(
-    () => (minutes ? (intraNow?.candles ?? []) : data ? (weekly ? toWeekly(data.candles) : data.candles) : []),
-    [minutes, intraNow, data, weekly]
-  );
+  const liveTicks = liveFeed?.ticker === ticker ? liveFeed.list : null;
+  const bars = useMemo(() => {
+    const base = minutes ? (intraNow?.candles ?? []) : data ? (weekly ? toWeekly(data.candles) : data.candles) : [];
+    return liveTicks ? withLive(base, liveTicks, minutes, weekly) : base;
+  }, [minutes, intraNow, data, weekly, liveTicks]);
   const ts = useMemo(() => timeScale(bars, minutes ?? weekly), [bars, minutes, weekly]);
   // Loaded, failed: for the timeframe on screen.
   const loaded = minutes ? Boolean(intraNow && !intraNow.failed) : Boolean(data);
@@ -650,6 +689,15 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
       {/* Top bar: timeframe, indicators, zoom, save state */}
       <div className="mb-2 flex flex-wrap items-center gap-1.5 text-xs">
         <Seg options={TIMEFRAMES.map((t) => [t, t] as const)} value={settings.tf} onChange={(tf) => changeSettings({ tf })} label="Timeframe" />
+        {liveOn && (
+          <span className="flex items-center gap-1.5 rounded-md bg-up-soft px-2 py-0.5 text-[11px] font-medium text-up" title="The last candle moves with the live price, every few seconds">
+            <span className="relative flex size-1.5">
+              <span className="absolute inline-flex size-full animate-ping rounded-full bg-up opacity-75" />
+              <span className="relative inline-flex size-1.5 rounded-full bg-up" />
+            </span>
+            Live
+          </span>
+        )}
         {lastIntraDay && lastIntraDay < todayNY && (
           <span className="text-[11px] text-ink-3" title="Today's intraday bars come with the live data plan">
             through {new Date(`${lastIntraDay}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })} close
