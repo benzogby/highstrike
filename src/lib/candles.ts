@@ -114,3 +114,113 @@ export async function getCandles(raw: string): Promise<CandleSet> {
   }
   return { candles: [], source: "none", stale: false, fetchedAt: null };
 }
+
+// ---- Intraday (Ben, 2026-11-18: "More timeframes. Down to 1m") -------------------------------------------------------
+// Minute bars from Massive, regular hours only (9:30 to 4:00 New York time), stamped with their New York wall time
+// ("2026-11-17T09:30"). 1h and 4h bars are built from 30-minute ones, counted from the open (so a day has 7 hourly
+// bars, the last half an hour, and two 4-hour bars). The free plan has bars up to the last close; with Stocks Starter
+// today's come too, 15 minutes delayed. Kept in public.market_cache for everyone, as fresh as daily candles.
+
+// One Massive request covers about 52 sessions of minutes (50,000 of them, extended hours included), so the longer
+// timeframes follow its next-page links: `pages` at most (each one a call; the cache shares the result).
+export const INTRADAY = {
+  "1m": { mult: 1, span: "minute", days: 7, group: 1, pages: 1 },
+  "5m": { mult: 5, span: "minute", days: 28, group: 1, pages: 1 },
+  "15m": { mult: 15, span: "minute", days: 60, group: 1, pages: 1 },
+  "30m": { mult: 30, span: "minute", days: 72, group: 1, pages: 1 },
+  "1h": { mult: 30, span: "minute", days: 150, group: 2, pages: 2 },
+  "4h": { mult: 30, span: "minute", days: 365, group: 8, pages: 5 },
+} as const;
+export type Intraday = keyof typeof INTRADAY;
+
+const NY = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false });
+/** A moment as New York wall time, "2026-11-17T09:30". */
+function nyStamp(ms: number) {
+  const p = Object.fromEntries(NY.formatToParts(new Date(ms)).map((x) => [x.type, x.value]));
+  return `${p.year}-${p.month}-${p.day}T${p.hour === "24" ? "00" : p.hour}:${p.minute}`;
+}
+
+async function intradayFromMassive(ticker: string, tf: Intraday, key: string): Promise<Candle[]> {
+  const spec = INTRADAY[tf];
+  const to = day(Date.now());
+  const from = day(Date.now() - spec.days * 86_400_000);
+  // Newest first, so a page cut short (the free plan's 5 calls a minute) still leaves the most recent bars.
+  const path = `/v2/aggs/ticker/${encodeURIComponent(ticker)}/range/${spec.mult}/${spec.span}/${from}/${to}?adjusted=true&sort=desc&limit=50000`;
+  let lastError: unknown = null;
+  for (const host of ["https://api.massive.com", "https://api.polygon.io"]) {
+    try {
+      const bars: Candle[] = [];
+      let url: string | null = `${host}${path}`;
+      for (let page = 0; url && page < spec.pages; page++) {
+        const res: Response = await fetch(url, { headers: { Authorization: `Bearer ${key}` }, cache: "no-store", signal: AbortSignal.timeout(8000) });
+        if (!res.ok) {
+          if (page > 0) break; // keep what the first pages gave
+          throw new Error(`${host} ${res.status}`);
+        }
+        const json = (await res.json()) as { results?: { t: number; o: number; h: number; l: number; c: number; v: number }[]; next_url?: string };
+        for (const r of json.results ?? []) {
+          const t = nyStamp(r.t);
+          const hm = t.slice(11);
+          if (hm < "09:30" || hm >= "16:00") continue;
+          bars.push({ t, o: r.o, h: r.h, l: r.l, c: r.c, v: r.v ?? 0 });
+        }
+        url = json.next_url ?? null;
+      }
+      bars.sort((a, b) => (a.t < b.t ? -1 : a.t > b.t ? 1 : 0));
+      return spec.group > 1 ? groupBars(bars, spec.group) : bars;
+    } catch (e) {
+      lastError = e;
+    }
+  }
+  throw lastError;
+}
+
+/** Rolls 30-minute bars into bars of `n` of them, counted from each day's open. */
+function groupBars(bars: Candle[], n: number): Candle[] {
+  const out: Candle[] = [];
+  let key = "";
+  for (const b of bars) {
+    const mins = Number(b.t.slice(11, 13)) * 60 + Number(b.t.slice(14, 16)) - 570;
+    const k = `${b.t.slice(0, 10)}:${Math.floor(mins / (30 * n))}`;
+    const last = out[out.length - 1];
+    if (k !== key || !last) {
+      out.push({ ...b });
+      key = k;
+    } else {
+      last.h = Math.max(last.h, b.h);
+      last.l = Math.min(last.l, b.l);
+      last.c = b.c;
+      last.v += b.v;
+    }
+  }
+  return out;
+}
+
+export async function getIntraday(raw: string, tf: Intraday): Promise<CandleSet> {
+  const ticker = raw.toUpperCase();
+  let db: ReturnType<typeof supabaseService> | null = null;
+  try {
+    db = supabaseService();
+  } catch {}
+  const cacheKey = `bars:${ticker}:${tf}`;
+  const { data: cached } = db ? await db.from("market_cache").select("body, fetched_at").eq("key", cacheKey).maybeSingle() : { data: null };
+  if (cached && fresh(cached.fetched_at) && (cached.body as Candle[]).length > 0) {
+    return { candles: cached.body as Candle[], source: "massive", stale: false, fetchedAt: cached.fetched_at };
+  }
+  const key = await massiveKey();
+  let candles: Candle[] = [];
+  if (key) {
+    try {
+      candles = await intradayFromMassive(ticker, tf, key);
+    } catch (e) {
+      console.error("candles: massive intraday failed for", ticker, tf, e instanceof Error ? e.message : e);
+    }
+  }
+  if (candles.length > 0) {
+    const fetchedAt = new Date().toISOString();
+    if (db) await db.from("market_cache").upsert({ key: cacheKey, body: candles, fetched_at: fetchedAt });
+    return { candles, source: "massive", stale: false, fetchedAt };
+  }
+  if (cached && (cached.body as Candle[]).length > 0) return { candles: cached.body as Candle[], source: "massive", stale: true, fetchedAt: cached.fetched_at };
+  return { candles: [], source: "none", stale: false, fetchedAt: null };
+}

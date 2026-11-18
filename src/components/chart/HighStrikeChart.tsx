@@ -6,7 +6,7 @@ import type { Anchor, Candle, Drawing, DrawingKind, HouseLevels } from "@/lib/ch
 import { FIB_LEVELS, niceTicks, priceLabel, rsi, sma, timeScale, toWeekly, volumeLabel } from "@/lib/chart/math";
 import { planNumbers } from "@/lib/chart/plan";
 
-// HighStrike Chart (Ben, 2026-11-17: "Our own custom charts, with our UI, and deep markup ability"): daily and weekly
+// HighStrike Chart (Ben, 2026-11-17: "Our own custom charts, with our UI, and deep markup ability"): 1m to weekly
 // candles from /api/candles, the 9/21/50/200 moving averages, volume and RSI, and markup the member draws on it: levels,
 // trend lines, zones, notes, arrows, a measure, a Fibonacci retracement and long/short trade plans whose reward:risk
 // and estimated option value update as they're dragged. A member's drawings are theirs alone, saved per ticker in
@@ -38,8 +38,13 @@ const RSI_H = 84;
 const GAP = 6;
 const HIT = 7;
 
-type Settings = { weekly: boolean; mas: number[]; volume: boolean; rsi: boolean };
-const DEFAULT_SETTINGS: Settings = { weekly: false, mas: [21, 50, 200], volume: true, rsi: true };
+// Timeframes (Ben, 2026-11-18: "More timeframes. Down to 1m"): intraday bars from /api/candles?tf=…, regular hours;
+// daily from /api/candles, weekly rolled from daily here.
+const TIMEFRAMES = ["1m", "5m", "15m", "30m", "1h", "4h", "D", "W"] as const;
+type Timeframe = (typeof TIMEFRAMES)[number];
+const MINUTES: Partial<Record<Timeframe, number>> = { "1m": 1, "5m": 5, "15m": 15, "30m": 30, "1h": 60, "4h": 240 };
+type Settings = { tf: Timeframe; mas: number[]; volume: boolean; rsi: boolean };
+const DEFAULT_SETTINGS: Settings = { tf: "D", mas: [21, 50, 200], volume: true, rsi: true };
 const SETTINGS_KEY = "hs-chart-settings";
 
 const TOOLS: { key: Tool; label: string; icon: string }[] = [
@@ -107,8 +112,12 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
   useEffect(() => {
     try {
       const raw = localStorage.getItem(SETTINGS_KEY);
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- reading the browser's saved settings once, on mount
-      if (raw) setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(raw) });
+      if (raw) {
+        const saved = JSON.parse(raw) as Partial<Settings> & { weekly?: boolean };
+        const tf = saved.tf && TIMEFRAMES.includes(saved.tf) ? saved.tf : saved.weekly ? "W" : "D";
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- reading the browser's saved settings once, on mount
+        setSettings({ ...DEFAULT_SETTINGS, ...saved, tf });
+      }
     } catch {}
   }, []);
   const changeSettings = (s: Partial<Settings>) => {
@@ -119,7 +128,7 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
       } catch {}
       return next;
     });
-    if (s.weekly !== undefined) setView(null);
+    if (s.tf !== undefined) setView(null);
   };
 
   // Candles.
@@ -133,6 +142,22 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
       alive = false;
     };
   }, [ticker]);
+
+  // Intraday bars for the chosen timeframe, kept per ticker and timeframe.
+  const [intra, setIntra] = useState<{ key: string; candles: Candle[] | null; failed: boolean } | null>(null);
+  const intraKey = MINUTES[settings.tf] ? `${ticker}:${settings.tf}` : null;
+  useEffect(() => {
+    if (!intraKey) return;
+    let alive = true;
+    const [sym, tf] = intraKey.split(":");
+    fetch(`/api/candles?symbol=${encodeURIComponent(sym)}&tf=${tf}`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((d) => alive && setIntra({ key: intraKey, candles: d.candles ?? [], failed: false }))
+      .catch(() => alive && setIntra({ key: intraKey, candles: null, failed: true }));
+    return () => {
+      alive = false;
+    };
+  }, [intraKey]);
 
   // The member's drawings on this ticker.
   useEffect(() => {
@@ -200,14 +225,23 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
     return () => ro.disconnect();
   }, [fill]);
 
-  const bars = useMemo(() => (data ? (settings.weekly ? toWeekly(data.candles) : data.candles) : []), [data, settings.weekly]);
-  const ts = useMemo(() => timeScale(bars, settings.weekly), [bars, settings.weekly]);
+  const weekly = settings.tf === "W";
+  const minutes = MINUTES[settings.tf] ?? null;
+  const intraNow = intraKey && intra?.key === intraKey ? intra : null;
+  const bars = useMemo(
+    () => (minutes ? (intraNow?.candles ?? []) : data ? (weekly ? toWeekly(data.candles) : data.candles) : []),
+    [minutes, intraNow, data, weekly]
+  );
+  const ts = useMemo(() => timeScale(bars, minutes ?? weekly), [bars, minutes, weekly]);
+  // Loaded, failed: for the timeframe on screen.
+  const loaded = minutes ? Boolean(intraNow && !intraNow.failed) : Boolean(data);
+  const failedNow = minutes ? Boolean(intraNow?.failed) : failed;
   const maLines = useMemo(() => MAS.filter((m) => settings.mas.includes(m.n)).map((m) => ({ ...m, values: sma(bars, m.n) })), [bars, settings.mas]);
   const rsiValues = useMemo(() => (settings.rsi ? rsi(bars) : []), [bars, settings.rsi]);
   const closes = useMemo(() => (data?.candles ?? []).map((c) => c.c), [data]);
 
   const narrow = width > 0 && width < 640;
-  const drawn = Boolean(data && bars.length > 0 && width > 0);
+  const drawn = Boolean(loaded && bars.length > 0 && width > 0);
   // Filling: the plot area less the legend (20px), the time axis and the RSI pane when it's on.
   const filled = fill && areaH > 0 ? Math.max(180, areaH - 20 - TIME_H - (settings.rsi ? RSI_H + GAP : 0)) : null;
   const priceH = filled ?? height ?? (narrow ? 300 : 420);
@@ -217,10 +251,10 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
   const rsiTop = priceH + TIME_H + GAP;
   const totalH = priceH + TIME_H + (settings.rsi ? RSI_H + GAP : 0);
 
-  const defaultCount = settings.weekly ? (narrow ? 45 : 80) : narrow ? 60 : 130;
+  const defaultCount = weekly ? (narrow ? 45 : 80) : minutes ? (narrow ? 80 : 160) : narrow ? 60 : 130;
   const v = useMemo(
-    () => view ?? { end: bars.length - 1 + (settings.weekly ? 4 : 8), count: Math.min(defaultCount, Math.max(20, bars.length + 8)) },
-    [view, bars.length, settings.weekly, defaultCount]
+    () => view ?? { end: bars.length - 1 + (weekly ? 4 : 8), count: Math.min(defaultCount, Math.max(20, bars.length + 8)) },
+    [view, bars.length, weekly, defaultCount]
   );
   const left = v.end - v.count;
   const barW = plotW / v.count;
@@ -228,7 +262,7 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
   const invX = (px: number) => px / barW - 0.5 + left;
 
   // Price range over the visible bars (and the idea's levels, so they're always on screen).
-  const rangeKey = `${ticker}:${settings.weekly ? "w" : "d"}`;
+  const rangeKey = `${ticker}:${settings.tf}`;
   const manual = yRange && yRange.key === rangeKey ? yRange : null;
   const auto = useMemo(() => {
     let l = Infinity;
@@ -398,7 +432,7 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
         const side = tool === "plan-long" ? "long" : "short";
         const sign = side === "long" ? 1 : -1;
         const span = (hi - lo) * 0.08;
-        const end = ts.date(Math.round(invX(px)) + (settings.weekly ? 6 : 20));
+        const end = ts.date(Math.round(invX(px)) + (weekly ? 6 : 20));
         return finishDraft({
           id: uid(),
           kind: "plan",
@@ -546,14 +580,31 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
     let prevKey = "";
     const minGap = narrow ? 60 : 80;
     let lastX = -Infinity;
+    // Intraday: with up to three days on screen, a tick each hour (the day's date where a new day starts); more, each day.
+    const days = minutes && visible.length ? new Set(visible.map((i) => bars[i].t.slice(0, 10))).size : 0;
     for (const i of visible) {
       const t = bars[i].t;
-      const key = settings.weekly || v.count > 300 ? t.slice(0, 4) + (v.count > 300 ? "" : t.slice(5, 7)) : t.slice(0, 7);
+      const key = minutes
+        ? days <= 3
+          ? t.slice(0, 13)
+          : t.slice(0, 10)
+        : weekly || v.count > 300
+          ? t.slice(0, 4) + (v.count > 300 ? "" : t.slice(5, 7))
+          : t.slice(0, 7);
       if (key !== prevKey) {
         const px = x(i);
         if (px - lastX >= minGap && prevKey) {
-          const d = new Date(`${t}T12:00:00Z`);
-          const label = d.getUTCMonth() === 0 ? String(d.getUTCFullYear()) : d.toLocaleDateString("en-US", { month: "short", timeZone: "UTC" });
+          let label: string;
+          if (minutes) {
+            const newDay = prevKey.slice(0, 10) !== t.slice(0, 10);
+            label =
+              days <= 3 && !newDay
+                ? `${Number(t.slice(11, 13)) % 12 || 12}${Number(t.slice(11, 13)) < 12 ? "am" : "pm"}`
+                : new Date(`${t.slice(0, 10)}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+          } else {
+            const d = new Date(`${t}T12:00:00Z`);
+            label = d.getUTCMonth() === 0 ? String(d.getUTCFullYear()) : d.toLocaleDateString("en-US", { month: "short", timeZone: "UTC" });
+          }
           out.push({ i, label });
           lastX = px;
         }
@@ -562,7 +613,7 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
     }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- recomputed from the visible window's own inputs
-  }, [bars, left, v.end, v.count, plotW, settings.weekly, narrow]);
+  }, [bars, left, v.end, v.count, plotW, weekly, minutes, narrow]);
 
   const path = (vals: (number | null)[], yf: (n: number) => number) => {
     let dStr = "";
@@ -581,8 +632,15 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
 
   const rsiY = (r: number) => rsiTop + ((100 - r) / 100) * RSI_H;
 
-  const dateLabel = (t: string) =>
-    new Date(`${t}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+  const dateLabel = (t: string) => {
+    const d = new Date(`${t.slice(0, 10)}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+    if (t.length <= 10) return d;
+    const h = Number(t.slice(11, 13));
+    return `${d} ${h % 12 || 12}:${t.slice(14, 16)}${h < 12 ? "am" : "pm"}`;
+  };
+  // Intraday bars run to the last close on the free data plan: say so when today's aren't in.
+  const lastIntraDay = minutes && bars.length ? bars[bars.length - 1].t.slice(0, 10) : null;
+  const todayNY = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
 
   const all = draft ? [...drawings, draft] : drawings;
   const cursor = overAxis === "price" ? "ns-resize" : overAxis === "time" ? "ew-resize" : tool !== "cursor" || draft ? "crosshair" : "default";
@@ -591,7 +649,12 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
     <div ref={boxRef} className={`relative select-none ${fill ? "flex h-full flex-col" : ""}`}>
       {/* Top bar: timeframe, indicators, zoom, save state */}
       <div className="mb-2 flex flex-wrap items-center gap-1.5 text-xs">
-        <Seg options={[["D", false], ["W", true]] as const} value={settings.weekly} onChange={(w) => changeSettings({ weekly: w })} label="Timeframe" />
+        <Seg options={TIMEFRAMES.map((t) => [t, t] as const)} value={settings.tf} onChange={(tf) => changeSettings({ tf })} label="Timeframe" />
+        {lastIntraDay && lastIntraDay < todayNY && (
+          <span className="text-[11px] text-ink-3" title="Today's intraday bars come with the live data plan">
+            through {new Date(`${lastIntraDay}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })} close
+          </span>
+        )}
         <span className="mx-1 h-4 w-px bg-line" />
         {MAS.map((m) => (
           <Chip key={m.n} on={settings.mas.includes(m.n)} color={m.color} onClick={() => changeSettings({ mas: settings.mas.includes(m.n) ? settings.mas.filter((n) => n !== m.n) : [...settings.mas, m.n] })}>
@@ -690,8 +753,8 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
         </div>
 
         <div ref={areaRef} className={`relative min-w-0 flex-1 ${fill ? "min-h-0" : ""}`}>
-          {!data && !failed && <div className="animate-pulse rounded-lg bg-panel-2" style={{ height: priceH + TIME_H }} />}
-          {(failed || (data && bars.length === 0)) && (
+          {!loaded && !failedNow && <div className="animate-pulse rounded-lg bg-panel-2" style={{ height: priceH + TIME_H }} />}
+          {(failedNow || (loaded && bars.length === 0)) && (
             <div className="grid place-items-center rounded-lg border border-dashed border-line-strong text-center" style={{ height: priceH + TIME_H }}>
               <div className="max-w-xs px-4">
                 <p className="text-sm font-medium text-ink">Chart data isn&apos;t available for ${ticker} right now</p>
@@ -699,7 +762,7 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
               </div>
             </div>
           )}
-          {data && bars.length > 0 && width > 0 && (
+          {loaded && bars.length > 0 && width > 0 && (
             <>
               {/* Legend: always one line (Ben, 2026-11-18: wrapping to a second line jolted the chart's height); what
                   doesn't fit is cut off at the right, the moving averages first. */}
@@ -749,7 +812,7 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
                   else if (py > priceH && py <= priceH + TIME_H) setView(null);
                 }}
                 role="img"
-                aria-label={`${ticker} ${settings.weekly ? "weekly" : "daily"} candle chart`}
+                aria-label={`${ticker} ${weekly ? "weekly" : minutes ? `${settings.tf}` : "daily"} candle chart`}
               >
                 <defs>
                   <clipPath id={`plot-${ticker}`}>
@@ -821,7 +884,7 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
                       plotW={plotW}
                       ts={ts}
                       closes={closes}
-                      weekly={settings.weekly}
+                      weekly={weekly}
                       selected={d.id === selected}
                       markerId={`arrow-${ticker}`}
                     />
@@ -887,7 +950,7 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
                 )}
               </svg>
 
-              {data.stale && <p className="mt-1 text-[11px] text-ink-3">Showing the last saved prices; the feed didn’t answer just now.</p>}
+              {!minutes && data?.stale && <p className="mt-1 text-[11px] text-ink-3">Showing the last saved prices; the feed didn’t answer just now.</p>}
             </>
           )}
 

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState, useSyncExternalStore, useTra
 import HighStrikeChart from "@/components/chart/HighStrikeChart";
 import { useQuotes } from "@/components/useQuotes";
 import type { PaperState } from "@/lib/paper";
+import type { Candle } from "@/lib/chart/types";
 import { toastError, toastSuccess } from "@/lib/toastBus";
 import { resetPaper } from "../paperActions";
 import OptionChain, { type Pick } from "./OptionChain";
@@ -127,11 +128,88 @@ export default function Desk({
 
   // ---- The pieces, laid out below for wide or small screens ----------------------------------------------------------
 
-  const totalPct = state.start ? (state.totalPnl / state.start) * 100 : null;
   const stat = (label: string, value: React.ReactNode, cls = "text-ink") => (
     <div className="min-w-0">
       <p className="text-[11px] leading-none text-ink-3">{label}</p>
       <p className={`mt-1 truncate font-mono-nums text-[14px] font-semibold leading-none ${cls}`}>{value}</p>
+    </div>
+  );
+  const totalPct = state.start ? (state.totalPnl / state.start) * 100 : null;
+
+  // The price summary (Ben, 2026-11-18: the top bar "should instead show the price data summary"): the stock's daily
+  // bars (the same request the chart makes, so the browser's copy answers it) for the day's open, high, low, volume,
+  // the last close and the 52-week range; the live quote for the price.
+  const [daily, setDaily] = useState<{ ticker: string; candles: Candle[] } | null>(null);
+  useEffect(() => {
+    let alive = true;
+    fetch(`/api/candles?symbol=${encodeURIComponent(ticker)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { candles?: Candle[] } | null) => alive && d && setDaily({ ticker, candles: d.candles ?? [] }))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [ticker]);
+  const bars = daily?.ticker === ticker ? daily.candles : [];
+  const lastBar = bars.at(-1) ?? null;
+  const prevBar = bars.at(-2) ?? null;
+  const yearBars = bars.slice(-252);
+  const hi52 = yearBars.length ? Math.max(...yearBars.map((b) => b.h)) : null;
+  const lo52 = yearBars.length ? Math.min(...yearBars.map((b) => b.l)) : null;
+  const lastPrice = q?.price ?? lastBar?.c ?? null;
+  const change = lastPrice != null && prevBar ? lastPrice - prevBar.c : null;
+  const changePct = q?.changePct ?? (change != null && prevBar ? (change / prevBar.c) * 100 : null);
+  const vol = (n: number | null | undefined) => (n == null || n <= 0 ? "—" : n >= 1e9 ? `${(n / 1e9).toFixed(2)}B` : n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${Math.round(n / 1e3)}K` : String(n));
+  const priceBar = (
+    <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+      <div className="flex items-baseline gap-3">
+        <h1 className="font-mono-nums text-[20px] font-semibold leading-none text-ink">{ticker}</h1>
+        <span className={`font-mono-nums text-[20px] leading-none ${flash[ticker] === "up" ? "text-up" : flash[ticker] === "down" ? "text-down" : "text-ink"}`}>{usd(lastPrice)}</span>
+        <span className={`font-mono-nums text-[13px] ${tone(change)}`}>
+          {change != null ? `${change >= 0 ? "+" : "−"}${Math.abs(change).toFixed(2)}` : "—"} ({pct(changePct)})
+        </span>
+      </div>
+      {stat("Open", usd(lastBar?.o ?? null), "text-ink-2")}
+      {stat("High", usd(lastBar?.h ?? null), "text-ink-2")}
+      {stat("Low", usd(lastBar?.l ?? null), "text-ink-2")}
+      {stat("Prev close", usd(prevBar?.c ?? null), "text-ink-2")}
+      {stat("Volume", vol(lastBar?.v), "text-ink-2")}
+      {stat("52-week range", hi52 != null && lo52 != null ? `${lo52.toFixed(2)} – ${hi52.toFixed(2)}` : "—", "text-ink-2")}
+      <span className="ml-auto flex items-center gap-4 text-[12px]">
+        <span className="flex items-center gap-1.5 text-[11px] text-ink-3">
+          <span className={`size-1.5 rounded-full ${state.open ? "bg-up" : "bg-ink-3"}`} aria-hidden="true" />
+          {state.open ? "Market open" : "Market closed"}
+        </span>
+        <Link href={`/plan?t=${ticker}`} className="text-ink-2 hover:text-accent">
+          Plan &amp; grade
+        </Link>
+        <Link href={`/symbol/${ticker}`} className="text-ink-2 hover:text-accent">
+          Stock page
+        </Link>
+      </span>
+    </div>
+  );
+  // The paper account, compact, at the top of the Trade panel.
+  const accountBox = (
+    <div className="rounded-lg border border-line bg-panel/60 p-2.5">
+      <div className="flex items-center justify-between">
+        <span className="rounded-md bg-accent-soft px-1.5 py-0.5 text-[11px] font-medium text-accent-ink">Paper account</span>
+        <button type="button" onClick={reset} disabled={resetting} className="text-[11px] font-medium text-ink-3 transition hover:text-ink">
+          {resetting ? "Resetting…" : "Reset to $25,000"}
+        </button>
+      </div>
+      <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2">
+        {stat("Account value", usd(state.equity))}
+        {stat(
+          "Total P&L",
+          <>
+            {signed(state.totalPnl)} <span className="text-[11px] font-normal">{pct(totalPct)}</span>
+          </>,
+          tone(state.totalPnl)
+        )}
+        {stat("Open P&L", signed(state.openPnl), tone(state.openPnl))}
+        {stat("Cash", usd(state.cash))}
+      </div>
     </div>
   );
   const accountBar = (
@@ -297,14 +375,13 @@ export default function Desk({
     const working = state.orders.filter((o) => o.status === "working").length;
     return (
       <div className="fixed bottom-0 left-60 right-0 top-14 z-20 flex flex-col bg-bg">
-        <div className="border-b border-line px-4 py-2.5">{accountBar}</div>
+        <div className="border-b border-line px-4 py-2.5">{priceBar}</div>
         <div className="relative min-h-0 flex-1">
           {/* The chart fills the room the open panels leave. */}
           <div
             className="absolute inset-0 flex flex-col pt-3 transition-[padding] duration-300 ease-out"
             style={{ paddingLeft: leftEdge, paddingRight: rightEdge, paddingBottom: 56 }}
           >
-            {symbolHead}
             <div className="min-h-0 flex-1">
               <HighStrikeChart ticker={ticker} userId={userId} fill />
             </div>
@@ -336,7 +413,10 @@ export default function Desk({
                 <h2 className="text-[13px] font-medium text-ink">Trade</h2>
                 <PanelButton label="Hide the trade panel" onClick={() => toggle("side")} d="M9 6l6 6-6 6" />
               </div>
-              <div className="max-h-[55%] flex-none overflow-y-auto p-2">{ticket}</div>
+              <div className="max-h-[70%] flex-none space-y-2 overflow-y-auto p-2">
+                {accountBox}
+                {ticket}
+              </div>
               <div className="flex min-h-0 flex-1 flex-col border-t border-line">
                 <p className="px-3 pt-2 text-[13px] font-medium text-ink">
                   Option chain <span className="font-mono-nums text-ink-3">{ticker}</span>

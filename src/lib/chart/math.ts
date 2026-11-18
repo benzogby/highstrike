@@ -1,6 +1,6 @@
 import type { Candle } from "./types";
 
-// HighStrike Chart's arithmetic: weekly bars, moving averages, RSI and the date axis. Pure; shared by the chart and
+// HighStrike Chart's arithmetic: weekly bars, moving averages, RSI and the time axis. Pure; shared by the chart and
 // anything that wants the same numbers (the planner, the backtester).
 
 /** Daily bars rolled into weeks (Monday to Friday), each stamped with its first trading day. */
@@ -66,26 +66,32 @@ export function rsi(bars: Candle[], n = 14): (number | null)[] {
   return out;
 }
 
-const dayNum = (t: string) => Math.round(Date.parse(`${t}T12:00:00Z`) / 86_400_000);
-const fromDayNum = (n: number) => new Date(n * 86_400_000).toISOString().slice(0, 10);
+/** A bar's time in minutes: "2026-11-18" (a daily bar, at noon) or "2026-11-18T09:35" (New York wall time). */
+const minuteNum = (t: string) => Math.round(Date.parse(t.length > 10 ? `${t}:00Z` : `${t}T12:00:00Z`) / 60_000);
+const fromMinuteNum = (n: number, intraday: boolean) => {
+  const iso = new Date(n * 60_000).toISOString();
+  return intraday ? iso.slice(0, 16) : iso.slice(0, 10);
+};
 
 /**
- * Dates ↔ bar positions. A date inside the series lands on its bar (or between the bars around it); one past the last
- * bar is placed by the series' calendar pace (7/5 days a bar for daily, 7 for weekly), so drawings can reach into the
- * future and stay put when new bars arrive.
+ * Times ↔ bar positions. A time inside the series lands on its bar (or between the bars around it); one past the last
+ * bar is placed by the series' pace (7/5 days a bar for daily, 7 for weekly, the bar's minutes for intraday), so
+ * drawings can reach into the future and stay put when new bars arrive. Daily and intraday anchors work on either
+ * kind of chart: a date alone means noon that day. `pace` is `true` for weekly, `false` for daily, or minutes a bar.
  */
-export function timeScale(bars: Candle[], weekly: boolean) {
-  const nums = bars.map((b) => dayNum(b.t));
-  const pace = weekly ? 7 : 7 / 5;
+export function timeScale(bars: Candle[], pace: boolean | number) {
+  const intraday = typeof pace === "number";
+  const step = typeof pace === "number" ? pace : pace ? 7 * 1440 : (7 / 5) * 1440;
+  const nums = bars.map((b) => minuteNum(b.t));
   const first = nums[0] ?? 0;
   const last = nums[nums.length - 1] ?? 0;
   return {
-    /** A date's position in bars (fractional between bars, beyond the ends by the pace). */
+    /** A time's position in bars (fractional between bars, beyond the ends by the pace). */
     index(t: string): number {
-      const n = dayNum(t);
+      const n = minuteNum(t);
       if (nums.length === 0) return 0;
-      if (n >= last) return nums.length - 1 + (n - last) / pace;
-      if (n <= first) return (n - first) / pace;
+      if (n >= last) return nums.length - 1 + (n - last) / step;
+      if (n <= first) return (n - first) / step;
       let lo = 0;
       let hi = nums.length - 1;
       while (hi - lo > 1) {
@@ -95,13 +101,13 @@ export function timeScale(bars: Candle[], weekly: boolean) {
       }
       return lo + (n - nums[lo]) / Math.max(1, nums[hi] - nums[lo]);
     },
-    /** The date at a bar position (rounded to a day). */
+    /** The time at a bar position: a date for daily and weekly charts, a date and time for intraday ones. */
     date(i: number): string {
-      if (nums.length === 0) return fromDayNum(0);
-      if (i >= nums.length - 1) return fromDayNum(Math.round(last + (i - (nums.length - 1)) * pace));
-      if (i <= 0) return fromDayNum(Math.round(first + i * pace));
+      if (nums.length === 0) return fromMinuteNum(0, intraday);
+      if (i >= nums.length - 1) return fromMinuteNum(Math.round(last + (i - (nums.length - 1)) * step), intraday);
+      if (i <= 0) return fromMinuteNum(Math.round(first + i * step), intraday);
       const lo = Math.floor(i);
-      return fromDayNum(Math.round(nums[lo] + (i - lo) * (nums[lo + 1] - nums[lo])));
+      return fromMinuteNum(Math.round(nums[lo] + (i - lo) * (nums[lo + 1] - nums[lo])), intraday);
     },
   };
 }
