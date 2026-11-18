@@ -21,7 +21,7 @@
   --color-accent-2: #3dd49c;
   --color-accent-soft: rgb(31 191 134 / 0.13);
   --color-accent-ink: #55dfaa;
-  --color-on-accent: #03140d;
+  --color-on-accent: #ffffff; /* white on every green button (Ben, 2026-11-18) */
   --color-up: #2fd08f;
   --color-up-soft: rgb(47 208 143 / 0.12);
   --color-down: #ff6b61;
@@ -615,3 +615,21 @@ body {
   }
 }
 
+
+/* Colored buttons have depth (Ben, 2026-11-18, option A "Bevel"): a lit top edge, a shaded bottom edge and an outline a
+   shade darker than the green, with white text. Every green button is bg-accent + text-on-accent, so this one rule covers
+   them all; grey and quiet buttons stay flat. Tailwind's ring and shadow layers are kept in front, so focus rings still
+   show. Hover brightens the same green rather than switching to the lighter one, which white text can't sit on. */
+.bg-accent.text-on-accent {
+  box-shadow:
+    var(--tw-ring-offset-shadow, 0 0 #0000),
+    var(--tw-ring-shadow, 0 0 #0000),
+    inset 0 1px 0 rgb(255 255 255 / 0.3),
+    inset 0 -2px 0 rgb(0 0 0 / 0.2),
+    0 0 0 1px #12925f;
+  text-shadow: 0 1px 0 rgb(0 0 0 / 0.18);
+}
+.bg-accent.text-on-accent:hover:not(:disabled) {
+  background-color: var(--color-accent);
+  filter: brightness(1.07);
+}
