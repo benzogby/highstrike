@@ -35,7 +35,7 @@ function useWide() {
 
 /** Which floating panels are open, remembered in this browser. */
 function usePanels() {
-  const [open, setOpen] = useState({ watch: true, side: true });
+  const [open, setOpen] = useState({ side: true });
   useEffect(() => {
     try {
       const saved = JSON.parse(localStorage.getItem("hs-desk-panels") ?? "null");
@@ -79,7 +79,7 @@ export default function Desk({
 }) {
   const wide = useWide();
   const [panels, toggle] = usePanels();
-  const [over, setOver] = useState<"account" | "ideas" | null>(null);
+  const [over, setOver] = useState<"watch" | "account" | "ideas" | null>(null);
   const [state, setState] = useState(initial);
   const [ticker, setTicker] = useState(initial.positions[0]?.underlying ?? watch[0] ?? "SPY");
   const [pick, setPick] = useState<Pick | null>(null);
@@ -160,8 +160,29 @@ export default function Desk({
   const change = lastPrice != null && prevBar ? lastPrice - prevBar.c : null;
   const changePct = q?.changePct ?? (change != null && prevBar ? (change / prevBar.c) * 100 : null);
   const vol = (n: number | null | undefined) => (n == null || n <= 0 ? "—" : n >= 1e9 ? `${(n / 1e9).toFixed(2)}B` : n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${Math.round(n / 1e3)}K` : String(n));
+  const searchBox = (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        const t = search.trim().toUpperCase().replace(/^\$/, "");
+        if (!TICKER.test(t)) return toastError("Type a ticker, like AAPL.");
+        select(t);
+        setSearch("");
+      }}
+    >
+      <input
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Symbol"
+        aria-label="Open a symbol"
+        className="h-8 w-full rounded-lg border border-line-strong bg-bg px-3 font-mono-nums text-sm uppercase text-ink outline-none placeholder:normal-case placeholder:text-ink-3 focus:border-accent focus:ring-2 focus:ring-accent/20"
+      />
+    </form>
+  );
+
   const priceBar = (
     <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+      <div className="w-36">{searchBox}</div>
       <div className="flex items-baseline gap-3">
         <h1 className="font-mono-nums text-[20px] font-semibold leading-none text-ink">{ticker}</h1>
         <span className={`font-mono-nums text-[20px] leading-none ${flash[ticker] === "up" ? "text-up" : flash[ticker] === "down" ? "text-down" : "text-ink"}`}>{usd(lastPrice)}</span>
@@ -265,25 +286,6 @@ export default function Desk({
     </div>
   );
 
-  const searchBox = (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        const t = search.trim().toUpperCase().replace(/^\$/, "");
-        if (!TICKER.test(t)) return toastError("Type a ticker, like AAPL.");
-        select(t);
-        setSearch("");
-      }}
-    >
-      <input
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="Symbol"
-        aria-label="Open a symbol"
-        className="h-8 w-full rounded-lg border border-line-strong bg-bg px-3 font-mono-nums text-sm uppercase text-ink outline-none placeholder:normal-case placeholder:text-ink-3 focus:border-accent focus:ring-2 focus:ring-accent/20"
-      />
-    </form>
-  );
 
   const watchRows = (
     <ul className="py-1">
@@ -370,7 +372,9 @@ export default function Desk({
     // chart from the buttons at its foot ("Get rid of the positions and make it a toggle-over"), so the chart keeps the
     // whole height.
     const SIDE = 452;
-    const leftEdge = panels.watch ? 228 : 56;
+    // Ben, 2026-11-18: "Remove the left side watchlist panel altogether, and abut the chart to the left side… Watchlist
+    // should be its own tab": the chart starts at the left edge; the watchlist is a tab at its foot.
+    const leftEdge = 12;
     const rightEdge = panels.side ? SIDE + 24 : 56;
     const working = state.orders.filter((o) => o.status === "working").length;
     return (
@@ -386,25 +390,6 @@ export default function Desk({
               <HighStrikeChart ticker={ticker} userId={userId} fill />
             </div>
           </div>
-
-          {/* Left: search and watchlist */}
-          {panels.watch ? (
-            <aside className={`${FLOAT} absolute bottom-3 left-3 top-3 flex w-[204px] flex-col overflow-hidden`}>
-              <div className="flex items-center justify-between gap-2 border-b border-line px-3 py-2">
-                <h2 className="text-[13px] font-medium text-ink">Watchlist</h2>
-                <span className="flex items-center gap-2">
-                  <Link href="/watchlists" className="text-[11px] text-ink-3 hover:text-ink">
-                    Edit
-                  </Link>
-                  <PanelButton label="Hide the watchlist" onClick={() => toggle("watch")} d="M15 6l-6 6 6 6" />
-                </span>
-              </div>
-              <div className="p-2">{searchBox}</div>
-              <div className="min-h-0 flex-1 overflow-y-auto">{watchRows}</div>
-            </aside>
-          ) : (
-            <EdgeTab label="Watchlist" className="left-3 top-3" onClick={() => toggle("watch")} d="M9 6l6 6-6 6" />
-          )}
 
           {/* Right, full height: the order ticket, and the option chain under it */}
           {panels.side ? (
@@ -430,10 +415,11 @@ export default function Desk({
             <EdgeTab label="Trade" className="right-3 top-3" onClick={() => toggle("side")} d="M15 6l-6 6 6 6" />
           )}
 
-          {/* The toggles at the chart's foot, and the panel they open over it: positions and orders, today's ideas */}
+          {/* The toggles at the chart's foot, and the panel they open over it: watchlist, positions and orders, today's ideas */}
           <div className="absolute bottom-3 flex gap-1.5 transition-[left] duration-300 ease-out" style={{ left: leftEdge }}>
             {(
               [
+                ["watch", "Watchlist"],
                 ["account", `Positions ${state.positions.length}${working ? ` · ${working} working` : ""}`],
                 ["ideas", `Today's ideas ${ideas.length}`],
               ] as const
@@ -453,15 +439,45 @@ export default function Desk({
             <section
               className={`${FLOAT} anim-pop absolute bottom-14 flex flex-col overflow-hidden transition-[left,right] duration-300 ease-out`}
               style={{ left: leftEdge, right: rightEdge, height: "min(46vh, 460px)" }}
-              aria-label={over === "account" ? "Positions and orders" : "Today's ideas"}
+              aria-label={over === "watch" ? "Watchlist" : over === "account" ? "Positions and orders" : "Today's ideas"}
             >
               <div className="flex h-10 flex-none items-center gap-2 border-b border-line px-3">
-                <h2 className="text-[13px] font-medium text-ink">{over === "account" ? "Positions and orders" : "Today's ideas"}</h2>
+                <h2 className="text-[13px] font-medium text-ink">{over === "watch" ? "Watchlist" : over === "account" ? "Positions and orders" : "Today's ideas"}</h2>
+                {over === "watch" && (
+                  <Link href="/watchlists" className="text-[12px] text-ink-3 hover:text-ink">
+                    Edit lists
+                  </Link>
+                )}
                 <p className="ml-auto hidden max-w-[60%] truncate text-[11px] text-ink-3 2xl:block">{disclaimer}</p>
                 <PanelButton label="Close" onClick={() => setOver(null)} d="M6 6l12 12M18 6L6 18" />
               </div>
               <div className="min-h-0 flex-1 overflow-y-auto">
-                {over === "account" ? (
+                {over === "watch" ? (
+                  <ul className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-1.5 p-2">
+                    {list.map((t) => {
+                      const lq = quotes[t];
+                      const on = t === ticker;
+                      return (
+                        <li key={t}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              select(t);
+                              setOver(null);
+                            }}
+                            className={`flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left transition ${on ? "border-accent/50 bg-accent-soft" : "border-line bg-panel hover:border-line-strong hover:bg-panel-2"}`}
+                          >
+                            <span className={`font-mono-nums text-[13px] font-semibold ${on ? "text-accent-ink" : "text-ink"}`}>{t}</span>
+                            <span className="text-right font-mono-nums text-[12px] leading-tight">
+                              <span className={`block ${flash[t] === "up" ? "text-up" : flash[t] === "down" ? "text-down" : "text-ink-2"}`}>{lq ? lq.price.toFixed(2) : "—"}</span>
+                              <span className={`block text-[11px] ${tone(lq?.changePct ?? null)}`}>{pct(lq?.changePct ?? null)}</span>
+                            </span>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : over === "account" ? (
                   <Blotter state={state} onSelect={select} onChange={refresh} />
                 ) : (
                   <div className="grid gap-2 p-2 lg:grid-cols-[minmax(0,1fr)_280px]">
