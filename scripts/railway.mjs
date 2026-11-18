@@ -96,7 +96,8 @@ if (!service) {
 await gql("mutation($serviceId: String!, $environmentId: String, $input: ServiceInstanceUpdateInput!) { serviceInstanceUpdate(serviceId: $serviceId, environmentId: $environmentId, input: $input) }", {
   serviceId: service.id,
   environmentId: environment.id,
-  input: { rootDirectory: "/worker", startCommand: "npm start", restartPolicyType: "ALWAYS" },
+  // Rebuilt only when worker/ changes (the app's own pushes don't restart it and drop Alpaca's one connection).
+  input: { rootDirectory: "/worker", startCommand: "npm start", restartPolicyType: "ALWAYS", watchPatterns: ["/worker/**"] },
 });
 await gql("mutation($input: VariableCollectionUpsertInput!) { variableCollectionUpsert(input: $input) }", {
   input: {
