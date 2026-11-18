@@ -940,14 +940,28 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
                   </g>
                 )}
 
-                {/* Crosshair */}
-                {hover && hover.y <= priceH && (
-                  <g pointerEvents="none">
-                    <line x1={0} x2={plotW} y1={hover.y} y2={hover.y} stroke="var(--color-ink-3)" strokeDasharray="3 3" strokeWidth={0.8} />
-                    <line x1={x(Math.round(invX(hover.x)))} x2={x(Math.round(invX(hover.x)))} y1={0} y2={totalH} stroke="var(--color-ink-3)" strokeDasharray="3 3" strokeWidth={0.8} />
-                    <AxisTag x={plotW} y={hover.y} fill="var(--color-panel-3)" text={priceLabel(invY(hover.y))} ink="var(--color-ink)" />
-                  </g>
-                )}
+                {/* Crosshair: the price where it crosses the price axis, and the bar's date (and time, intraday) where it
+                    crosses the time axis (Ben, 2026-11-18: "so I can see where my cursor is"). The vertical line and its
+                    time follow the cursor into the RSI pane too. */}
+                {hover && hover.y <= totalH && (() => {
+                  const i = Math.round(invX(hover.x));
+                  const cx = x(i);
+                  const t = i >= 0 && i < bars.length ? bars[i].t : ts.date(i);
+                  const label = weekly ? `Week of ${dateLabel(t)}` : dateLabel(t);
+                  const w = label.length * 6.3 + 14;
+                  const tx = Math.max(0, Math.min(plotW - w, cx - w / 2));
+                  return (
+                    <g pointerEvents="none">
+                      {hover.y <= priceH && <line x1={0} x2={plotW} y1={hover.y} y2={hover.y} stroke="var(--color-ink-3)" strokeDasharray="3 3" strokeWidth={0.8} />}
+                      <line x1={cx} x2={cx} y1={0} y2={totalH} stroke="var(--color-ink-3)" strokeDasharray="3 3" strokeWidth={0.8} />
+                      {hover.y <= priceH && <AxisTag x={plotW} y={hover.y} fill="var(--color-panel-3)" text={priceLabel(invY(hover.y))} ink="var(--color-ink)" />}
+                      <rect x={tx} y={priceH + 2} width={w} height={TIME_H - 4} rx={3} fill="var(--color-panel-3)" />
+                      <text x={tx + w / 2} y={priceH + TIME_H / 2 + 3.5} textAnchor="middle" className="font-mono text-[10.5px] tabular-nums" fill="var(--color-ink)">
+                        {label}
+                      </text>
+                    </g>
+                  );
+                })()}
               </svg>
 
               {!minutes && data?.stale && <p className="mt-1 text-[11px] text-ink-3">Showing the last saved prices; the feed didn’t answer just now.</p>}
