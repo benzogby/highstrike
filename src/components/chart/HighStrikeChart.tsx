@@ -668,6 +668,34 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
   const bodyW = Math.max(1, Math.min(14, barW * 0.68));
 
   const ticks = niceTicks(lo, hi, narrow ? 5 : 8);
+
+  // Intraday: runs of bars outside 9:30 to 4:00 (pre-market, after-hours), and the bars that open a session after a
+  // weekend or holiday (a gap of more than one calendar day from the bar before).
+  const { closedRuns, breaks } = useMemo(() => {
+    const runs: { from: number; to: number }[] = [];
+    const gaps: number[] = [];
+    if (!minutes) return { closedRuns: runs, breaks: gaps };
+    let run: { from: number; to: number } | null = null;
+    for (const i of visible) {
+      const t = bars[i].t;
+      const hm = t.slice(11, 16);
+      const closed = hm < "09:30" || hm >= "16:00";
+      if (closed) {
+        if (run && run.to === i - 1) run.to = i;
+        else {
+          run = { from: i, to: i };
+          runs.push(run);
+        }
+      }
+      if (i > 0) {
+        const prev = bars[i - 1].t.slice(0, 10);
+        const days = (Date.parse(`${t.slice(0, 10)}T12:00:00Z`) - Date.parse(`${prev}T12:00:00Z`)) / 86_400_000;
+        if (days > 1) gaps.push(i);
+      }
+    }
+    return { closedRuns: runs, breaks: gaps };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- recomputed from the visible window's own inputs
+  }, [bars, left, v.end, minutes]);
   const timeTicks = useMemo(() => {
     const out: { i: number; label: string }[] = [];
     let prevKey = "";
@@ -932,6 +960,19 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
                     <path d="M0,0 L10,5 L0,10 z" fill="context-stroke" />
                   </marker>
                 </defs>
+
+                {/* Closed market (Ben, 2026-11-18: "Gray out weekends and market closed times"): pre-market and
+                    after-hours bars on a lighter ground, and a light band where the chart jumps a weekend or holiday. */}
+                {minutes && (
+                  <g pointerEvents="none">
+                    {closedRuns.map((r) => (
+                      <rect key={`c${r.from}`} x={x(r.from) - barW / 2} y={0} width={(r.to - r.from + 1) * barW} height={priceH} fill="var(--color-ink)" opacity={0.045} />
+                    ))}
+                    {breaks.map((i) => (
+                      <rect key={`b${i}`} x={x(i) - barW / 2 - Math.max(3, barW) / 2} y={0} width={Math.max(3, barW)} height={priceH} fill="var(--color-ink)" opacity={0.09} />
+                    ))}
+                  </g>
+                )}
 
                 {/* Grid */}
                 {ticks.map((t) => (

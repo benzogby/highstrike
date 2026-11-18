@@ -124,7 +124,8 @@ export async function getCandles(raw: string): Promise<CandleSet> {
 }
 
 // ---- Intraday (Ben, 2026-11-18: "More timeframes. Down to 1m") -------------------------------------------------------
-// Minute bars from Massive, regular hours only (9:30 to 4:00 New York time), stamped with their New York wall time
+// Minute bars from Massive (1m to 30m with pre-market and after-hours, 4:00 AM to 8:00 PM; 1h and 4h regular hours,
+// 9:30 to 4:00 New York time), stamped with their New York wall time
 // ("2026-11-17T09:30"). 1h and 4h bars are built from 30-minute ones, counted from the open (so a day has 7 hourly
 // bars, the last half an hour, and two 4-hour bars). The free plan has bars up to the last close; with Stocks Starter
 // today's come too, 15 minutes delayed. Kept in public.market_cache for everyone, as fresh as daily candles.
@@ -132,12 +133,14 @@ export async function getCandles(raw: string): Promise<CandleSet> {
 // One Massive request covers about 52 sessions of minutes (50,000 of them, extended hours included), so the longer
 // timeframes follow its next-page links: `pages` at most (each one a call; the cache shares the result).
 export const INTRADAY = {
-  "1m": { mult: 1, span: "minute", days: 7, group: 1, pages: 1 },
-  "5m": { mult: 5, span: "minute", days: 28, group: 1, pages: 1 },
-  "15m": { mult: 15, span: "minute", days: 60, group: 1, pages: 1 },
-  "30m": { mult: 30, span: "minute", days: 72, group: 1, pages: 1 },
-  "1h": { mult: 30, span: "minute", days: 75, group: 2, pages: 1 },
-  "4h": { mult: 30, span: "minute", days: 150, group: 8, pages: 2 },
+  // `ext`: pre-market and after-hours too (4:00 AM to 8:00 PM), which the chart shades (Ben, 2026-11-18: "Gray out…
+  // market closed times").
+  "1m": { mult: 1, span: "minute", days: 7, group: 1, pages: 1, ext: true },
+  "5m": { mult: 5, span: "minute", days: 28, group: 1, pages: 1, ext: true },
+  "15m": { mult: 15, span: "minute", days: 60, group: 1, pages: 1, ext: true },
+  "30m": { mult: 30, span: "minute", days: 72, group: 1, pages: 1, ext: true },
+  "1h": { mult: 30, span: "minute", days: 75, group: 2, pages: 1, ext: false },
+  "4h": { mult: 30, span: "minute", days: 150, group: 8, pages: 2, ext: false },
 } as const;
 export type Intraday = keyof typeof INTRADAY;
 
@@ -170,7 +173,7 @@ async function intradayFromMassive(ticker: string, tf: Intraday, key: string): P
         for (const r of json.results ?? []) {
           const t = nyStamp(r.t);
           const hm = t.slice(11);
-          if (hm < "09:30" || hm >= "16:00") continue;
+          if (spec.ext ? hm < "04:00" || hm >= "20:00" : hm < "09:30" || hm >= "16:00") continue;
           bars.push({ t, o: r.o, h: r.h, l: r.l, c: r.c, v: r.v ?? 0 });
         }
         url = json.next_url ?? null;
@@ -212,7 +215,7 @@ export async function getIntraday(raw: string, tf: Intraday): Promise<CandleSet>
   try {
     db = supabaseService();
   } catch {}
-  const cacheKey = `bars:${ticker}:${tf}`;
+  const cacheKey = `bars2:${ticker}:${tf}`;
   const { data: cached } = db ? await db.from("market_cache").select("body, fetched_at").eq("key", cacheKey).maybeSingle() : { data: null };
   // In market hours intraday bars that include today are kept a minute (the live price moves the last candle in
   // between); otherwise like daily candles.

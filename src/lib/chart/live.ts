@@ -3,7 +3,7 @@ import type { Candle } from "./types";
 // Live candles (Ben, 2026-11-18: "a live moving chart, candles reacting to prices"): the live prices seen since the
 // chart opened (from /api/live every few seconds), folded into the bars of the timeframe on screen. The bar a price
 // falls in grows with it (its high and low stretch, its close follows); a price in a new period starts a new bar.
-// Regular hours only for intraday, periods counted from 9:30 New York time like the server's bars.
+// Intraday periods line up with the server's bars: 1m to 30m from 4:00 AM to 8:00 PM, 1h and 4h from the 9:30 open.
 
 export type Tick = { price: number; at: number; open: number | null; high: number | null; low: number | null };
 
@@ -24,9 +24,12 @@ function periodOf(ms: number, minutes: number | null, weekly: boolean): string |
     return new Date(d.getTime() - dow * 86_400_000).toISOString().slice(0, 10);
   }
   if (!minutes) return date;
-  const m = Number(s.slice(11, 13)) * 60 + Number(s.slice(14, 16)) - 570;
-  if (m < 0 || m >= 390) return null;
-  const start = 570 + Math.floor(m / minutes) * minutes;
+  // 1m to 30m run 4:00 AM to 8:00 PM (pre-market and after-hours too); 1h and 4h 9:30 to 4:00, from the open.
+  const ext = minutes <= 30;
+  const from = ext ? 240 : 570;
+  const m = Number(s.slice(11, 13)) * 60 + Number(s.slice(14, 16)) - from;
+  if (m < 0 || m >= (ext ? 960 : 390)) return null;
+  const start = from + Math.floor(m / minutes) * minutes;
   return `${date}T${String(Math.floor(start / 60)).padStart(2, "0")}:${String(start % 60).padStart(2, "0")}`;
 }
 
