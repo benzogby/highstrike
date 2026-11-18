@@ -5,7 +5,8 @@ import { BUTTON_PRIMARY, BUTTON_SECONDARY, INPUT } from "@/components/ui";
 import { ACCOUNT_CHOICES, RISK_CHOICES, usd, type TradingProfile } from "@/lib/tradingProfile";
 import { ONBOARDING_DEFAULTS, type OnboardingCopy } from "@/lib/onboardingCopy";
 import type { Style } from "@/lib/ideas";
-import { saveAnswers } from "./actions";
+import { saveAnswers, type FirstIdeaCard } from "./actions";
+import FirstIdeaReveal from "./FirstIdeaReveal";
 
 const choice = (on: boolean) =>
   `press rounded-xl border px-4 py-3.5 text-left transition ${on ? "border-accent bg-accent-soft ring-1 ring-inset ring-accent/40" : "border-line bg-panel hover:border-line-strong hover:bg-panel-2"}`;
@@ -28,7 +29,14 @@ export default function StartQuestions({
   preview?: boolean;
   startAt?: number;
 }) {
-  const [step, setStep] = useState(startAt);
+  const [step, setStepRaw] = useState(startAt);
+  // Which way the screens slide: forward from the right, back from the left (Ben, 2026-11-18: "Animate the transitions").
+  const [dir, setDir] = useState<1 | -1>(1);
+  const setStep = (n: number) => {
+    setDir(n > step ? 1 : -1);
+    setStepRaw(n);
+  };
+  const [done, setDone] = useState<{ card: FirstIdeaCard | null } | null>(null);
   const [account, setAccount] = useState<number | null>(initial?.account ?? (preview ? 5_000 : null));
   const [typed, setTyped] = useState(initial && !ACCOUNT_CHOICES.includes(initial.account) ? String(initial.account) : "");
   const [risk, setRisk] = useState<number>(initial?.riskPct ?? 1);
@@ -44,7 +52,8 @@ export default function StartQuestions({
     setError("");
     start(async () => {
       const r = await saveAnswers({ account: acct, riskPct: risk, style });
-      if (r?.error) setError(r.error);
+      if ("error" in r) setError(r.error);
+      else setDone({ card: r.card });
     });
   };
 
@@ -56,13 +65,18 @@ export default function StartQuestions({
   ];
   const tenLosses = Math.round((1 - Math.pow(1 - risk / 100, 10)) * 100);
 
+  if (done) return <FirstIdeaReveal card={done.card} />;
+
   return (
     <div className="mx-auto max-w-xl">
       <div className="flex items-center gap-2" aria-hidden="true">
         {titles.map((_, i) => (
-          <span key={i} className={`h-1 flex-1 rounded-full ${i <= step ? "bg-accent" : "bg-panel-2"}`} />
+          <span key={i} className="h-1 flex-1 overflow-hidden rounded-full bg-panel-2">
+            <span className="block h-full rounded-full bg-accent transition-[width] duration-500 ease-out" style={{ width: i <= step ? "100%" : "0%" }} />
+          </span>
         ))}
       </div>
+      <div key={step} className={dir > 0 ? "anim-step-next" : "anim-step-back"}>
       <p className="mt-5 text-[13px] text-ink-3">
         {firstTime && step === 0 && copy.intro ? `${copy.intro} · ` : ""}
         {step + 1} of 3
@@ -120,6 +134,8 @@ export default function StartQuestions({
           ))}
         </div>
       )}
+
+      </div>
 
       {error && <p className="mt-4 rounded-lg border border-down/40 bg-down-soft px-4 py-3 text-sm text-down">{error}</p>}
 

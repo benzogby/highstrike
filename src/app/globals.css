@@ -633,3 +633,36 @@ body {
   background-color: var(--color-accent);
   filter: brightness(1.07);
 }
+
+/* The three first questions slide screen to screen, forward from the right and back from the left, and the first idea's
+   reveal rises in piece by piece (src/app/(app)/start, Ben 2026-11-18). */
+@media (prefers-reduced-motion: no-preference) {
+  .anim-step-next {
+    animation: hs-step-next 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .anim-step-back {
+    animation: hs-step-back 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .anim-reveal {
+    animation: hs-reveal 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: var(--reveal-delay, 0ms);
+  }
+}
+@keyframes hs-step-next {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+}
+@keyframes hs-step-back {
+  from {
+    opacity: 0;
+    transform: translateX(-28px);
+  }
+}
+@keyframes hs-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+  }
+}
