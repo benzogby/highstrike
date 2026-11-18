@@ -701,8 +701,9 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
           )}
           {data && bars.length > 0 && width > 0 && (
             <>
-              {/* Legend */}
-              <div className="mb-1 flex min-h-4 flex-wrap items-center gap-x-3 gap-y-0.5 font-mono text-[11px] tabular-nums text-ink-2">
+              {/* Legend: always one line (Ben, 2026-11-18: wrapping to a second line jolted the chart's height); what
+                  doesn't fit is cut off at the right, the moving averages first. */}
+              <div className="mb-1 flex h-4 flex-nowrap items-center gap-x-3 overflow-hidden whitespace-nowrap font-mono text-[11px] leading-4 tabular-nums text-ink-2 [&>*]:shrink-0">
                 <span className="text-ink-3">{dateLabel(shown.t)}</span>
                 {!narrow && (
                   <>
