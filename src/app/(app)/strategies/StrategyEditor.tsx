@@ -346,7 +346,12 @@ const dollars = (n: number | null) => (n == null ? "—" : `${n > 0 ? "+" : n < 
 const tone = (n: number | null) => (n == null || n === 0 ? "text-ink-2" : n > 0 ? "text-up" : "text-down");
 const REASONS: Record<Trade["reason"], string> = { exit: "Exit", stop: "Stop", expiry: "Expiry", open: "Still open" };
 
-function Equity({ points }: { points: { t: string; v: number }[] }) {
+/**
+ * The running profit or loss, one point per closed trade. Hovering shows a line at the nearest trade with the running
+ * total in dollars and as a percent of the $25,000 account, and that trade's own result (Ben, 2026-11-19).
+ */
+function Equity({ points, trades }: { points: { t: string; v: number }[]; trades: Trade[] }) {
+  const [at, setAt] = useState<number | null>(null);
   if (points.length < 2) return null;
   const w = 600;
   const h = 140;
@@ -357,12 +362,56 @@ function Equity({ points }: { points: { t: string; v: number }[] }) {
   const y = (v: number) => h - ((v - lo) / (hi - lo || 1)) * (h - 8) - 4;
   const d = vals.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
   const col = vals[vals.length - 1] >= 0 ? "var(--color-up)" : "var(--color-down)";
+  // Point k (1-based in vals) is after trade k − 1.
+  const k = at;
+  const total = k != null ? vals[k] : null;
+  const trade = k != null && k > 0 ? trades[k - 1] : null;
+  const left = k != null ? (x(k) / w) * 100 : 0;
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="h-36 w-full" preserveAspectRatio="none" aria-label="Running profit or loss">
-      <line x1={0} x2={w} y1={y(0)} y2={y(0)} stroke="var(--color-line-strong)" strokeDasharray="4 4" />
-      <path d={`${d} L${w},${h} L0,${h} Z`} fill={col} opacity={0.12} />
-      <path d={d} fill="none" stroke={col} strokeWidth={2} vectorEffect="non-scaling-stroke" />
-    </svg>
+    <div
+      className="relative h-36 w-full cursor-crosshair"
+      onMouseMove={(e) => {
+        const r = e.currentTarget.getBoundingClientRect();
+        setAt(Math.max(0, Math.min(vals.length - 1, Math.round(((e.clientX - r.left) / r.width) * (vals.length - 1)))));
+      }}
+      onMouseLeave={() => setAt(null)}
+    >
+      <svg viewBox={`0 0 ${w} ${h}`} className="h-full w-full" preserveAspectRatio="none" aria-label="Running profit or loss">
+        <line x1={0} x2={w} y1={y(0)} y2={y(0)} stroke="var(--color-line-strong)" strokeDasharray="4 4" />
+        <path d={`${d} L${w},${h} L0,${h} Z`} fill={col} opacity={0.12} />
+        <path d={d} fill="none" stroke={col} strokeWidth={2} vectorEffect="non-scaling-stroke" />
+      </svg>
+      {k != null && total != null && (
+        <>
+          <span className="pointer-events-none absolute bottom-0 top-0 w-px bg-ink-3/70" style={{ left: `${left}%` }} />
+          <span
+            className={`pointer-events-none absolute size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-panel ${total >= 0 ? "bg-up" : "bg-down"}`}
+            style={{ left: `${left}%`, top: `${(y(total) / h) * 100}%` }}
+          />
+          <div
+            className="pointer-events-none absolute top-1 z-10 min-w-44 rounded-lg border border-line-strong bg-panel-3/95 px-2.5 py-2 text-[12px] shadow-lg"
+            style={left > 60 ? { right: `${100 - left + 1.5}%` } : { left: `${left + 1.5}%` }}
+          >
+            <p className="text-ink-3">{trade?.exitT ?? "Start"}</p>
+            <p className="mt-1 flex justify-between gap-3">
+              <span className="text-ink-2">Total</span>
+              <span className={`font-mono-nums ${tone(total)}`}>
+                {dollars(total)} <span className="text-[11px]">({pct((total / 25_000) * 100, 2)})</span>
+              </span>
+            </p>
+            {trade && (
+              <p className="mt-0.5 flex justify-between gap-3">
+                <span className="text-ink-2">This trade</span>
+                <span className={`font-mono-nums ${tone(trade.dollars)}`}>
+                  {dollars(trade.dollars)} <span className="text-[11px]">({pct(trade.pct)})</span>
+                </span>
+              </p>
+            )}
+            {trade && <p className="mt-1 text-[11px] text-ink-3">Trade {k} of {trades.length}, entered {trade.entryT}</p>}
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 
@@ -650,8 +699,8 @@ export function BacktestResults({ result, ticker, direction, userId }: { result:
       </p>
 
       <div className={`${CARD} p-4`}>
-        <p className="text-[13px] font-medium text-ink">Running profit or loss</p>
-        <Equity points={result.equity} />
+        <p className="text-[13px] font-medium text-ink">Running profit or loss <span className="font-normal text-ink-3">· hover for each point</span></p>
+        <Equity points={result.equity} trades={result.trades.filter((t) => t.reason !== "open")} />
       </div>
 
       <div className={`${CARD} p-3`}>
