@@ -182,6 +182,14 @@ export default function Desk({
   // be replaced with a chart of the contract's price"): the open contract, else the stock. Same chart, same timeframe.
   const chartSymbol = mode === "options" && pick ? pick.contract : ticker;
   const chartExpiry = parseContract(chartSymbol)?.expiry ?? null;
+  // The member's unfilled limit orders on what's charted, marked on the chart.
+  const chartOrders = useMemo(
+    () =>
+      state.orders
+        .filter((o) => o.status === "working" && o.type === "limit" && o.limit != null && o.symbol === chartSymbol)
+        .map((o) => ({ id: o.id, price: o.limit!, side: o.side, qty: o.qty })),
+    [state.orders, chartSymbol]
+  );
   const [live, setLive] = useState<{ ticker: string; price: number; open: number | null; high: number | null; low: number | null; prevClose: number | null } | null>(null);
   const onLive = useCallback((t: { price: number; open: number | null; high: number | null; low: number | null; prevClose: number | null }) => setLive({ ticker: chartSymbol, ...t }), [chartSymbol]);
   const liveNow = live?.ticker === ticker ? live : null;
@@ -477,7 +485,7 @@ export default function Desk({
             style={{ paddingLeft: leftEdge, paddingRight: rightEdge, paddingBottom: 56 }}
           >
             <div className="min-h-0 flex-1">
-              <HighStrikeChart ticker={chartSymbol} expiry={chartExpiry} underlyingPrice={q?.price ?? lastBar?.c ?? null} userId={userId} fill onLive={onLive} initialTimeframe={start.tf} onTimeframe={setTf} limitLine={limitLine} />
+              <HighStrikeChart ticker={chartSymbol} expiry={chartExpiry} underlyingPrice={q?.price ?? lastBar?.c ?? null} workingOrders={chartOrders} userId={userId} fill onLive={onLive} initialTimeframe={start.tf} onTimeframe={setTf} limitLine={limitLine} />
             </div>
           </div>
 
@@ -601,7 +609,7 @@ export default function Desk({
       <section className="rounded-xl border border-line bg-panel px-4 py-3">{accountBar}</section>
       <section className="rounded-xl border border-line bg-panel p-3">
         {symbolHead}
-        <HighStrikeChart ticker={chartSymbol} expiry={chartExpiry} underlyingPrice={q?.price ?? lastBar?.c ?? null} userId={userId} height={320} onLive={onLive} initialTimeframe={start.tf} onTimeframe={setTf} limitLine={limitLine} />
+        <HighStrikeChart ticker={chartSymbol} expiry={chartExpiry} underlyingPrice={q?.price ?? lastBar?.c ?? null} workingOrders={chartOrders} userId={userId} height={320} onLive={onLive} initialTimeframe={start.tf} onTimeframe={setTf} limitLine={limitLine} />
       </section>
       {modeTabs}
       {mode === "shares" ? (

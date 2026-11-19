@@ -79,6 +79,8 @@ type Props = {
   limitLine?: { price: number; side: "buy" | "sell" } | null;
   /** An option contract's expiry date ("2026-12-18"): a dashed vertical line at 4:00 PM New York time that day. */
   expiry?: string | null;
+  /** Working (unfilled) limit orders on this symbol: a line at each price, tagged +10 (buy) or −10 (sell). */
+  workingOrders?: { id: string; price: number; side: "buy" | "sell"; qty: number }[];
   /** For an option contract: the stock's price now, to say how far the strike is in or out of the money. */
   underlyingPrice?: number | null;
   /** Each live price as it arrives (the desk's price bar follows it). */
@@ -89,7 +91,7 @@ type Props = {
   onTimeframe?: (tf: Timeframe) => void;
 };
 
-export default function HighStrikeChart({ ticker, userId, levels, height, fill = false, onLive, initialTimeframe, onTimeframe, limitLine, expiry, underlyingPrice }: Props) {
+export default function HighStrikeChart({ ticker, userId, levels, height, fill = false, onLive, initialTimeframe, onTimeframe, limitLine, expiry, underlyingPrice, workingOrders }: Props) {
   // Daily candles, kept with their ticker so another ticker's never show (or a failure sticks) while a new one loads.
   const [daily, setDaily] = useState<{ ticker: string; candles: Candle[] | null; source?: string; stale?: boolean; waiting?: boolean; failed?: boolean } | null>(null);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
@@ -486,10 +488,17 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
       l = Math.min(l, limitLine.price);
       h = Math.max(h, limitLine.price);
     }
+    // Working orders near the price stay in view too.
+    for (const o of workingOrders ?? []) {
+      if (Number.isFinite(l) && o.price > l * 0.85 && o.price < h * 1.15) {
+        l = Math.min(l, o.price);
+        h = Math.max(h, o.price);
+      }
+    }
     if (!Number.isFinite(l)) return { lo: 0, hi: 1 };
     const pad = (h - l) * 0.07 || h * 0.02 || 1;
     return { lo: l - pad, hi: h + pad };
-  }, [bars, left, v.end, levels, limitLine]);
+  }, [bars, left, v.end, levels, limitLine, workingOrders]);
   const { lo, hi } = manual ?? auto;
   const y = (p: number) => ((hi - p) / (hi - lo)) * priceH;
   const invY = (py: number) => hi - (py / priceH) * (hi - lo);
@@ -1215,6 +1224,21 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
                   {/* The contract's expiry: a dashed vertical line, labelled (or a tag at the right edge when it's further on) */}
                   {expiry && expIdx != null && <ExpiryMark x={x(expIdx)} plotW={plotW} priceH={priceH} label={`EXPIRES ${expiryLabel(expiry)}`} />}
 
+                  {/* Working orders (Ben, 2026-11-18: "When a limit order is open/unfilled, mark it… +10 or -10 indicating the
+                      number of shares or contracts that are still unfilled") */}
+                  {(workingOrders ?? []).map((o) =>
+                    o.price > lo && o.price < hi ? (
+                      <g key={o.id} pointerEvents="none">
+                        <line x1={0} x2={plotW} y1={y(o.price)} y2={y(o.price)} stroke={o.side === "buy" ? "var(--color-up)" : "var(--color-down)"} strokeOpacity={0.9} strokeDasharray="8 3 2 3" strokeWidth={1.3} />
+                        <rect x={plotW - 118} y={y(o.price) - 9} width={60} height={18} rx={3} fill={o.side === "buy" ? "var(--color-up)" : "var(--color-down)"} />
+                        <text x={plotW - 88} y={y(o.price) + 4} textAnchor="middle" className="font-mono text-[11px] font-semibold" fill="#fff">
+                          {o.side === "buy" ? "+" : "−"}
+                          {o.qty} LMT
+                        </text>
+                      </g>
+                    ) : null
+                  )}
+
                   {/* The ticket's working limit (Ben, 2026-11-18: "show a light line on the chart with a LIMIT label") */}
                   {limitLine && limitLine.price > lo && limitLine.price < hi && (
                     <g pointerEvents="none">
@@ -1296,6 +1320,9 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
                   </g>
                 )}
 
+                {(workingOrders ?? []).map((o) =>
+                  o.price > lo && o.price < hi ? <AxisTag key={o.id} x={plotW} y={y(o.price)} fill={o.side === "buy" ? "var(--color-up)" : "var(--color-down)"} text={priceLabel(o.price)} /> : null
+                )}
                 {limitLine && limitLine.price > lo && limitLine.price < hi && (
                   <AxisTag x={plotW} y={y(limitLine.price)} fill={limitLine.side === "buy" ? "var(--color-up)" : "var(--color-down)"} text={priceLabel(limitLine.price)} />
                 )}
