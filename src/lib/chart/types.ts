@@ -1,7 +1,8 @@
 // HighStrike Chart's shapes, shared by the server (src/lib/candles.ts), the chart (src/components/chart) and the saved
 // markup (public.chart_drawings). Prices are per share; times are New York trading dates, "2026-11-17".
 
-export type Candle = { t: string; o: number; h: number; l: number; c: number; v: number; live?: boolean };
+/** `empty`: a time slot nothing traded in (src/lib/chart/slots.ts), kept so time stays to scale; drawn as nothing. */
+export type Candle = { t: string; o: number; h: number; l: number; c: number; v: number; live?: boolean; empty?: boolean };
 
 /** A point on the chart: a date (any date, even past the last bar, for drawings that reach into the future) and a price. */
 export type Anchor = { t: string; p: number };

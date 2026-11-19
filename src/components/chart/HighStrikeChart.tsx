@@ -8,6 +8,8 @@ import { planNumbers } from "@/lib/chart/plan";
 import { withLive, type Span, type Tick } from "@/lib/chart/live";
 import { TIMEFRAMES, type Timeframe } from "@/lib/chart/timeframes";
 import { addDays, isSession } from "@/lib/marketCalendar";
+import { barStart, minuteOf } from "@/lib/chart/sessions";
+import { daySlots, fillDated, fillIntraday, onReal } from "@/lib/chart/slots";
 export type { Timeframe };
 
 // HighStrike Chart (Ben, 2026-11-17: "Our own custom charts, with our UI, and deep markup ability"): 1m to weekly
@@ -341,15 +343,17 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
   const bars = useMemo(() => {
     const roll = span === "W" ? toWeekly : span === "M" ? toMonthly : span === "Y" ? toYearly : (b: Candle[]) => b;
     const base = minutes ? (intraNow?.candles ?? []) : data ? roll(data.candles) : [];
-    return liveTicks ? withLive(base, liveTicks, minutes, span) : base;
+    const withTicks = liveTicks ? withLive(base, liveTicks, minutes, span) : base;
+    // Every day the same width, traded in or not (src/lib/chart/slots.ts).
+    return minutes ? fillIntraday(withTicks, minutes) : fillDated(withTicks, span);
   }, [minutes, intraNow, data, span, liveTicks]);
   const ts = useMemo(() => timeScale(bars, minutes ?? (span === "M" ? 30.44 * 1440 : span === "Y" ? 365.25 * 1440 : weekly)), [bars, minutes, span, weekly]);
   // Loaded, failed: for the timeframe on screen.
   const loaded = minutes ? Boolean(intraNow?.candles) : Boolean(data);
   const waiting = minutes ? Boolean(intraNow?.waiting) : Boolean(dailyNow?.waiting);
   const failedNow = minutes ? Boolean(intraNow?.failed) : failed;
-  const maLines = useMemo(() => MAS.filter((m) => settings.mas.includes(m.n)).map((m) => ({ ...m, values: sma(bars, m.n) })), [bars, settings.mas]);
-  const rsiValues = useMemo(() => (settings.rsi ? rsi(bars) : []), [bars, settings.rsi]);
+  const maLines = useMemo(() => MAS.filter((m) => settings.mas.includes(m.n)).map((m) => ({ ...m, values: onReal(bars, (real) => sma(real, m.n)) })), [bars, settings.mas]);
+  const rsiValues = useMemo(() => (settings.rsi ? onReal(bars, (real) => rsi(real)) : []), [bars, settings.rsi]);
   const closes = useMemo(() => (data?.candles ?? []).map((c) => c.c), [data]);
 
   const narrow = width > 0 && width < 640;
@@ -374,28 +378,15 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
     const n = bars.length;
     const lastT = bars[n - 1].t;
     const lastDate = lastT.slice(0, 10);
-    const median = (xs: number[]) => (xs.length ? [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)] : 0);
-    let bpd = 1;
-    let after = 0;
-    let restToday = 0;
-    let startMin = 570;
-    if (minutes) {
-      const days = new Map<string, Candle[]>();
-      for (const b of bars.slice(-4000)) {
-        const d = b.t.slice(0, 10);
-        if (!days.has(d)) days.set(d, []);
-        days.get(d)!.push(b);
-      }
-      const done = [...days.entries()].filter(([d]) => d !== lastDate).slice(-10).map(([, list]) => list);
-      bpd = Math.max(1, median(done.map((l) => l.length)) || (days.get(lastDate)?.length ?? 1));
-      after = median(done.map((l) => l.filter((b) => b.t.slice(11, 16) >= "16:00").length));
-      restToday = Math.max(0, bpd - (days.get(lastDate)?.length ?? 0));
-      const first = done.at(-1)?.[0]?.t ?? lastT;
-      startMin = Number(first.slice(11, 13)) * 60 + Number(first.slice(14, 16));
-    }
-    /** The k-th trading day after `from`. */
-    const nthSession = (from: string, k: number) => {
-      let d = from;
+    // Each trading day's slots, the same as the bars' (src/lib/chart/slots.ts); 4:00 PM is the end of the regular ones.
+    const slots = minutes ? daySlots(minutes) : [];
+    const spd = slots.length;
+    const regEnd = slots.filter((m) => m < 960).length;
+    const lastSlot = minutes ? Math.max(0, slots.indexOf(barStart(minuteOf(lastT), minutes) ?? -1)) : 0;
+    const restToday = minutes ? spd - 1 - lastSlot : 0;
+    /** The k-th trading day after the last bar's. */
+    const nthSession = (k: number) => {
+      let d = lastDate;
       for (let left = k, guard = 0; left > 0 && guard < 4000; guard++) {
         d = addDays(d, 1);
         if (isSession(d)) left--;
@@ -409,22 +400,21 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
     };
     const clock = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
     return {
-      /** Where 4:00 PM on a future date falls: its daily bar, or the close of that day's last regular-hours bar. */
+      /** Where 4:00 PM on a date falls: its daily bar, or the edge between that day's regular and after-hours slots. */
       close(date: string) {
         const k = sessionsUntil(date);
-        return minutes ? n - 1 + restToday + k * bpd - after + 0.5 : n - 1 + k;
+        if (!minutes) return n - 1 + k;
+        if (k === 0) return n - 1 + (regEnd - 1 - lastSlot) + 0.5;
+        return n - 1 + restToday + (k - 1) * spd + regEnd + 0.5;
       },
       /** The time at a position past the last bar (the crosshair's tag out there). */
       date(i: number) {
         const j = Math.round(i - (n - 1));
-        if (!minutes) return nthSession(lastDate, j);
-        if (j <= restToday) {
-          const m = Number(lastT.slice(11, 13)) * 60 + Number(lastT.slice(14, 16)) + j * minutes;
-          return `${lastDate}T${clock(Math.min(m, 23 * 60 + 59))}`;
-        }
-        const k = Math.ceil((j - restToday) / bpd);
-        const p = j - restToday - (k - 1) * bpd;
-        return `${nthSession(lastDate, k)}T${clock(Math.min(startMin + (p - 1) * minutes, 23 * 60 + 59))}`;
+        if (!minutes) return nthSession(j);
+        if (j <= restToday) return `${lastDate}T${clock(slots[lastSlot + j])}`;
+        const m = j - restToday;
+        const k = Math.ceil(m / spd);
+        return `${nthSession(k)}T${clock(slots[m - (k - 1) * spd - 1])}`;
       },
     };
   }, [bars, minutes, span]);
@@ -461,6 +451,7 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
     const from = Math.max(0, Math.floor(left));
     const to = Math.min(bars.length - 1, Math.ceil(v.end));
     for (let i = from; i <= to; i++) {
+      if (bars[i].empty) continue;
       l = Math.min(l, bars[i].l);
       h = Math.max(h, bars[i].h);
     }
@@ -759,14 +750,21 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
   // ---- Render -------------------------------------------------------------------------------------------------------
 
   const hoverIdx = hover ? Math.round(invX(hover.x)) : null;
-  const shown = hoverIdx != null && hoverIdx >= 0 && hoverIdx < bars.length ? bars[hoverIdx] : bars[bars.length - 1];
-  const shownIdx = hoverIdx != null && hoverIdx >= 0 && hoverIdx < bars.length ? hoverIdx : bars.length - 1;
-  const prevClose = shownIdx > 0 ? bars[shownIdx - 1]?.c : undefined;
+  // The legend reads the last bar that traded at or before the cursor (an empty slot has nothing of its own).
+  const realAt = (i: number) => {
+    let j = Math.min(i, bars.length - 1);
+    while (j > 0 && bars[j].empty) j--;
+    return j;
+  };
+  const shownIdx = realAt(hoverIdx != null && hoverIdx >= 0 && hoverIdx < bars.length ? hoverIdx : bars.length - 1);
+  const shown = bars[shownIdx];
+  const prevClose = shownIdx > 0 ? bars[realAt(shownIdx - 1)]?.c : undefined;
   const last = bars[bars.length - 1];
 
   const visible: number[] = [];
   for (let i = Math.max(0, Math.floor(left)); i <= Math.min(bars.length - 1, Math.ceil(v.end)); i++) visible.push(i);
   const maxVol = Math.max(1, ...visible.map((i) => bars[i].v));
+  const drawnBars = visible.filter((i) => !bars[i].empty);
   const volH = priceH * 0.16;
   const bodyW = Math.max(1, Math.min(14, barW * 0.68));
 
@@ -846,10 +844,8 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
     let pen = false;
     for (const i of visible) {
       const val = vals[i];
-      if (val == null) {
-        pen = false;
-        continue;
-      }
+      // Across empty slots the line carries on to the next value.
+      if (val == null) continue;
       dStr += `${pen ? "L" : "M"}${x(i).toFixed(1)},${yf(val).toFixed(1)}`;
       pen = true;
     }
@@ -1092,7 +1088,7 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
                 <g clipPath={`url(#plot-${ticker})`}>
                   {/* Volume */}
                   {settings.volume &&
-                    visible.map((i) => {
+                    drawnBars.map((i) => {
                       const b = bars[i];
                       const h = (b.v / maxVol) * volH;
                       return (
@@ -1109,7 +1105,7 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
                     })}
 
                   {/* Candles */}
-                  {visible.map((i) => {
+                  {drawnBars.map((i) => {
                     const b = bars[i];
                     const up = b.c >= b.o;
                     const col = up ? "var(--color-up)" : "var(--color-down)";
