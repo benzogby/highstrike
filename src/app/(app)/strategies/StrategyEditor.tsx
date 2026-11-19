@@ -85,7 +85,6 @@ function CriterionRow({ cr, onChange }: { cr: Criterion; onChange: (c: Criterion
   const parts = d.text.split(/(\{\w+\})/);
   return (
     <div className={`flex items-center gap-3 rounded-lg px-3 py-2 transition ${cr.on ? "bg-accent-soft/60 ring-1 ring-inset ring-accent/30" : "bg-panel-2/40"}`}>
-      <Toggle on={cr.on} onChange={(v) => onChange({ ...cr, on: v })} label={d.text.replace(/\{\w+\}/g, "N")} />
       <span className={cr.on ? "" : "opacity-60"}>
         <StrategyIcon id={cr.id} />
       </span>
@@ -108,6 +107,10 @@ function CriterionRow({ cr, onChange }: { cr: Criterion; onChange: (c: Criterion
             />
           );
         })}
+      </span>
+      {/* The switch on the far right (Ben, 2026-11-19). */}
+      <span className="ml-auto pl-3">
+        <Toggle on={cr.on} onChange={(v) => onChange({ ...cr, on: v })} label={d.text.replace(/\{\w+\}/g, "N")} />
       </span>
     </div>
   );
