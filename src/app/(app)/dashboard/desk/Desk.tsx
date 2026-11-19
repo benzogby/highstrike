@@ -78,7 +78,7 @@ export default function Desk({
   lesson: DeskLesson;
   budget: number | null;
   /** What the URL asked for (?t=NVDA&tf=4h&panel=positions). */
-  start: { ticker: string | null; tf: Timeframe | null; panel: "watch" | "account" | "ideas" | null };
+  start: { ticker: string | null; tf: Timeframe | null; panel: "watch" | "account" | "ideas" | null; trade: "shares" | "options" | null };
 }) {
   const wide = useWide();
   const [panels, toggle] = usePanels();
@@ -86,6 +86,8 @@ export default function Desk({
   const [state, setState] = useState(initial);
   const [ticker, setTicker] = useState(start.ticker ?? initial.positions[0]?.underlying ?? watch[0] ?? "SPY");
   const [tf, setTf] = useState<Timeframe | null>(start.tf);
+  // The Trade panel's two tabs (Ben, 2026-11-18: "Split the trade tab into 2 subtabs… Shares and Options").
+  const [mode, setMode] = useState<"shares" | "options">(start.trade ?? "shares");
 
   // The view in the URL (Ben, 2026-11-18: "store the ticker in the URL as well as any other relevant parameters"):
   // ?t=NVDA&tf=4h&panel=positions, replaced in place as they change, so a reload or a shared link opens the same view.
@@ -96,9 +98,11 @@ export default function Desk({
     const panel = over === "watch" ? "watchlist" : over === "account" ? "positions" : over === "ideas" ? "ideas" : null;
     if (panel) q.set("panel", panel);
     else q.delete("panel");
+    if (mode === "options") q.set("trade", "options");
+    else q.delete("trade");
     const next = `${window.location.pathname}?${q}`;
     if (next !== `${window.location.pathname}${window.location.search}`) window.history.replaceState(window.history.state, "", next);
-  }, [ticker, tf, over]);
+  }, [ticker, tf, over, mode]);
   const [pick, setPick] = useState<Pick | null>(null);
   const [search, setSearch] = useState("");
   const [resetting, startReset] = useTransition();
@@ -125,11 +129,13 @@ export default function Desk({
   };
   const choose = (p: Pick) => {
     setPick(p);
+    setMode("options");
     if (wide && !panels.side) toggle("side");
   };
   const held = (symbol: string) => state.positions.find((p) => p.symbol === symbol)?.qty ?? 0;
 
-  const target: TicketTarget = pick
+  const target: TicketTarget =
+    mode === "options" && pick
     ? { symbol: pick.contract, kind: "option", side: pick.side, bid: pick.bid, ask: pick.ask, last: null, held: held(pick.contract) }
     : { symbol: ticker, kind: "stock", side: "buy", bid: null, ask: null, last: q?.price ?? null, held: held(ticker) };
 
@@ -297,15 +303,30 @@ export default function Desk({
     </div>
   );
 
-  const ticket = (
-    <div className="flex flex-col gap-2">
-      <OrderTicket key={`${target.symbol}:${target.side}`} target={target} cash={state.cash} budget={budget} open={state.open} onDone={refresh} />
-      {pick && (
-        <button type="button" onClick={() => setPick(null)} className="text-left text-[12px] text-ink-3 hover:text-ink">
-          ← Trade {ticker} shares instead
+  const ticket = <OrderTicket key={`${target.symbol}:${target.side}`} target={target} cash={state.cash} budget={budget} open={state.open} onDone={refresh} />;
+
+  /** Shares | Options, across the top of the Trade panel. */
+  const modeTabs = (
+    <div role="tablist" aria-label="Trade" className="flex gap-1 rounded-lg bg-bg p-1">
+      {(["shares", "options"] as const).map((m) => (
+        <button
+          key={m}
+          type="button"
+          role="tab"
+          aria-selected={mode === m}
+          onClick={() => setMode(m)}
+          className={`flex-1 rounded-md px-3 py-1.5 text-[13px] font-medium transition ${mode === m ? "bg-panel-3 text-ink ring-1 ring-inset ring-line-strong" : "text-ink-3 hover:text-ink"}`}
+        >
+          {m === "shares" ? "Shares" : "Options"}
         </button>
-      )}
+      ))}
     </div>
+  );
+  /** Options with nothing picked yet: how to start. */
+  const pickHint = (
+    <p className="rounded-lg border border-dashed border-line-strong px-3 py-2.5 text-[12px] leading-relaxed text-ink-2">
+      Tap an <span className="text-ink">ask</span> in the chain to buy that contract, or a <span className="text-ink">bid</span> to sell one you hold. The ticket opens here.
+    </p>
   );
 
 
@@ -420,22 +441,28 @@ export default function Desk({
           {/* Right, full height: the order ticket, and the option chain under it */}
           {panels.side ? (
             <aside className={`${FLOAT} absolute bottom-3 right-3 top-3 flex flex-col overflow-hidden`} style={{ width: SIDE }}>
-              <div className="flex items-center justify-between border-b border-line px-3 py-2">
-                <h2 className="text-[13px] font-medium text-ink">Trade</h2>
+              <div className="flex items-center gap-2 border-b border-line px-2 py-2">
+                <div className="flex-1">{modeTabs}</div>
                 <PanelButton label="Hide the trade panel" onClick={() => toggle("side")} d="M9 6l6 6-6 6" />
               </div>
-              <div className="max-h-[70%] flex-none space-y-2 overflow-y-auto p-2">
-                {accountBox}
-                {ticket}
-              </div>
-              <div className="flex min-h-0 flex-1 flex-col border-t border-line">
-                <p className="px-3 pt-2 text-[13px] font-medium text-ink">
-                  Option chain <span className="font-mono-nums text-ink-3">{ticker}</span>
-                </p>
-                <div className="min-h-0 flex-1">
-                  <OptionChain ticker={ticker} picked={pick?.contract ?? null} onPick={choose} fill />
+              {mode === "shares" ? (
+                <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-2">
+                  {accountBox}
+                  {ticket}
                 </div>
-              </div>
+              ) : (
+                <>
+                  <div className="max-h-[60%] flex-none overflow-y-auto p-2">{pick ? ticket : pickHint}</div>
+                  <div className="flex min-h-0 flex-1 flex-col border-t border-line">
+                    <p className="px-3 pt-2 text-[13px] font-medium text-ink">
+                      Option chain <span className="font-mono-nums text-ink-3">{ticker}</span>
+                    </p>
+                    <div className="min-h-0 flex-1">
+                      <OptionChain ticker={ticker} picked={pick?.contract ?? null} onPick={choose} fill />
+                    </div>
+                  </div>
+                </>
+              )}
             </aside>
           ) : (
             <EdgeTab label="Trade" className="right-3 top-3" onClick={() => toggle("side")} d="M15 6l-6 6 6 6" />
@@ -528,8 +555,15 @@ export default function Desk({
         {symbolHead}
         <HighStrikeChart ticker={ticker} userId={userId} height={320} onLive={onLive} initialTimeframe={start.tf} onTimeframe={setTf} />
       </section>
-      {ticket}
-      <OptionChain ticker={ticker} picked={pick?.contract ?? null} onPick={setPick} />
+      {modeTabs}
+      {mode === "shares" ? (
+        ticket
+      ) : (
+        <>
+          {pick ? ticket : pickHint}
+          <OptionChain ticker={ticker} picked={pick?.contract ?? null} onPick={choose} />
+        </>
+      )}
       <Blotter state={state} onSelect={select} onChange={refresh} />
       <section className="rounded-xl border border-line bg-panel">
         <div className="flex items-baseline justify-between border-b border-line px-3 py-2">

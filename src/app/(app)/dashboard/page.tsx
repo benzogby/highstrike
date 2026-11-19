@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 };
 
 
-type Query = { t?: string; tf?: string; panel?: string };
+type Query = { t?: string; tf?: string; panel?: string; trade?: string };
 
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<Query> }) {
   const { supabase, user, profile, member } = await memberContext("/dashboard");
@@ -61,12 +61,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const lesson = next ? { href: lessonHref(next.id), title: next.title, label: nextModule ? moduleLabel(nextModule.title).eyebrow : "Trading School", done, total: course.lessons.length } : null;
   const p = profileOf(profile);
 
-  // The view the URL asks for: ?t=NVDA&tf=4h&panel=watchlist|positions|ideas.
+  // The view the URL asks for: ?t=NVDA&tf=4h&panel=watchlist|positions|ideas&trade=options.
   const t = (q.t ?? "").trim().toUpperCase().replace(/^\$/, "");
   const start = {
     ticker: /^[A-Z][A-Z0-9.]{0,7}$/.test(t) ? t : null,
     tf: (TIMEFRAMES as readonly string[]).includes(q.tf ?? "") ? (q.tf as Timeframe) : null,
     panel: q.panel === "watchlist" ? ("watch" as const) : q.panel === "positions" ? ("account" as const) : q.panel === "ideas" ? ("ideas" as const) : null,
+    trade: q.trade === "options" ? ("options" as const) : null,
   };
 
   return <Desk userId={user.id} initial={paper} watch={watch} ideas={ideas} lesson={lesson} budget={p ? riskBudget(p) : null} start={start} />;
