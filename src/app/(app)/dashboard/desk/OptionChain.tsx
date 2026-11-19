@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChainView, Side } from "@/lib/paperChain";
 import { shortDay, daysTo } from "./fmt";
 
@@ -29,6 +29,16 @@ export default function OptionChain({ ticker, picked, onPick, fill = false }: { 
   const data = chain?.key === key ? chain.data : null;
   const loading = !chain || chain.key !== key;
   const spot = data?.spot ?? null;
+  // Highest strike on top (Ben, 2026-11-18: "Have higher strikes on top, sorted top down").
+  const rows = useMemo(() => (data ? [...data.rows].sort((a, b) => b.strike - a.strike) : []), [data]);
+  // Opens with the stock price's line in the middle of the list, where the strikes worth looking at are.
+  const scroller = useRef<HTMLDivElement>(null);
+  const priceRow = useRef<HTMLTableRowElement>(null);
+  useEffect(() => {
+    const box = scroller.current;
+    const row = priceRow.current;
+    if (box && row) box.scrollTop += row.getBoundingClientRect().top - box.getBoundingClientRect().top - box.clientHeight / 2;
+  }, [key, data]);
 
   const cell = (s: Side | null, which: "bid" | "ask", shade = "") => {
     const v = s?.[which] ?? null;
@@ -86,7 +96,7 @@ export default function OptionChain({ ticker, picked, onPick, fill = false }: { 
       ) : !data || data.rows.length === 0 ? (
         <p className="px-4 py-10 text-center text-sm text-ink-3">No option chain for {ticker} right now.</p>
       ) : (
-        <div className={fill ? "min-h-0 flex-1 overflow-auto" : "max-h-[420px] overflow-auto"}>
+        <div ref={scroller} className={fill ? "min-h-0 flex-1 overflow-auto" : "max-h-[420px] overflow-auto"}>
           <table className={`w-full text-[12px] ${fill ? "" : "min-w-[460px]"}`}>
             <thead className="sticky top-0 bg-panel-2 text-[11px] text-ink-3">
               <tr>
@@ -100,12 +110,13 @@ export default function OptionChain({ ticker, picked, onPick, fill = false }: { 
               </tr>
             </thead>
             <tbody>
-              {data.rows.map((r, i) => {
+              {rows.map((r, i) => {
                 const callItm = spot != null && r.strike < spot;
                 const putItm = spot != null && r.strike > spot;
-                const priceLine = spot != null && i > 0 && data.rows[i - 1].strike < spot && r.strike >= spot;
+                // The line sits on top of the first strike below the price.
+                const priceLine = spot != null && i > 0 && rows[i - 1].strike >= spot && r.strike < spot;
                 return (
-                  <tr key={r.strike} className={`border-t ${priceLine ? "border-t-2 border-accent" : "border-line/60"}`}>
+                  <tr key={r.strike} ref={priceLine ? priceRow : undefined} className={`border-t ${priceLine ? "border-t-2 border-accent" : "border-line/60"}`}>
                     <td className={`px-2 py-1.5 text-right font-mono-nums text-ink-3 ${callItm ? "bg-up/[0.06]" : ""}`}>{r.call?.delta != null ? r.call.delta.toFixed(2) : "—"}</td>
                     {cell(r.call, "bid", callItm ? "bg-up/[0.06]" : "")}
                     {cell(r.call, "ask", callItm ? "bg-up/[0.06]" : "")}
