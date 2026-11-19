@@ -74,6 +74,8 @@ type Props = {
   fill?: boolean;
   /** A working limit price to mark (the desk's ticket): a light line labelled LIMIT. */
   limitLine?: { price: number; side: "buy" | "sell" } | null;
+  /** An option contract's expiry date ("2026-12-18"): a dashed vertical line at 4:00 PM New York time that day. */
+  expiry?: string | null;
   /** Each live price as it arrives (the desk's price bar follows it). */
   onLive?: (tick: { price: number; open: number | null; high: number | null; low: number | null; prevClose: number | null }) => void;
   /** A timeframe to open on (the desk's URL), over the one remembered in this browser. */
@@ -82,7 +84,7 @@ type Props = {
   onTimeframe?: (tf: Timeframe) => void;
 };
 
-export default function HighStrikeChart({ ticker, userId, levels, height, fill = false, onLive, initialTimeframe, onTimeframe, limitLine }: Props) {
+export default function HighStrikeChart({ ticker, userId, levels, height, fill = false, onLive, initialTimeframe, onTimeframe, limitLine, expiry }: Props) {
   // Daily candles, kept with their ticker so another ticker's never show (or a failure sticks) while a new one loads.
   const [daily, setDaily] = useState<{ ticker: string; candles: Candle[] | null; source?: string; stale?: boolean; waiting?: boolean; failed?: boolean } | null>(null);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
@@ -178,7 +180,11 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
       clearTimeout(timer);
     };
   }, [ticker]);
+  // Another symbol (the stock, or one of its contracts) starts from its own latest bars.
+  useEffect(() => setView(null), [ticker]);
   const dailyNow = daily?.ticker === ticker ? daily : null;
+  // What the chart is of, in words: the ticker, or "AAPL Dec 18 $350 call" for an option contract.
+  const name = contractName(ticker) ?? ticker;
   const data = useMemo(() => (dailyNow?.candles ? { candles: dailyNow.candles, source: dailyNow.source ?? "", stale: Boolean(dailyNow.stale) } : null), [dailyNow]);
   const failed = Boolean(dailyNow?.failed);
 
@@ -350,10 +356,28 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
   const rsiTop = priceH + TIME_H + GAP;
   const totalH = priceH + TIME_H + (settings.rsi ? RSI_H + GAP : 0);
 
+  // The expiry's bar position (Ben, 2026-11-18: "a vertical line at the expiration date/time"): past the last bar it's
+  // counted in trading time, weekdays (and 4:00 AM to 8:00 PM for intraday bars), the way the bars themselves run.
+  const expIdx = useMemo(() => {
+    if (!expiry || !bars.length) return null;
+    const lastT = bars[bars.length - 1].t;
+    const at = minutes ? `${expiry}T16:00` : expiry;
+    if (at <= lastT || span === "W" || span === "M" || span === "Y") return ts.index(at);
+    if (!minutes) return bars.length - 1 + (weekdayOrd(expiry) - weekdayOrd(lastT.slice(0, 10)));
+    const pos = (t: string) => weekdayOrd(t.slice(0, 10)) * 960 + Math.min(960, Math.max(0, Number(t.slice(11, 13)) * 60 + Number(t.slice(14, 16)) - 240));
+    return bars.length - 1 + (pos(at) - pos(lastT)) / minutes;
+  }, [expiry, bars, minutes, span, ts]);
   const defaultCount = span === "Y" ? bars.length + 2 : span === "M" ? (narrow ? 60 : 132) : weekly ? (narrow ? 45 : 80) : minutes ? (narrow ? 80 : 160) : narrow ? 60 : 130;
   const v = useMemo(
-    () => view ?? { end: bars.length - 1 + (span === "Y" ? 1 : span === "M" ? 3 : weekly ? 4 : 8), count: Math.min(defaultCount, Math.max(long ? 8 : 20, bars.length + 8)) },
-    [view, bars.length, weekly, span, long, defaultCount]
+    () => {
+      if (view) return view;
+      const base = { end: bars.length - 1 + (span === "Y" ? 1 : span === "M" ? 3 : weekly ? 4 : 8), count: Math.min(defaultCount, Math.max(long ? 8 : 20, bars.length + 8)) };
+      // A contract's expiry comes into the first view when it isn't far off (more than about half a screen away, it's
+      // marked at the right edge instead).
+      const extra = expIdx != null ? Math.ceil(expIdx + (long ? 1 : weekly ? 2 : 4) - base.end) : 0;
+      return extra > 0 && extra < base.count * 0.6 ? { end: base.end + extra, count: base.count + extra } : base;
+    },
+    [view, bars.length, weekly, span, long, defaultCount, expIdx]
   );
   const left = v.end - v.count;
   const barW = plotW / v.count;
@@ -902,7 +926,7 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
             <div className="grid animate-pulse place-items-center rounded-lg bg-panel-2" style={{ height: priceH + TIME_H }}>
               {waiting && (
                 <p className="max-w-xs px-4 text-center text-xs text-ink-2">
-                  Getting {ticker}&apos;s prices. The data plan allows a few requests a minute, so this can take up to a minute.
+                  Getting {name}&apos;s prices. The data plan allows a few requests a minute, so this can take up to a minute.
                 </p>
               )}
             </div>
@@ -910,7 +934,7 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
           {(failedNow || (loaded && bars.length === 0)) && (
             <div className="grid place-items-center rounded-lg border border-dashed border-line-strong text-center" style={{ height: priceH + TIME_H }}>
               <div className="max-w-xs px-4">
-                <p className="text-sm font-medium text-ink">Chart data isn&apos;t available for ${ticker} right now</p>
+                <p className="text-sm font-medium text-ink">Chart data isn&apos;t available for {name} right now</p>
                 <p className="mt-1 text-xs text-ink-3">We don&apos;t draw sample prices. Try again in a few minutes.</p>
               </div>
             </div>
@@ -1035,6 +1059,9 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
                   {maLines.map((m) => (
                     <path key={m.n} d={path(m.values, y)} fill="none" stroke={m.color} strokeWidth={1.4} opacity={0.9} />
                   ))}
+
+                  {/* The contract's expiry: a dashed vertical line, labelled (or a tag at the right edge when it's further on) */}
+                  {expiry && expIdx != null && <ExpiryMark x={x(expIdx)} plotW={plotW} priceH={priceH} label={`EXPIRES ${expiryLabel(expiry)}`} />}
 
                   {/* The ticket's working limit (Ben, 2026-11-18: "show a light line on the chart with a LIMIT label") */}
                   {limitLine && limitLine.price > lo && limitLine.price < hi && (
@@ -1432,5 +1459,45 @@ function IconButton({ label, onClick, d }: { label: string; onClick: () => void;
         <path d={d} />
       </svg>
     </button>
+  );
+}
+
+/** Weekdays since Monday 1970-01-05, for counting trading days ahead (holidays aside). */
+function weekdayOrd(date: string) {
+  const d = Math.round((Date.parse(`${date}T12:00:00Z`) - Date.parse("1970-01-05T12:00:00Z")) / 86_400_000);
+  return Math.floor(d / 7) * 5 + Math.min(d % 7, 5);
+}
+
+/** "AAPL Dec 18 $350 call" for "O:AAPL261218C00350000"; null for a stock. */
+function contractName(symbol: string) {
+  const m = /^O:([A-Z.]{1,8})(\d{2})(\d{2})(\d{2})([CP])(\d{8})$/.exec(symbol);
+  if (!m) return null;
+  const strike = Number(m[6]) / 1000;
+  return `${m[1]} ${expiryLabel(`20${m[2]}-${m[3]}-${m[4]}`, false)} $${Number.isInteger(strike) ? strike : strike.toFixed(2)} ${m[5] === "C" ? "call" : "put"}`;
+}
+
+/** "Dec 18 · 4:00 PM ET" (or "Dec 18"; the year too when it isn't this one). */
+function expiryLabel(date: string, time = true) {
+  const d = new Date(`${date}T12:00:00Z`);
+  const year = d.getUTCFullYear() !== new Date().getUTCFullYear();
+  const day = d.toLocaleDateString("en-US", { month: "short", day: "numeric", ...(year ? { year: "numeric" as const } : {}), timeZone: "UTC" });
+  return time ? `${day} · 4:00 PM ET` : day;
+}
+
+/** An option's expiry on the chart: a dashed line with its label at the top, or a tag at the right edge past the view. */
+function ExpiryMark({ x, plotW, priceH, label }: { x: number; plotW: number; priceH: number; label: string }) {
+  if (x < 0) return null;
+  const past = x > plotW;
+  const text = past ? `${label} →` : label;
+  const w = text.length * 6.2 + 14;
+  const lx = past ? plotW - w - 6 : Math.min(plotW - w - 4, Math.max(4, x - w / 2));
+  return (
+    <g pointerEvents="none">
+      {!past && <line x1={x} x2={x} y1={0} y2={priceH} stroke="var(--color-warn)" strokeOpacity={0.75} strokeDasharray="5 4" strokeWidth={1.3} />}
+      <rect x={lx} y={6} width={w} height={18} rx={4} fill="var(--color-panel-3)" stroke="var(--color-warn)" strokeOpacity={0.6} />
+      <text x={lx + w / 2} y={18.5} textAnchor="middle" className="font-mono text-[10px] font-semibold" fill="var(--color-warn)">
+        {text}
+      </text>
+    </g>
   );
 }

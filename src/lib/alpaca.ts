@@ -291,3 +291,57 @@ export function parseOcc(sym: string): { underlying: string; type: "call" | "put
   const m = /^([A-Z.]{1,8})(\d{2})(\d{2})(\d{2})([CP])(\d{8})$/.exec(sym);
   return m ? { underlying: m[1], expiry: `20${m[2]}-${m[3]}-${m[4]}`, type: m[5] === "C" ? "call" : "put", strike: Number(m[6]) / 1000 } : null;
 }
+
+// ---- One option contract: its price history and its live price ----------------------------------------------------
+
+/** "O:AAPL261218C00350000" → "AAPL261218C00350000", or null. */
+export const occOf = (contract: string) => (/^O:[A-Z.]{1,8}\d{6}[CP]\d{8}$/.test(contract) ? contract.slice(2) : null);
+
+/** A contract's bars (Alpaca's option bars, free up to 15 minutes back), oldest first, stamped like stock bars. */
+export async function optionBars(contract: string, timeframe: string, days: number): Promise<Candle[]> {
+  const keys = await alpacaKeys();
+  const sym = occOf(contract);
+  if (!keys || !sym) return [];
+  const daily = timeframe === "1Day";
+  const start = new Date(Date.now() - days * 86_400_000).toISOString();
+  const end = new Date(Date.now() - SIP_DELAY_MS).toISOString();
+  const out: Candle[] = [];
+  let token: string | null = null;
+  for (let page = 0; page < 20; page++) {
+    const q = new URLSearchParams({ symbols: sym, timeframe, start, end, limit: "10000", sort: "asc" });
+    if (token) q.set("page_token", token);
+    const body: { bars?: Record<string, Bar[]>; next_page_token?: string | null } = await get(`/v1beta1/options/bars?${q}`, keys);
+    for (const b of body.bars?.[sym] ?? []) {
+      const stamp = nyStamp(Date.parse(b.t));
+      out.push({ t: daily ? stamp.slice(0, 10) : stamp, o: b.o, h: b.h, l: b.l, c: b.c, v: b.v ?? 0 });
+    }
+    token = body.next_page_token ?? null;
+    if (!token) break;
+  }
+  return out;
+}
+
+/** A contract's live price (its indicative quote's mark, else its last trade) and today's bar so far. */
+export async function optionLive(contract: string): Promise<{ price: number; open: number | null; high: number | null; low: number | null; prevClose: number | null } | null> {
+  const keys = await alpacaKeys();
+  const sym = occOf(contract);
+  if (!keys || !sym) return null;
+  const body = await get<{
+    snapshots?: Record<string, { latestQuote?: { bp?: number; ap?: number }; latestTrade?: { p?: number }; dailyBar?: { o?: number; h?: number; l?: number; t?: string }; prevDailyBar?: { c?: number } }>;
+  }>(`/v1beta1/options/snapshots?symbols=${sym}&feed=indicative`, keys);
+  const s = body.snapshots?.[sym];
+  if (!s) return null;
+  const bid = s.latestQuote?.bp;
+  const ask = s.latestQuote?.ap;
+  const price = bid != null && ask != null && ask > 0 ? (bid + ask) / 2 : s.latestTrade?.p;
+  if (!(price && price > 0)) return null;
+  const today = nyStamp(Date.now()).slice(0, 10);
+  const todays = s.dailyBar?.t && nyStamp(Date.parse(s.dailyBar.t)).slice(0, 10) === today ? s.dailyBar : null;
+  return {
+    price: Math.round(price * 100) / 100,
+    open: todays?.o ?? null,
+    high: todays?.h != null ? Math.max(todays.h, Math.round(price * 100) / 100) : null,
+    low: todays?.l != null ? Math.min(todays.l, Math.round(price * 100) / 100) : null,
+    prevClose: s.prevDailyBar?.c ?? null,
+  };
+}

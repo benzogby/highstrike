@@ -3,7 +3,7 @@ import { fetchQuotes } from "@/lib/quotes";
 import { isSession, marketOpen, newYorkDate } from "@/lib/marketCalendar";
 import type { Candle } from "@/lib/chart/types";
 import { barStart, hhmm, minuteOf } from "@/lib/chart/sessions";
-import { AlpacaBusy, SIP_DELAY_MS, alpacaBars, alpacaKeys, nyStamp as nyStampOf, recentMinutes } from "@/lib/alpaca";
+import { AlpacaBusy, SIP_DELAY_MS, alpacaBars, alpacaKeys, nyStamp as nyStampOf, occOf, optionBars, recentMinutes } from "@/lib/alpaca";
 
 // Daily candles for HighStrike Chart (Ben, 2026-11-17: "our own custom charts, with our UI, and deep markup ability";
 // data from a Massive/Polygon account, docs/plans/offer-overhaul.md). Two years of daily bars per ticker, cached in
@@ -310,5 +310,43 @@ async function intradayHistory(raw: string, tf: Intraday): Promise<CandleSet> {
     return { candles, source, stale: false, fetchedAt };
   }
   if (cached && (cached.body as Candle[]).length > 0) return { candles: cached.body as Candle[], source: "massive", stale: true, fetchedAt: cached.fetched_at };
+  return { candles: [], source: "none", stale: false, fetchedAt: null, busy };
+}
+
+// ---- One option contract (Ben, 2026-11-18: "the candle chart should be replaced with a chart of the contract's price")
+// Alpaca's free option bars (up to 15 minutes back), the same timeframes as stocks: daily for D/W/M/Y, minutes for the
+// intraday ones, 1h and 4h built from 30-minute bars. Contracts trade 9:30 to 4:00 only, so the shaded hours stay empty.
+// Kept in public.market_cache a minute in market hours.
+export async function getOptionCandles(contract: string, tf: Intraday | null): Promise<CandleSet> {
+  if (!occOf(contract)) return { candles: [], source: "none", stale: false, fetchedAt: null };
+  let db: ReturnType<typeof supabaseService> | null = null;
+  try {
+    db = supabaseService();
+  } catch {}
+  const cacheKey = `obars:${contract}:${tf ?? "D"}`;
+  const { data: cached } = db ? await db.from("market_cache").select("body, fetched_at").eq("key", cacheKey).maybeSingle() : { data: null };
+  const current = cached && (marketOpen(Date.now()) ? Date.now() - Date.parse(cached.fetched_at) < 60_000 : fresh(cached.fetched_at));
+  if (cached && current && (cached.body as Candle[]).length > 0) {
+    return { candles: cached.body as Candle[], source: "alpaca", stale: false, fetchedAt: cached.fetched_at };
+  }
+  let candles: Candle[] = [];
+  let busy = false;
+  try {
+    if (!tf) candles = await optionBars(contract, "1Day", 7305);
+    else {
+      const spec = INTRADAY[tf];
+      const bars = await optionBars(contract, spec.group > 1 ? "30Min" : `${spec.mult}Min`, spec.days);
+      candles = spec.group > 1 ? groupBars(bars, spec.group) : bars;
+    }
+  } catch (e) {
+    busy = e instanceof AlpacaBusy;
+    if (!busy) console.error("candles: option bars failed for", contract, tf, e instanceof Error ? e.message : e);
+  }
+  if (candles.length > 0) {
+    const fetchedAt = new Date().toISOString();
+    if (db) await db.from("market_cache").upsert({ key: cacheKey, body: candles, fetched_at: fetchedAt });
+    return { candles, source: "alpaca", stale: false, fetchedAt };
+  }
+  if (cached && (cached.body as Candle[]).length > 0) return { candles: cached.body as Candle[], source: "alpaca", stale: true, fetchedAt: cached.fetched_at };
   return { candles: [], source: "none", stale: false, fetchedAt: null, busy };
 }

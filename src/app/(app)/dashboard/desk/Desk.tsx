@@ -11,7 +11,7 @@ import { resetPaper } from "../paperActions";
 import OptionChain, { type Pick } from "./OptionChain";
 import OrderTicket, { type TicketTarget } from "./OrderTicket";
 import Blotter from "./Blotter";
-import { parseContract, pct, signed, tone, usd } from "./fmt";
+import { parseContract, pct, signed, symbolLabel, tone, usd } from "./fmt";
 
 export type DeskIdea = { id: string; ticker: string; direction: "long" | "short"; headline: string; option: string | null };
 export type DeskLesson = { href: string; title: string; label: string; done: number; total: number } | null;
@@ -178,9 +178,14 @@ export default function Desk({
     };
   }, [ticker]);
   // The chart's live price (every few seconds while the market's open), which the price summary follows.
+  // What the chart shows (Ben, 2026-11-18: "When an options contract is open in the trade panel, the candle chart should
+  // be replaced with a chart of the contract's price"): the open contract, else the stock. Same chart, same timeframe.
+  const chartSymbol = mode === "options" && pick ? pick.contract : ticker;
+  const chartExpiry = parseContract(chartSymbol)?.expiry ?? null;
   const [live, setLive] = useState<{ ticker: string; price: number; open: number | null; high: number | null; low: number | null; prevClose: number | null } | null>(null);
-  const onLive = useCallback((t: { price: number; open: number | null; high: number | null; low: number | null; prevClose: number | null }) => setLive({ ticker, ...t }), [ticker]);
+  const onLive = useCallback((t: { price: number; open: number | null; high: number | null; low: number | null; prevClose: number | null }) => setLive({ ticker: chartSymbol, ...t }), [chartSymbol]);
   const liveNow = live?.ticker === ticker ? live : null;
+  const contractLive = chartSymbol !== ticker && live?.ticker === chartSymbol ? live : null;
   const bars = daily?.ticker === ticker ? daily.candles : [];
   const lastBar = bars.at(-1) ?? null;
   const prevBar = bars.at(-2) ?? null;
@@ -222,6 +227,13 @@ export default function Desk({
           {change != null ? `${change >= 0 ? "+" : "−"}${Math.abs(change).toFixed(2)}` : "—"} ({pct(changePct)})
         </span>
       </div>
+      {chartSymbol !== ticker && (
+        <span className="flex items-center gap-2 rounded-md border border-warn/40 bg-warn-soft px-2 py-1 text-[12px]">
+          <span className="text-ink-3">Chart</span>
+          <span className="font-medium text-ink">{symbolLabel(chartSymbol)}</span>
+          <span className="font-mono-nums text-ink">{usd(contractLive?.price ?? pick?.ask ?? null)}</span>
+        </span>
+      )}
       {stat("Open", usd(liveNow?.open ?? lastBar?.o ?? null), "text-ink-2")}
       {stat("High", usd(liveNow?.high ?? lastBar?.h ?? null), "text-ink-2")}
       {stat("Low", usd(liveNow?.low ?? lastBar?.l ?? null), "text-ink-2")}
@@ -465,7 +477,7 @@ export default function Desk({
             style={{ paddingLeft: leftEdge, paddingRight: rightEdge, paddingBottom: 56 }}
           >
             <div className="min-h-0 flex-1">
-              <HighStrikeChart ticker={ticker} userId={userId} fill onLive={onLive} initialTimeframe={start.tf} onTimeframe={setTf} limitLine={target.kind === "stock" ? limitLine : null} />
+              <HighStrikeChart ticker={chartSymbol} expiry={chartExpiry} userId={userId} fill onLive={onLive} initialTimeframe={start.tf} onTimeframe={setTf} limitLine={limitLine} />
             </div>
           </div>
 
@@ -589,7 +601,7 @@ export default function Desk({
       <section className="rounded-xl border border-line bg-panel px-4 py-3">{accountBar}</section>
       <section className="rounded-xl border border-line bg-panel p-3">
         {symbolHead}
-        <HighStrikeChart ticker={ticker} userId={userId} height={320} onLive={onLive} initialTimeframe={start.tf} onTimeframe={setTf} limitLine={target.kind === "stock" ? limitLine : null} />
+        <HighStrikeChart ticker={chartSymbol} expiry={chartExpiry} userId={userId} height={320} onLive={onLive} initialTimeframe={start.tf} onTimeframe={setTf} limitLine={limitLine} />
       </section>
       {modeTabs}
       {mode === "shares" ? (

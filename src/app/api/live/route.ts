@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { viewer } from "@/lib/membership";
 import { isSession, marketOpen, newYorkDate } from "@/lib/marketCalendar";
-import { alpacaKeys, latestTrades, nyStamp, recentDailyBars, type DayBar } from "@/lib/alpaca";
+import { alpacaKeys, latestTrades, nyStamp, occOf, optionLive, recentDailyBars, type DayBar } from "@/lib/alpaca";
 
 export const dynamic = "force-dynamic";
 
@@ -70,11 +70,19 @@ async function fromFinnhub(symbol: string): Promise<Live | null> {
   }
 }
 
-const fetchLive = async (symbol: string) => (await fromAlpaca(symbol).catch(() => null)) ?? (await fromFinnhub(symbol));
+/** One option contract's live price (its indicative mark), which moves in regular hours only. */
+async function fromOption(symbol: string): Promise<Live | null> {
+  const l = await optionLive(symbol).catch(() => null);
+  return l ? { symbol, ...l, at: Date.now(), marketOpen: marketOpen(Date.now()) } : null;
+}
+
+const fetchLive = async (symbol: string) =>
+  occOf(symbol) ? await fromOption(symbol) : ((await fromAlpaca(symbol).catch(() => null)) ?? (await fromFinnhub(symbol)));
 
 export async function GET(request: Request) {
   const symbol = (new URL(request.url).searchParams.get("symbol") ?? "").trim().toUpperCase();
-  if (!/^[A-Z][A-Z.]{0,7}$/.test(symbol)) return NextResponse.json({ error: "Invalid symbol" }, { status: 400 });
+  // A stock, or one option contract ("O:AAPL261218C00350000") when the desk charts it.
+  if (!/^[A-Z][A-Z.]{0,7}$/.test(symbol) && !occOf(symbol)) return NextResponse.json({ error: "Invalid symbol" }, { status: 400 });
   const v = await viewer();
   if (!v?.member) return NextResponse.json({ error: "Members only" }, { status: 401 });
   const hit = memo.get(symbol);
