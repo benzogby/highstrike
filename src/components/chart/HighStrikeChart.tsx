@@ -247,9 +247,25 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
           } else setIntra({ key: intraKey, candles: null, failed: true });
         });
     load();
+    // While prices move, the bars are asked for again every 30 seconds and when the page comes back into view, so the
+    // always-on worker's minutes fill in whatever the live ticks missed (Ben, 2026-11-19: a hole after the tab was away).
+    const again = () => {
+      if (!alive || document.visibilityState !== "visible" || !liveOnRef.current) return;
+      fetch(`/api/candles?symbol=${encodeURIComponent(sym)}&tf=${tf}&fresh=${Math.floor(Date.now() / 15_000)}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d: { candles?: Candle[] } | null) => {
+          if (alive && d?.candles?.length) setIntra({ key: intraKey, candles: d.candles, failed: false });
+        })
+        .catch(() => {});
+    };
+    const every = setInterval(again, 30_000);
+    const onShow = () => document.visibilityState === "visible" && again();
+    document.addEventListener("visibilitychange", onShow);
     return () => {
       alive = false;
       clearTimeout(timer);
+      clearInterval(every);
+      document.removeEventListener("visibilitychange", onShow);
     };
   }, [intraKey]);
 
@@ -257,6 +273,10 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
   // 30 seconds when the market's shut, to notice the open. Kept per ticker, the last 3,000.
   const [liveFeed, setLiveFeed] = useState<{ ticker: string; list: Tick[] } | null>(null);
   const [liveOn, setLiveOn] = useState(false);
+  const liveOnRef = useRef(false);
+  useEffect(() => {
+    liveOnRef.current = liveOn;
+  }, [liveOn]);
   const onLiveRef = useRef(onLive);
   useEffect(() => {
     onLiveRef.current = onLive;
@@ -275,10 +295,10 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
             setLiveFeed((cur) => ({ ticker, list: [...(cur?.ticker === ticker ? cur.list : []), tick].slice(-3000) }));
             setLiveOn(true);
             onLiveRef.current?.({ price: j.price, open: j.open ?? null, high: j.high ?? null, low: j.low ?? null, prevClose: j.prevClose ?? null });
-            next = 3000;
+            next = 1000;
           } else if (alive) setLiveOn(false);
         } catch {}
-      } else next = 3000;
+      } else next = 2000;
       if (alive) timer = setTimeout(poll, next);
     };
     poll();

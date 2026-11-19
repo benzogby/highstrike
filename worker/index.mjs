@@ -1,7 +1,9 @@
 // HighStrike's always-on worker (Ben, 2026-11-18: "set up the always-on polling server"). It keeps one connection open
 // to Alpaca's free real-time stream (IEX) and records every minute bar for the stocks members look at into
 // public.live_bars, so charts run right up to now (Alpaca's free history stops 15 minutes back; src/lib/candles.ts folds
-// these minutes in). Rows older than 40 minutes are pruned. No dependencies: Node 22's own WebSocket and fetch.
+// these minutes in). Rows older than 40 minutes are pruned. It also takes every trade and writes each stock's latest
+// price to public.live_quotes about once a second (Ben, 2026-11-19: "the price updates too slowly"), which the desk's
+// live price reads. No dependencies: Node 22's own WebSocket and fetch.
 //
 // Environment: ALPACA_KEY_ID, ALPACA_SECRET, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY. Deployed on Railway (worker/README.md).
 
@@ -19,7 +21,7 @@ const STREAM = "wss://stream.data.alpaca.markets/v2/iex";
 const REST = `${SUPABASE_URL.replace(/\/$/, "")}/rest/v1`;
 const HEADERS = { apikey: SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`, "Content-Type": "application/json" };
 
-const state = { connected: false, lastBar: null, written: 0, tickers: 0, startedAt: new Date().toISOString() };
+const state = { connected: false, lastBar: null, lastTrade: null, written: 0, quotes: 0, tickers: 0, startedAt: new Date().toISOString() };
 
 // ---- Which stocks to keep: anything charted in the last week, on a watchlist, held in paper trading, or active -------
 
@@ -89,6 +91,38 @@ async function flush() {
   }
 }
 
+// ---- Latest trades ---------------------------------------------------------------------------------------------------
+
+const latest = new Map();
+function onTrade(t) {
+  if (!wanted.has(t.S) || !(t.p > 0)) return;
+  const prev = latest.get(t.S);
+  if (prev && prev.at >= t.t) return;
+  latest.set(t.S, { ticker: t.S, price: t.p, at: t.t });
+  state.lastTrade = t.t;
+}
+
+let writingQuotes = false;
+async function flushQuotes() {
+  if (!latest.size || writingQuotes) return;
+  const rows = [...latest.values()];
+  latest.clear();
+  writingQuotes = true;
+  try {
+    const res = await fetch(`${REST}/live_quotes?on_conflict=ticker`, {
+      method: "POST",
+      headers: { ...HEADERS, Prefer: "resolution=merge-duplicates,return=minimal" },
+      body: JSON.stringify(rows),
+    });
+    if (!res.ok) console.error("worker: quote write failed", res.status, (await res.text()).slice(0, 200));
+    else state.quotes += rows.length;
+  } catch (e) {
+    console.error("worker: quote write failed", e.message);
+  } finally {
+    writingQuotes = false;
+  }
+}
+
 async function prune() {
   const before = new Date(Date.now() - 40 * 60_000).toISOString();
   try {
@@ -111,11 +145,12 @@ function connect() {
     }
     for (const m of Array.isArray(msgs) ? msgs : [msgs]) {
       if (m.T === "success" && m.msg === "authenticated") {
-        ws.send(JSON.stringify({ action: "subscribe", bars: ["*"], updatedBars: ["*"] }));
+        ws.send(JSON.stringify({ action: "subscribe", bars: ["*"], updatedBars: ["*"], trades: ["*"] }));
         state.connected = true;
         backoff = 2000;
         console.log("worker: streaming minute bars");
-      } else if (m.T === "b" || m.T === "u") onBar(m);
+      } else if (m.T === "t") onTrade(m);
+      else if (m.T === "b" || m.T === "u") onBar(m);
       else if (m.T === "error") console.error("worker: alpaca says", m.code, m.msg);
     }
   };
@@ -133,6 +168,7 @@ function connect() {
 await refreshWanted();
 setInterval(refreshWanted, 10 * 60_000);
 setInterval(flush, 5_000);
+setInterval(flushQuotes, 1_000);
 setInterval(prune, 5 * 60_000);
 connect();
 

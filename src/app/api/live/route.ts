@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { viewer } from "@/lib/membership";
+import { supabaseService } from "@/lib/stripe";
 import { isSession, marketOpen, newYorkDate } from "@/lib/marketCalendar";
 import { alpacaKeys, latestTrades, nyStamp, occOf, optionLive, recentDailyBars, type DayBar } from "@/lib/alpaca";
 
@@ -10,19 +11,45 @@ export const dynamic = "force-dynamic";
 // With Alpaca's keys (src/lib/alpaca.ts): the real-time last trade (IEX, which trades 8:00 AM to 5:00 PM New York time,
 // so candles move pre-market and after-hours too), the day's open, high and low from today's whole-market bar (up to
 // 15 minutes back, stretched by the live price) and the previous close; about 200 requests a minute. Without them,
-// Finnhub's quote (60 a minute, regular hours). One answer per symbol is shared for 2 seconds; the chart asks every 3.
+// Finnhub's quote (60 a minute, regular hours). The last trade comes from the always-on worker's stream when it has one
+// (public.live_quotes). One answer per symbol is shared for about a second; the chart asks every second.
 
 type Live = { symbol: string; price: number; open: number | null; high: number | null; low: number | null; prevClose: number | null; at: number; marketOpen: boolean };
 
 const memo = new Map<string, { at: number; value: Promise<Live | null> }>();
 const dayMemo = new Map<string, { at: number; value: Promise<DayBar[] | null> }>();
-const SHARE_MS = 2000;
+const SHARE_MS = 900;
 
 /** Whether prices are moving: a session day between 8:00 AM and 5:00 PM New York time (IEX's hours). */
 function moving(now = Date.now()) {
   const day = newYorkDate(now);
   const hm = nyStamp(now).slice(11, 16);
   return isSession(day) && hm >= "08:00" && hm < "17:00";
+}
+
+// Without a streamed trade, Alpaca's latest is asked at most every 3 seconds per stock (its free plan allows about 200
+// requests a minute in all).
+const tradeMemo = new Map<string, { at: number; value: Promise<{ price: number; at: string } | null> }>();
+function alpacaTrade(symbol: string, keys: { id: string; secret: string }) {
+  const hit = tradeMemo.get(symbol);
+  if (hit && Date.now() - hit.at < 3000) return hit.value;
+  const value = latestTrades([symbol], keys)
+    .then((m) => m.get(symbol) ?? null)
+    .catch(() => null);
+  tradeMemo.set(symbol, { at: Date.now(), value });
+  if (tradeMemo.size > 500) tradeMemo.delete(tradeMemo.keys().next().value as string);
+  return value;
+}
+
+/** The always-on worker's latest trade for a stock, when it's from the last 20 seconds. */
+async function streamedTrade(symbol: string): Promise<{ price: number; at: string } | null> {
+  try {
+    const { data } = await supabaseService().from("live_quotes").select("price, at").eq("ticker", symbol).maybeSingle();
+    if (!data || Date.now() - Date.parse(data.at as string) > 20_000) return null;
+    return { price: Number(data.price), at: data.at as string };
+  } catch {
+    return null;
+  }
 }
 
 async function fromAlpaca(symbol: string): Promise<Live | null> {
@@ -37,8 +64,9 @@ async function fromAlpaca(symbol: string): Promise<Live | null> {
       .catch(() => null);
     dayMemo.set(symbol, { at: Date.now(), value: days });
   }
-  const [trades, bars] = await Promise.all([latestTrades([symbol], keys).catch(() => null), days]);
-  const t = trades?.get(symbol);
+  // The worker's latest trade (public.live_quotes, about a second old), else Alpaca's.
+  const [streamed, bars] = await Promise.all([streamedTrade(symbol), days]);
+  const t = streamed ?? (await alpacaTrade(symbol, keys));
   if (!t) return null;
   const today = newYorkDate(Date.now());
   const last = bars?.at(-1) ?? null;
