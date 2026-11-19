@@ -446,7 +446,11 @@ export default function StrategyEditor({
   const [ticker, setTicker] = useState(initialTicker);
   const [settings, setSettings] = useState<LiveSettings>(initialSettings);
   const [watchText, setWatchText] = useState(initialSettings.watch.join(", "));
-  const [result, setResult] = useState<{ ticker: string; data: Result; newsFrom: string | null } | null>(null);
+  const [result, setResult] = useState<{ ticker: string; data: Result; newsFrom: string | null; key: string } | null>(null);
+  // What a run would be given: the strategy and the ticker. When they're what the shown results came from, running
+  // again would give the same answer, so the button rests (Ben, 2026-11-19).
+  const runKey = JSON.stringify({ spec, t: ticker.trim().toUpperCase() });
+  const unchanged = result != null && result.key === runKey;
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
   const [running, startRun] = useTransition();
@@ -465,9 +469,10 @@ export default function StrategyEditor({
       setError(null);
       setTab("backtest");
       const t = ticker.trim().toUpperCase();
+      const key = runKey;
       const r = await runBacktest({ rules: spec, ticker: t });
       if ("error" in r) setError(r.error);
-      else setResult({ ticker: t, data: r.result, newsFrom: r.newsFrom });
+      else setResult({ ticker: t, data: r.result, newsFrom: r.newsFrom, key });
     });
   const save = () =>
     startSave(async () => {
@@ -568,13 +573,22 @@ export default function StrategyEditor({
             <input
               value={ticker}
               onChange={(e) => setTicker(e.target.value.toUpperCase())}
-              onKeyDown={(e) => e.key === "Enter" && run()}
+              onKeyDown={(e) => e.key === "Enter" && !unchanged && run()}
               className="h-9 w-28 rounded-lg border border-line-strong bg-panel px-2.5 font-mono-nums text-[14px] uppercase text-ink focus:border-accent focus:outline-none"
               aria-label="Ticker"
             />
             <span className="text-[12px] text-ink-3">daily bars since 2016</span>
-            <button type="button" onClick={run} disabled={running} className="ml-auto h-9 rounded-lg bg-accent px-4 text-[13.5px] font-semibold text-on-accent shadow-[inset_0_1px_0_rgb(255_255_255/0.25),0_2px_0_#148a60] disabled:opacity-60">
-              {running ? "Running…" : "Run backtest"}
+            {result && !unchanged && !running && <span className="ml-auto text-[12px] text-warn">Changed since the last run</span>}
+            <button
+              type="button"
+              onClick={run}
+              disabled={running || unchanged}
+              title={unchanged ? "Nothing's changed since the last run. Change the strategy or the ticker to run it again." : undefined}
+              className={`h-9 rounded-lg px-4 text-[13.5px] font-semibold transition ${result && !unchanged && !running ? "" : "ml-auto"} ${
+                unchanged ? "cursor-not-allowed bg-panel-3 text-ink-3" : "bg-accent text-on-accent shadow-[inset_0_1px_0_rgb(255_255_255/0.25),0_2px_0_#148a60] disabled:opacity-60"
+              }`}
+            >
+              {running ? "Running…" : unchanged ? "Up to date" : "Run backtest"}
             </button>
           </div>
           {result?.newsFrom && (
