@@ -3,6 +3,8 @@
 // The AI's morning picks are the first source; the others arrive one by one, so the feed only offers the ones with ideas.
 
 export const SOURCES = {
+  // HighStrike's own strategies firing, with their record (src/lib/strategies/ideas.ts): the day's ideas, first.
+  strategy: "Strategies",
   ai: "Scanner picks",
   flow: "Options flow",
   catalyst: "Catalysts",
@@ -50,10 +52,16 @@ export type Idea = {
   owner_id: string | null;
   /** Its option, estimated when it was made (src/lib/optionIdea.ts); read it through asOption. */
   option: unknown;
+  /** For an idea from a strategy: the strategy and how it did on this stock before (src/lib/strategies/ideas.ts). */
+  record: { strategy: string; name: string; trades: number; winRate: number; avg: number; basis: "option" | "stock"; since: string } | null;
 };
 
+/** "Won 58% of 31 trades since 2016, +17.6% a trade on the option". */
+export const recordLine = (r: NonNullable<Idea["record"]>) =>
+  `Won ${r.winRate}% of ${r.trades} trades since ${r.since}, ${r.avg > 0 ? "+" : ""}${r.avg}% a trade on the ${r.basis === "option" ? "option" : "shares"}`;
+
 export const IDEA_COLUMNS =
-  "id, report_date, ticker, direction, source, style, headline, justification, entry_criteria, price_target, time_frame, status, entry_price, target_price, current_pct, result_pct, stop_price, contract, owner_id, option";
+  "id, report_date, ticker, direction, source, style, headline, justification, entry_criteria, price_target, time_frame, status, entry_price, target_price, current_pct, result_pct, stop_price, contract, owner_id, option, record";
 
 /** The idea's one line: its headline, else the first sentence of its reasoning (ideas from before headlines). */
 export const headlineOf = (i: Pick<Idea, "headline" | "justification">) => i.headline?.trim() || i.justification.split(/(?<=\.)\s/)[0];

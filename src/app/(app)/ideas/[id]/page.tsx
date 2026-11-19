@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { requireMember } from "@/lib/membership";
 import { fetchQuotes } from "@/lib/quotes";
 import { Badge, CARD } from "@/components/ui";
-import { IDEA_COLUMNS, SOURCES, STATUS, STYLES, headlineOf, type Idea } from "@/lib/ideas";
+import { IDEA_COLUMNS, SOURCES, STATUS, STYLES, headlineOf, recordLine, type Idea } from "@/lib/ideas";
 import { caseFor, quickAnswers, type Signals } from "@/lib/ideaCase";
 import { asOption } from "@/lib/optionIdea";
 import HighStrikeChart from "@/components/chart/HighStrikeChart";
@@ -108,6 +108,19 @@ export default async function IdeaPage({ params }: { params: Promise<{ id: strin
           </div>
         ))}
       </dl>
+
+      {idea.record && (
+        <section className={`${CARD} flex flex-wrap items-center justify-between gap-3 px-4 py-3.5`}>
+          <div>
+            <p className="text-[13px] text-ink-3">From the strategy</p>
+            <p className="mt-0.5 text-[15px] font-medium text-ink">{idea.record.name}</p>
+            <p className="mt-0.5 text-[13px] text-accent-ink">{recordLine(idea.record)} (estimated; past results don&apos;t promise future ones)</p>
+          </div>
+          <Link href={`/strategies/new?template=${idea.record.strategy}&t=${idea.ticker}`} className="text-sm font-medium text-accent hover:underline">
+            See every trade it took →
+          </Link>
+        </section>
+      )}
 
       {option && <SuggestedOption ticker={idea.ticker} option={option} />}
 

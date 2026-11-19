@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui";
-import { SOURCES, STATUS, STYLES, headlineOf, type Idea } from "@/lib/ideas";
+import { SOURCES, STATUS, STYLES, headlineOf, recordLine, type Idea } from "@/lib/ideas";
 import { asOption, optionLine } from "@/lib/optionIdea";
 
 const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -25,6 +25,7 @@ export default function IdeaRow({ idea: i }: { idea: Idea }) {
             <Link href={`/ideas/${i.id}`} className="text-sm text-ink hover:text-accent hover:underline">
               {headlineOf(i)}
             </Link>
+            {i.record && <span className="mt-0.5 block text-xs text-accent-ink">{recordLine(i.record)}</span>}
             {o && <span className="mt-0.5 block font-mono-nums text-xs text-ink-3">{optionLine(o)}</span>}
           </span>
           <span className="flex shrink-0 items-center gap-1.5">
@@ -54,6 +55,11 @@ export default function IdeaRow({ idea: i }: { idea: Idea }) {
             <p className="mt-3 text-ink-3">
               Target {i.price_target} · {i.time_frame}
             </p>
+            {i.record && (
+              <Link href={`/strategies/new?template=${i.record.strategy}&t=${i.ticker}`} className="mt-3 mr-4 inline-block text-[13px] font-medium text-accent hover:underline">
+                Backtest {i.record.name} on {i.ticker} →
+              </Link>
+            )}
             <Link href={`/ideas/${i.id}`} className="mt-3 inline-block text-[13px] font-medium text-accent hover:underline">
               {o ? "Open the idea: the option, bull vs bear, sizing →" : "Open the idea: bull vs bear, quick answers, sizing →"}
             </Link>

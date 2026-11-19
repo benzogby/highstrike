@@ -59,15 +59,18 @@ async function handle(request: Request) {
     const result = await generateDaily(wantsForce);
     // The day's ideas are in: start the morning email and watchlist scans in a run of their own (once a day; a forced
     // regeneration from Admin doesn't email anyone).
-    if (result.status === "generated" && !wantsForce) {
+    // Then the ideas from strategies (api/cron/strategy-ideas, up to 5 minutes), which starts the morning email when
+    // it's done so the email has them too. An admin's forced regeneration remakes them without emailing anyone.
+    if (result.status === "generated" || wantsForce) {
       // On production, the site's own address: Vercel Cron calls the deployment's generated vercel.app URL, which sits
       // behind Vercel Authentication, so the email's start got its sign-in page and waited for the backup cron.
       const origin = process.env.VERCEL_ENV === "production" ? SITE_URL : new URL(request.url).origin;
+      const digest = result.status === "generated" && !wantsForce ? "?digest=1" : "";
       after(() =>
-        fetch(`${origin}/api/cron/morning-digest`, { headers: { "x-morning-token": morningToken(result.date) } })
+        fetch(`${origin}/api/cron/strategy-ideas${digest}`, { headers: { "x-morning-token": morningToken(result.date) } })
           .then((r) => r.json())
-          .then((j) => console.log("morning-digest:", JSON.stringify(j)))
-          .catch((e) => console.error("morning-digest start failed:", e))
+          .then((j) => console.log("strategy-ideas:", JSON.stringify(j)))
+          .catch((e) => console.error("strategy-ideas start failed:", e))
       );
     }
     return NextResponse.json({ ...result, grading, snapshot, alerts });
