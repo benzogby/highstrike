@@ -79,6 +79,10 @@ type Props = {
   limitLine?: { price: number; side: "buy" | "sell" } | null;
   /** An option contract's expiry date ("2026-12-18"): a dashed vertical line at 4:00 PM New York time that day. */
   expiry?: string | null;
+  /** An option's strike on its stock's chart: a line at that price, labelled (Ben, 2026-11-19). */
+  strikeLine?: { price: number; type: "call" | "put" } | null;
+  /** A timeframe to follow as it changes (two charts kept on the same one); the chart's own picks go out through onTimeframe. */
+  timeframe?: Timeframe | null;
   /** Working (unfilled) limit orders on this symbol: a line at each price, tagged +10 (buy) or −10 (sell). */
   workingOrders?: { id: string; price: number; side: "buy" | "sell"; qty: number }[];
   /** For an option contract: the stock's price now, to say how far the strike is in or out of the money. */
@@ -91,7 +95,7 @@ type Props = {
   onTimeframe?: (tf: Timeframe) => void;
 };
 
-export default function HighStrikeChart({ ticker, userId, levels, height, fill = false, onLive, initialTimeframe, onTimeframe, limitLine, expiry, underlyingPrice, workingOrders }: Props) {
+export default function HighStrikeChart({ ticker, userId, levels, height, fill = false, onLive, initialTimeframe, onTimeframe, limitLine, expiry, underlyingPrice, workingOrders, strikeLine, timeframe }: Props) {
   // Daily candles, kept with their ticker so another ticker's never show (or a failure sticks) while a new one loads.
   const [daily, setDaily] = useState<{ ticker: string; candles: Candle[] | null; source?: string; stale?: boolean; waiting?: boolean; failed?: boolean } | null>(null);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
@@ -152,6 +156,15 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
     } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on mount
   }, []);
+  // Follow the timeframe it's given when that changes (the other chart of a split view was switched).
+  const [seenTf, setSeenTf] = useState(timeframe);
+  if (timeframe !== seenTf) {
+    setSeenTf(timeframe);
+    if (timeframe && TIMEFRAMES.includes(timeframe) && timeframe !== settings.tf) {
+      setSettings((prev) => ({ ...prev, tf: timeframe }));
+      setView(null);
+    }
+  }
   const onTimeframeRef = useRef(onTimeframe);
   useEffect(() => {
     onTimeframeRef.current = onTimeframe;
@@ -508,6 +521,11 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
       l = Math.min(l, limitLine.price);
       h = Math.max(h, limitLine.price);
     }
+    // The strike too, when it's near.
+    if (strikeLine && Number.isFinite(l) && strikeLine.price > l * 0.85 && strikeLine.price < h * 1.15) {
+      l = Math.min(l, strikeLine.price);
+      h = Math.max(h, strikeLine.price);
+    }
     // Working orders near the price stay in view too.
     for (const o of workingOrders ?? []) {
       if (Number.isFinite(l) && o.price > l * 0.85 && o.price < h * 1.15) {
@@ -518,7 +536,7 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
     if (!Number.isFinite(l)) return { lo: 0, hi: 1 };
     const pad = (h - l) * 0.07 || h * 0.02 || 1;
     return { lo: l - pad, hi: h + pad };
-  }, [bars, left, v.end, levels, limitLine, workingOrders]);
+  }, [bars, left, v.end, levels, limitLine, workingOrders, strikeLine]);
   const { lo, hi } = manual ?? auto;
   const y = (p: number) => ((hi - p) / (hi - lo)) * priceH;
   const invY = (py: number) => hi - (py / priceH) * (hi - lo);
@@ -1244,6 +1262,17 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
                   {/* The contract's expiry: a dashed vertical line, labelled (or a tag at the right edge when it's further on) */}
                   {expiry && expIdx != null && <ExpiryMark x={x(expIdx)} plotW={plotW} priceH={priceH} label={`EXPIRES ${expiryLabel(expiry)}`} />}
 
+                  {/* The option's strike on the stock's chart */}
+                  {strikeLine && strikeLine.price > lo && strikeLine.price < hi && (
+                    <g pointerEvents="none">
+                      <line x1={0} x2={plotW} y1={y(strikeLine.price)} y2={y(strikeLine.price)} stroke="var(--color-accent)" strokeOpacity={0.85} strokeDasharray="10 4" strokeWidth={1.3} />
+                      <rect x={8} y={y(strikeLine.price) - 9} width={strikeText(strikeLine).length * 6.6 + 14} height={18} rx={3} fill="var(--color-accent)" />
+                      <text x={15} y={y(strikeLine.price) + 4} className="font-mono text-[11px] font-semibold" fill="var(--color-on-accent)">
+                        {strikeText(strikeLine)}
+                      </text>
+                    </g>
+                  )}
+
                   {/* Working orders (Ben, 2026-11-18: "When a limit order is open/unfilled, mark it… +10 or -10 indicating the
                       number of shares or contracts that are still unfilled") */}
                   {(workingOrders ?? []).map((o) =>
@@ -1340,6 +1369,7 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
                   </g>
                 )}
 
+                {strikeLine && strikeLine.price > lo && strikeLine.price < hi && <AxisTag x={plotW} y={y(strikeLine.price)} fill="var(--color-accent)" text={priceLabel(strikeLine.price)} />}
                 {(workingOrders ?? []).map((o) =>
                   o.price > lo && o.price < hi ? <AxisTag key={o.id} x={plotW} y={y(o.price)} fill={o.side === "buy" ? "var(--color-up)" : "var(--color-down)"} text={priceLabel(o.price)} /> : null
                 )}
@@ -1726,3 +1756,6 @@ function StrikeBadge({ contract, spot }: { contract: { underlying: string; call:
     </g>
   );
 }
+
+/** "STRIKE $733 CALL". */
+const strikeText = (s: { price: number; type: "call" | "put" }) => `STRIKE $${Number.isInteger(s.price) ? s.price : s.price.toFixed(2)} ${s.type.toUpperCase()}`;

@@ -153,6 +153,55 @@ export default function Desk({
     });
   };
 
+  // The chart: the stock alone, or with a contract open the stock on top (its strike and expiry marked) and the
+  // contract's own price below, on the same timeframe (Ben, 2026-11-19: "show a split screen, option on bottom and
+  // underlying on top. Show the Strike price and expiration date on the underlying as well").
+  const charts = (size: "wide" | "small") => {
+    const box = size === "wide" ? { fill: true } : { height: chartSymbol === ticker ? 320 : 240 };
+    const stock = (
+      <HighStrikeChart
+        ticker={ticker}
+        expiry={chartExpiry}
+        strikeLine={strikeLine}
+        workingOrders={ordersFor(ticker)}
+        userId={userId}
+        {...box}
+        onLive={onLive}
+        initialTimeframe={start.tf}
+        timeframe={tf}
+        onTimeframe={setTf}
+        limitLine={target.kind === "stock" ? limitLine : null}
+      />
+    );
+    if (chartSymbol === ticker) return size === "wide" ? <div className="min-h-0 flex-1">{stock}</div> : stock;
+    const contract = (
+      <HighStrikeChart
+        ticker={chartSymbol}
+        expiry={chartExpiry}
+        underlyingPrice={q?.price ?? lastBar?.c ?? null}
+        workingOrders={ordersFor(chartSymbol)}
+        userId={userId}
+        {...box}
+        onLive={onLiveContract}
+        initialTimeframe={tf ?? start.tf}
+        timeframe={tf}
+        onTimeframe={setTf}
+        limitLine={target.kind === "option" ? limitLine : null}
+      />
+    );
+    return size === "wide" ? (
+      <div className="flex min-h-0 flex-1 flex-col gap-2">
+        <div className="min-h-0 flex-1">{stock}</div>
+        <div className="min-h-0 flex-1 border-t border-line pt-2">{contract}</div>
+      </div>
+    ) : (
+      <div className="flex flex-col gap-3">
+        {stock}
+        {contract}
+      </div>
+    );
+  };
+
   // ---- The pieces, laid out below for wide or small screens ----------------------------------------------------------
 
   const stat = (label: string, value: React.ReactNode, cls = "text-ink") => (
@@ -182,18 +231,25 @@ export default function Desk({
   // be replaced with a chart of the contract's price"): the open contract, else the stock. Same chart, same timeframe.
   const chartSymbol = mode === "options" && pick ? pick.contract : ticker;
   const chartExpiry = parseContract(chartSymbol)?.expiry ?? null;
-  // The member's unfilled limit orders on what's charted, marked on the chart.
-  const chartOrders = useMemo(
-    () =>
+  // The member's unfilled limit orders, marked on the chart of what they're for.
+  const ordersFor = useCallback(
+    (symbol: string) =>
       state.orders
-        .filter((o) => o.status === "working" && o.type === "limit" && o.limit != null && o.symbol === chartSymbol)
+        .filter((o) => o.status === "working" && o.type === "limit" && o.limit != null && o.symbol === symbol)
         .map((o) => ({ id: o.id, price: o.limit!, side: o.side, qty: o.qty })),
-    [state.orders, chartSymbol]
+    [state.orders]
   );
-  const [live, setLive] = useState<{ ticker: string; price: number; open: number | null; high: number | null; low: number | null; prevClose: number | null } | null>(null);
-  const onLive = useCallback((t: { price: number; open: number | null; high: number | null; low: number | null; prevClose: number | null }) => setLive({ ticker: chartSymbol, ...t }), [chartSymbol]);
+  const contractParts = parseContract(chartSymbol);
+  const strikeLine = contractParts ? { price: contractParts.strike, type: contractParts.type } : null;
+  // Live prices from the charts: the stock's (top) and, with a contract open, the contract's (bottom).
+  type LiveTick = { ticker: string; price: number; open: number | null; high: number | null; low: number | null; prevClose: number | null };
+  const [live, setLive] = useState<LiveTick | null>(null);
+  const [liveC, setLiveC] = useState<LiveTick | null>(null);
+  const onLive = useCallback((t: Omit<LiveTick, "ticker">) => setLive({ ticker, ...t }), [ticker]);
+  // (The chart keeps the latest callback in a ref, so a plain function is fine here.)
+  const onLiveContract = (t: Omit<LiveTick, "ticker">) => setLiveC({ ticker: chartSymbol, ...t });
   const liveNow = live?.ticker === ticker ? live : null;
-  const contractLive = chartSymbol !== ticker && live?.ticker === chartSymbol ? live : null;
+  const contractLive = chartSymbol !== ticker && liveC?.ticker === chartSymbol ? liveC : null;
   const bars = daily?.ticker === ticker ? daily.candles : [];
   const lastBar = bars.at(-1) ?? null;
   const prevBar = bars.at(-2) ?? null;
@@ -484,9 +540,7 @@ export default function Desk({
             className="absolute inset-0 flex flex-col pt-3 transition-[padding] duration-300 ease-out"
             style={{ paddingLeft: leftEdge, paddingRight: rightEdge, paddingBottom: 56 }}
           >
-            <div className="min-h-0 flex-1">
-              <HighStrikeChart ticker={chartSymbol} expiry={chartExpiry} underlyingPrice={q?.price ?? lastBar?.c ?? null} workingOrders={chartOrders} userId={userId} fill onLive={onLive} initialTimeframe={start.tf} onTimeframe={setTf} limitLine={limitLine} />
-            </div>
+            {charts("wide")}
           </div>
 
           {/* Right, full height: the order ticket, and the option chain under it */}
@@ -609,7 +663,7 @@ export default function Desk({
       <section className="rounded-xl border border-line bg-panel px-4 py-3">{accountBar}</section>
       <section className="rounded-xl border border-line bg-panel p-3">
         {symbolHead}
-        <HighStrikeChart ticker={chartSymbol} expiry={chartExpiry} underlyingPrice={q?.price ?? lastBar?.c ?? null} workingOrders={chartOrders} userId={userId} height={320} onLive={onLive} initialTimeframe={start.tf} onTimeframe={setTf} limitLine={limitLine} />
+        {charts("small")}
       </section>
       {modeTabs}
       {mode === "shares" ? (
