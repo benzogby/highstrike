@@ -8,7 +8,8 @@ import { CARD, INPUT } from "@/components/ui";
 import { OPERANDS, OPS, type Condition, type Op, type Operand, type OperandKind } from "@/lib/strategies/rules";
 import { criterionDef, entryText, fullList, type Contract, type Criterion, type Exits, type Group, type Spec } from "@/lib/strategies/spec";
 import { PERIODS, type Period, type Result, type Trade } from "@/lib/strategies/backtest";
-import { deleteStrategy, runBacktest, saveStrategy, type LiveSettings } from "./actions";
+import { deleteStrategy, runBacktest, saveStrategy, type KeptBacktest, type LiveSettings } from "./actions";
+import { StrategyIcon } from "./icons";
 
 // The strategy editor (Ben, 2026-11-19: "Each strategy should have tabs: Entry, Contract, Exit, Stop, Backtest"):
 // criteria switched on and off with their own sensitivity, how it picks a contract or spread and sizes it, exits and
@@ -85,6 +86,9 @@ function CriterionRow({ cr, onChange }: { cr: Criterion; onChange: (c: Criterion
   return (
     <div className={`flex items-center gap-3 rounded-lg px-3 py-2 transition ${cr.on ? "bg-accent-soft/60 ring-1 ring-inset ring-accent/30" : "bg-panel-2/40"}`}>
       <Toggle on={cr.on} onChange={(v) => onChange({ ...cr, on: v })} label={d.text.replace(/\{\w+\}/g, "N")} />
+      <span className={cr.on ? "" : "opacity-60"}>
+        <StrategyIcon id={cr.id} />
+      </span>
       <span className={`flex flex-wrap items-center gap-1.5 text-[13.5px] ${cr.on ? "text-ink" : "text-ink-3"}`}>
         {parts.map((p, k) => {
           const m = /^\{(\w+)\}$/.exec(p);
@@ -221,9 +225,12 @@ function ExitsTab({ g, value, onChange, title, blurb }: { g: Group; value: Exits
 function ContractTab({ value, onChange, direction }: { value: Contract; onChange: (c: Contract) => void; direction: "long" | "short" }) {
   const opt = value.kind !== "shares";
   const side = direction === "long" ? "call" : "put";
-  const field = (label: string, child: React.ReactNode, hint?: string) => (
+  const field = (label: string, child: React.ReactNode, hint?: string, icon?: string) => (
     <div>
-      <p className="mb-1.5 text-[13px] font-medium text-ink">{label}</p>
+      <p className="mb-1.5 flex items-center gap-2 text-[13px] font-medium text-ink">
+        {icon && <StrategyIcon id={icon} size={24} />}
+        {label}
+      </p>
       {child}
       {hint && <p className="mt-1 text-[12px] text-ink-3">{hint}</p>}
     </div>
@@ -247,7 +254,9 @@ function ContractTab({ value, onChange, direction }: { value: Contract; onChange
             ["spread", "A debit spread"],
             ["shares", "Shares"],
           ]}
-        />
+        />,
+        undefined,
+        value.kind === "shares" ? "k-shares" : value.kind === "spread" ? "k-spread" : direction === "long" ? "k-call" : "k-put"
       )}
       {opt && (
         <>
@@ -261,7 +270,8 @@ function ContractTab({ value, onChange, direction }: { value: Contract; onChange
               <input type="number" min={1} max={400} className={NUM} value={value.dte} onChange={(e) => onChange({ ...value, dte: Number(e.target.value) })} aria-label="Days to expiry" />
               days out
             </div>,
-            "Listed options expire on Fridays (weeklies and monthlies)."
+            "Listed options expire on Fridays (weeklies and monthlies).",
+            "f-expiry"
           )}
           {field(
             "Strike",
@@ -293,7 +303,8 @@ function ContractTab({ value, onChange, direction }: { value: Contract; onChange
               )}
               {value.strike.by === "otmPct" && <span>% (positive: out of the money)</span>}
             </div>,
-            value.strike.by === "delta" ? "0.50 is about at the money; lower is further out (cheaper, less likely to pay)." : undefined
+            value.strike.by === "delta" ? "0.50 is about at the money; lower is further out (cheaper, less likely to pay)." : undefined,
+            "f-strike"
           )}
           {value.kind === "spread" &&
             field(
@@ -303,7 +314,8 @@ function ContractTab({ value, onChange, direction }: { value: Contract; onChange
                 <input type="number" min={1} max={10} className={NUM} value={value.width} onChange={(e) => onChange({ ...value, width: Number(e.target.value) })} aria-label="Width in strikes" />
                 strike{value.width === 1 ? "" : "s"} further out
               </div>,
-              "Caps the gain, and lowers the cost. Paper trading can't hold spreads yet, so live it alerts only."
+              "Caps the gain, and lowers the cost. Paper trading can't hold spreads yet, so live it alerts only.",
+              "f-width"
             )}
         </>
       )}
@@ -332,7 +344,9 @@ function ContractTab({ value, onChange, direction }: { value: Contract; onChange
             onChange={(e) => onChange({ ...value, size: { ...value.size, value: Number(e.target.value) } })}
             aria-label="Size"
           />
-        </div>
+        </div>,
+        undefined,
+        "f-size"
       )}
       <p className="rounded-lg bg-panel-2/60 px-3 py-2.5 text-[13px] text-ink">
         {summary}. Size: {size}.
@@ -424,6 +438,8 @@ export default function StrategyEditor({
   userId,
   initialSettings = { watch: [], live: false, alerts: true, autoTrade: false },
   signals = [],
+  backtestRef,
+  lastRun = null,
 }: {
   id: string | null;
   initialName: string;
@@ -433,6 +449,10 @@ export default function StrategyEditor({
   userId: string;
   initialSettings?: LiveSettings;
   signals?: SignalRow[];
+  /** Which kept backtest this is (the strategy's id, or the classic it came from). */
+  backtestRef?: string;
+  /** This member's last backtest of it, shown until they run another. */
+  lastRun?: KeptBacktest | null;
 }) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("entry");
@@ -443,11 +463,13 @@ export default function StrategyEditor({
     exit: { ...initialRules.exit, criteria: fullList("exit", initialRules.exit.criteria) },
     stop: { ...initialRules.stop, criteria: fullList("stop", initialRules.stop.criteria) },
   }));
-  const [ticker, setTicker] = useState(initialTicker);
-  const [period, setPeriod] = useState<Period>("all");
+  const [ticker, setTicker] = useState(lastRun?.ticker ?? initialTicker);
+  const [period, setPeriod] = useState<Period>(lastRun?.period ?? "all");
   const [settings, setSettings] = useState<LiveSettings>(initialSettings);
   const [watchText, setWatchText] = useState(initialSettings.watch.join(", "));
-  const [result, setResult] = useState<{ ticker: string; data: Result; newsFrom: string | null; key: string } | null>(null);
+  const [result, setResult] = useState<{ ticker: string; data: Result; newsFrom: string | null; key: string } | null>(
+    lastRun ? { ticker: lastRun.ticker, data: lastRun.result, newsFrom: lastRun.newsFrom, key: lastRun.runKey } : null
+  );
   // What a run would be given: the strategy and the ticker. When they're what the shown results came from, running
   // again would give the same answer, so the button rests (Ben, 2026-11-19).
   const runKey = JSON.stringify({ spec, t: ticker.trim().toUpperCase(), period });
@@ -471,7 +493,7 @@ export default function StrategyEditor({
       setTab("backtest");
       const t = ticker.trim().toUpperCase();
       const key = runKey;
-      const r = await runBacktest({ rules: spec, ticker: t, period });
+      const r = await runBacktest({ rules: spec, ticker: t, period, ref: backtestRef, runKey: key });
       if ("error" in r) setError(r.error);
       else setResult({ ticker: t, data: r.result, newsFrom: r.newsFrom, key });
     });

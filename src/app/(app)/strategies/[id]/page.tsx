@@ -6,7 +6,8 @@ import { PageHeader } from "@/components/ui";
 import { DEFAULT_CONTRACT, cleanSpec, on, type Spec } from "@/lib/strategies/spec";
 import { templateByKey } from "@/lib/strategies/templates";
 import StrategyEditor, { type SignalRow } from "../StrategyEditor";
-import type { LiveSettings } from "../actions";
+import type { KeptBacktest, LiveSettings } from "../actions";
+import type { Period } from "@/lib/strategies/backtest";
 
 export const metadata: Metadata = { title: "Strategy — HighStrike" };
 
@@ -48,6 +49,13 @@ export default async function StrategyPage({ params, searchParams }: { params: P
     signals = (sigs ?? []) as SignalRow[];
   }
 
+  // This member's last backtest of it (theirs alone, by row-level security).
+  const ref = start.id ?? (start.template ? `template:${start.template}` : "new");
+  const { data: kept } = await supabase.from("strategy_backtests").select("ticker, period, run_key, news_from, result").eq("user_id", user.id).eq("ref", ref).maybeSingle();
+  const lastRun: KeptBacktest | null = kept
+    ? { ticker: kept.ticker, period: kept.period as Period, runKey: kept.run_key, newsFrom: kept.news_from, result: kept.result as KeptBacktest["result"] }
+    : null;
+
   return (
     <>
       <PageHeader
@@ -62,7 +70,7 @@ export default async function StrategyPage({ params, searchParams }: { params: P
         }
       />
       <div className="mt-6">
-        <StrategyEditor id={start.id} initialName={start.name} initialRules={start.rules} initialTicker={start.ticker} template={start.template} userId={user.id} initialSettings={settings} signals={signals} />
+        <StrategyEditor id={start.id} initialName={start.name} initialRules={start.rules} initialTicker={start.ticker} template={start.template} userId={user.id} initialSettings={settings} signals={signals} backtestRef={ref} lastRun={lastRun} />
       </div>
     </>
   );

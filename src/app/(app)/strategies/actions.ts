@@ -13,8 +13,14 @@ import { newYorkDate } from "@/lib/marketCalendar";
 
 const TICKER = /^[A-Z][A-Z0-9.]{0,7}$/;
 
-export async function runBacktest(input: { rules: unknown; ticker: string; period?: Period }): Promise<{ result: Result; newsFrom: string | null } | { error: string }> {
-  await requireMember("/strategies");
+/** A member's last backtest of one strategy, as kept (public.strategy_backtests, theirs alone). */
+export type KeptBacktest = { ticker: string; period: Period; runKey: string; newsFrom: string | null; result: Result };
+
+/** Which kept backtest a strategy uses: its id once saved, else the classic it came from, else "new". */
+const REF = /^([0-9a-f-]{36}|template:[a-z0-9-]{1,40}|new)$/;
+
+export async function runBacktest(input: { rules: unknown; ticker: string; period?: Period; ref?: string; runKey?: string }): Promise<{ result: Result; newsFrom: string | null } | { error: string }> {
+  const { supabase, user } = await requireMember("/strategies");
   const spec = cleanSpec(input.rules);
   if (!spec) return { error: "Turn on at least one entry criterion (or add a custom rule)." };
   const ticker = input.ticker.trim().toUpperCase().replace(/^\$/, "");
@@ -26,7 +32,23 @@ export async function runBacktest(input: { rules: unknown; ticker: string; perio
   const news = usesNewsSpec(spec) ? await stockNews(ticker) : undefined;
   const period: Period = PERIODS.some(([k]) => k === input.period) ? input.period! : "all";
   const from = periodStart(period, newYorkDate(Date.now()));
-  return { result: backtest(set.candles, spec, news ? { news, newsFrom: NEWS_START } : {}, from), newsFrom: news ? NEWS_START : null };
+  const result = backtest(set.candles, spec, news ? { news, newsFrom: NEWS_START } : {}, from);
+  const newsFrom = news ? NEWS_START : null;
+  // Kept for this member only (row-level security: their own rows), so it's there next time they open the strategy.
+  if (input.ref && REF.test(input.ref)) {
+    const { error } = await supabase.from("strategy_backtests").upsert({
+      user_id: user.id,
+      ref: input.ref,
+      ticker,
+      period,
+      run_key: String(input.runKey ?? "").slice(0, 20_000),
+      news_from: newsFrom,
+      result,
+      ran_at: new Date().toISOString(),
+    });
+    if (error) console.error("strategy backtest not kept:", error.message);
+  }
+  return { result, newsFrom };
 }
 
 export type LiveSettings = { watch: string[]; live: boolean; alerts: boolean; autoTrade: boolean };
@@ -53,6 +75,12 @@ export async function saveStrategy(input: { id?: string | null; name: string; ru
     ? await supabase.from("strategies").update(row).eq("id", input.id).eq("user_id", user.id).select("id").single()
     : await supabase.from("strategies").insert(row).select("id").single();
   if (error || !data) return { error: "It didn't save. Try again." };
+  // A first save carries over the backtest run before it (on the classic, or the blank new one).
+  if (!input.id) {
+    const from = input.template ? `template:${input.template}` : "new";
+    const { data: kept } = await supabase.from("strategy_backtests").select("*").eq("user_id", user.id).eq("ref", from).maybeSingle();
+    if (kept) await supabase.from("strategy_backtests").upsert({ ...kept, ref: data.id });
+  }
   revalidatePath("/strategies");
   return { id: data.id as string };
 }
