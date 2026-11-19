@@ -477,7 +477,7 @@ export default function Desk({
             style={{ paddingLeft: leftEdge, paddingRight: rightEdge, paddingBottom: 56 }}
           >
             <div className="min-h-0 flex-1">
-              <HighStrikeChart ticker={chartSymbol} expiry={chartExpiry} userId={userId} fill onLive={onLive} initialTimeframe={start.tf} onTimeframe={setTf} limitLine={limitLine} />
+              <HighStrikeChart ticker={chartSymbol} expiry={chartExpiry} underlyingPrice={q?.price ?? lastBar?.c ?? null} userId={userId} fill onLive={onLive} initialTimeframe={start.tf} onTimeframe={setTf} limitLine={limitLine} />
             </div>
           </div>
 
@@ -601,7 +601,7 @@ export default function Desk({
       <section className="rounded-xl border border-line bg-panel px-4 py-3">{accountBar}</section>
       <section className="rounded-xl border border-line bg-panel p-3">
         {symbolHead}
-        <HighStrikeChart ticker={chartSymbol} expiry={chartExpiry} userId={userId} height={320} onLive={onLive} initialTimeframe={start.tf} onTimeframe={setTf} limitLine={limitLine} />
+        <HighStrikeChart ticker={chartSymbol} expiry={chartExpiry} underlyingPrice={q?.price ?? lastBar?.c ?? null} userId={userId} height={320} onLive={onLive} initialTimeframe={start.tf} onTimeframe={setTf} limitLine={limitLine} />
       </section>
       {modeTabs}
       {mode === "shares" ? (

@@ -77,6 +77,8 @@ type Props = {
   limitLine?: { price: number; side: "buy" | "sell" } | null;
   /** An option contract's expiry date ("2026-12-18"): a dashed vertical line at 4:00 PM New York time that day. */
   expiry?: string | null;
+  /** For an option contract: the stock's price now, to say how far the strike is in or out of the money. */
+  underlyingPrice?: number | null;
   /** Each live price as it arrives (the desk's price bar follows it). */
   onLive?: (tick: { price: number; open: number | null; high: number | null; low: number | null; prevClose: number | null }) => void;
   /** A timeframe to open on (the desk's URL), over the one remembered in this browser. */
@@ -85,7 +87,7 @@ type Props = {
   onTimeframe?: (tf: Timeframe) => void;
 };
 
-export default function HighStrikeChart({ ticker, userId, levels, height, fill = false, onLive, initialTimeframe, onTimeframe, limitLine, expiry }: Props) {
+export default function HighStrikeChart({ ticker, userId, levels, height, fill = false, onLive, initialTimeframe, onTimeframe, limitLine, expiry, underlyingPrice }: Props) {
   // Daily candles, kept with their ticker so another ticker's never show (or a failure sticks) while a new one loads.
   const [daily, setDaily] = useState<{ ticker: string; candles: Candle[] | null; source?: string; stale?: boolean; waiting?: boolean; failed?: boolean } | null>(null);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
@@ -186,6 +188,7 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
   const dailyNow = daily?.ticker === ticker ? daily : null;
   // What the chart is of, in words: the ticker, or "AAPL Dec 18 $350 call" for an option contract.
   const name = contractName(ticker) ?? ticker;
+  const contract = contractParts(ticker);
   const data = useMemo(() => (dailyNow?.candles ? { candles: dailyNow.candles, source: dailyNow.source ?? "", stale: Boolean(dailyNow.stale) } : null), [dailyNow]);
   const failed = Boolean(dailyNow?.failed);
 
@@ -1125,6 +1128,25 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
                     <path key={m.n} d={path(m.values, y)} fill="none" stroke={m.color} strokeWidth={1.4} opacity={0.9} />
                   ))}
 
+                  {/* An option contract's strike (Ben, 2026-11-18: "show the strike of that contract"), and where the stock is */}
+                  {contract && <StrikeBadge contract={contract} spot={underlyingPrice ?? null} />}
+
+                  {/* The last trade price (Ben, 2026-11-18: "show the last trade price with a horizontal colored dotted line") */}
+                  {last && last.c > lo && last.c < hi && (
+                    <line
+                      x1={0}
+                      x2={plotW}
+                      y1={y(last.c)}
+                      y2={y(last.c)}
+                      stroke={last.c >= (bars[bars.length - 2]?.c ?? last.o) ? "var(--color-up)" : "var(--color-down)"}
+                      strokeOpacity={0.8}
+                      strokeDasharray="1.5 3"
+                      strokeLinecap="round"
+                      strokeWidth={1.2}
+                      pointerEvents="none"
+                    />
+                  )}
+
                   {/* The contract's expiry: a dashed vertical line, labelled (or a tag at the right edge when it's further on) */}
                   {expiry && expIdx != null && <ExpiryMark x={x(expIdx)} plotW={plotW} priceH={priceH} label={`EXPIRES ${expiryLabel(expiry)}`} />}
 
@@ -1557,6 +1579,38 @@ function ExpiryMark({ x, plotW, priceH, label }: { x: number; plotW: number; pri
       <text x={lx + w / 2} y={18.5} textAnchor="middle" className="font-mono text-[10px] font-semibold" fill="var(--color-warn)">
         {text}
       </text>
+    </g>
+  );
+}
+
+/** An option symbol's parts, or null for a stock. */
+function contractParts(symbol: string) {
+  const m = /^O:([A-Z.]{1,8})(\d{6})([CP])(\d{8})$/.exec(symbol);
+  return m ? { underlying: m[1], call: m[3] === "C", strike: Number(m[4]) / 1000 } : null;
+}
+
+/** "STRIKE $250 CALL · AAPL $351.91 · $101.91 in the money", at the plot's top left. */
+function StrikeBadge({ contract, spot }: { contract: { underlying: string; call: boolean; strike: number }; spot: number | null }) {
+  const k = contract.strike;
+  const strike = `STRIKE $${Number.isInteger(k) ? k : k.toFixed(2)} ${contract.call ? "CALL" : "PUT"}`;
+  const diff = spot != null && spot > 0 ? (contract.call ? spot - k : k - spot) : null;
+  const where = spot == null || !(spot > 0) ? null : `${contract.underlying} $${spot.toFixed(2)} · ${diff === 0 ? "at the money" : `$${Math.abs(diff!).toFixed(2)} ${diff! > 0 ? "in" : "out of"} the money`}`;
+  const sw = strike.length * 6.6 + 16;
+  const ww = where ? where.length * 6.1 + 14 : 0;
+  return (
+    <g pointerEvents="none">
+      <rect x={6} y={6} width={sw} height={20} rx={4} fill="var(--color-accent)" />
+      <text x={6 + sw / 2} y={19.5} textAnchor="middle" className="font-mono text-[11px] font-semibold" fill="var(--color-on-accent)">
+        {strike}
+      </text>
+      {where && (
+        <>
+          <rect x={12 + sw} y={6} width={ww} height={20} rx={4} fill="var(--color-panel-3)" opacity={0.92} />
+          <text x={12 + sw + ww / 2} y={19.5} textAnchor="middle" className="font-mono text-[10.5px]" fill={diff! > 0 ? "var(--color-up)" : "var(--color-ink-2)"}>
+            {where}
+          </text>
+        </>
+      )}
     </g>
   );
 }
