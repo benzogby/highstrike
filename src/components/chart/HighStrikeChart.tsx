@@ -7,6 +7,7 @@ import { FIB_LEVELS, niceTicks, priceLabel, rsi, sma, timeScale, toMonthly, toWe
 import { planNumbers } from "@/lib/chart/plan";
 import { withLive, type Span, type Tick } from "@/lib/chart/live";
 import { TIMEFRAMES, type Timeframe } from "@/lib/chart/timeframes";
+import { addDays, isSession } from "@/lib/marketCalendar";
 export type { Timeframe };
 
 // HighStrike Chart (Ben, 2026-11-17: "Our own custom charts, with our UI, and deep markup ability"): 1m to weekly
@@ -196,7 +197,10 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
     let alive = true;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let tries = 0;
-    const [sym, tf] = intraKey.split(":");
+    // Split at the last colon: an option contract's symbol has one of its own ("O:AAPL261218C00250000:1h").
+    const cut = intraKey.lastIndexOf(":");
+    const sym = intraKey.slice(0, cut);
+    const tf = intraKey.slice(cut + 1);
     const load = () =>
       fetch(`/api/candles?symbol=${encodeURIComponent(sym)}&tf=${tf}`)
         .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
@@ -358,24 +362,85 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
 
   // The expiry's bar position (Ben, 2026-11-18: "a vertical line at the expiration date/time"): past the last bar it's
   // counted in trading time, weekdays (and 4:00 AM to 8:00 PM for intraday bars), the way the bars themselves run.
+  // The time ahead of the last bar, to scale (Ben, 2026-11-18: "Make the expiration line occur on the timeline where it
+  // actually will happen in time"): counted in real trading days (weekends and market holidays skipped) and, for
+  // intraday bars, in as many bars a day as this chart really has (a contract trades 9:30 to 4:00 only: seven 1h bars a
+  // day, not the stock's sixteen).
+  const ahead = useMemo(() => {
+    if (!bars.length || (!minutes && span !== "D")) return null;
+    const n = bars.length;
+    const lastT = bars[n - 1].t;
+    const lastDate = lastT.slice(0, 10);
+    const median = (xs: number[]) => (xs.length ? [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)] : 0);
+    let bpd = 1;
+    let after = 0;
+    let restToday = 0;
+    let startMin = 570;
+    if (minutes) {
+      const days = new Map<string, Candle[]>();
+      for (const b of bars.slice(-4000)) {
+        const d = b.t.slice(0, 10);
+        if (!days.has(d)) days.set(d, []);
+        days.get(d)!.push(b);
+      }
+      const done = [...days.entries()].filter(([d]) => d !== lastDate).slice(-10).map(([, list]) => list);
+      bpd = Math.max(1, median(done.map((l) => l.length)) || (days.get(lastDate)?.length ?? 1));
+      after = median(done.map((l) => l.filter((b) => b.t.slice(11, 16) >= "16:00").length));
+      restToday = Math.max(0, bpd - (days.get(lastDate)?.length ?? 0));
+      const first = done.at(-1)?.[0]?.t ?? lastT;
+      startMin = Number(first.slice(11, 13)) * 60 + Number(first.slice(14, 16));
+    }
+    /** The k-th trading day after `from`. */
+    const nthSession = (from: string, k: number) => {
+      let d = from;
+      for (let left = k, guard = 0; left > 0 && guard < 4000; guard++) {
+        d = addDays(d, 1);
+        if (isSession(d)) left--;
+      }
+      return d;
+    };
+    const sessionsUntil = (to: string) => {
+      let k = 0;
+      for (let d = addDays(lastDate, 1), guard = 0; d <= to && guard < 4000; d = addDays(d, 1), guard++) if (isSession(d)) k++;
+      return k;
+    };
+    const clock = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+    return {
+      /** Where 4:00 PM on a future date falls: its daily bar, or the close of that day's last regular-hours bar. */
+      close(date: string) {
+        const k = sessionsUntil(date);
+        return minutes ? n - 1 + restToday + k * bpd - after + 0.5 : n - 1 + k;
+      },
+      /** The time at a position past the last bar (the crosshair's tag out there). */
+      date(i: number) {
+        const j = Math.round(i - (n - 1));
+        if (!minutes) return nthSession(lastDate, j);
+        if (j <= restToday) {
+          const m = Number(lastT.slice(11, 13)) * 60 + Number(lastT.slice(14, 16)) + j * minutes;
+          return `${lastDate}T${clock(Math.min(m, 23 * 60 + 59))}`;
+        }
+        const k = Math.ceil((j - restToday) / bpd);
+        const p = j - restToday - (k - 1) * bpd;
+        return `${nthSession(lastDate, k)}T${clock(Math.min(startMin + (p - 1) * minutes, 23 * 60 + 59))}`;
+      },
+    };
+  }, [bars, minutes, span]);
   const expIdx = useMemo(() => {
     if (!expiry || !bars.length) return null;
     const lastT = bars[bars.length - 1].t;
     const at = minutes ? `${expiry}T16:00` : expiry;
-    if (at <= lastT || span === "W" || span === "M" || span === "Y") return ts.index(at);
-    if (!minutes) return bars.length - 1 + (weekdayOrd(expiry) - weekdayOrd(lastT.slice(0, 10)));
-    const pos = (t: string) => weekdayOrd(t.slice(0, 10)) * 960 + Math.min(960, Math.max(0, Number(t.slice(11, 13)) * 60 + Number(t.slice(14, 16)) - 240));
-    return bars.length - 1 + (pos(at) - pos(lastT)) / minutes;
-  }, [expiry, bars, minutes, span, ts]);
+    if (at <= lastT || !ahead) return ts.index(at);
+    return ahead.close(expiry);
+  }, [expiry, bars, minutes, ts, ahead]);
   const defaultCount = span === "Y" ? bars.length + 2 : span === "M" ? (narrow ? 60 : 132) : weekly ? (narrow ? 45 : 80) : minutes ? (narrow ? 80 : 160) : narrow ? 60 : 130;
   const v = useMemo(
     () => {
       if (view) return view;
       const base = { end: bars.length - 1 + (span === "Y" ? 1 : span === "M" ? 3 : weekly ? 4 : 8), count: Math.min(defaultCount, Math.max(long ? 8 : 20, bars.length + 8)) };
-      // A contract's expiry comes into the first view when it isn't far off (more than about half a screen away, it's
-      // marked at the right edge instead).
+      // A contract's expiry comes into the first view when it's up to about one and a half screens ahead (further, a tag at
+      // the right edge points to it; scroll right to reach it).
       const extra = expIdx != null ? Math.ceil(expIdx + (long ? 1 : weekly ? 2 : 4) - base.end) : 0;
-      return extra > 0 && extra < base.count * 0.6 ? { end: base.end + extra, count: base.count + extra } : base;
+      return extra > 0 && extra <= base.count * 1.5 ? { end: base.end + extra, count: base.count + extra } : base;
     },
     [view, bars.length, weekly, span, long, defaultCount, expIdx]
   );
@@ -1154,7 +1219,7 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
                 {hover && hover.y <= totalH && (() => {
                   const i = Math.round(invX(hover.x));
                   const cx = x(i);
-                  const t = i >= 0 && i < bars.length ? bars[i].t : ts.date(i);
+                  const t = i >= 0 && i < bars.length ? bars[i].t : i >= bars.length && ahead ? ahead.date(i) : ts.date(i);
                   const label = weekly ? `Week of ${dateLabel(t)}` : dateLabel(t, span);
                   const w = label.length * 6.3 + 14;
                   const tx = Math.max(0, Math.min(plotW - w, cx - w / 2));
@@ -1460,12 +1525,6 @@ function IconButton({ label, onClick, d }: { label: string; onClick: () => void;
       </svg>
     </button>
   );
-}
-
-/** Weekdays since Monday 1970-01-05, for counting trading days ahead (holidays aside). */
-function weekdayOrd(date: string) {
-  const d = Math.round((Date.parse(`${date}T12:00:00Z`) - Date.parse("1970-01-05T12:00:00Z")) / 86_400_000);
-  return Math.floor(d / 7) * 5 + Math.min(d % 7, 5);
 }
 
 /** "AAPL Dec 18 $350 call" for "O:AAPL261218C00350000"; null for a stock. */
