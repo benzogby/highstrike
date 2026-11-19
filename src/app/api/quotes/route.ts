@@ -1,6 +1,5 @@
 import { NextResponse, after } from "next/server";
 import { checkAlerts } from "@/lib/alerts";
-import { checkTrades } from "@/lib/tradeAlerts";
 
 export const dynamic = "force-dynamic";
 
@@ -23,8 +22,6 @@ export async function GET(request: Request) {
   // Piggyback a throttled alert sweep on member traffic (runs after the
   // response is sent; internally rate-limited to one sweep per ~2 minutes).
   after(() => checkAlerts({ throttled: true }).catch(() => {}));
-  // The same for tracked trades reaching their target or stop (src/lib/tradeAlerts.ts, its own 2-minute throttle).
-  after(() => checkTrades({ throttled: true }).catch(() => {}));
 
   const url = new URL(request.url);
   const raw = url.searchParams.get("symbols") ?? "";

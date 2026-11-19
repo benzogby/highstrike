@@ -3,7 +3,6 @@ import { morningToken } from "@/lib/morning";
 import { supabaseServer } from "@/lib/supabase/server";
 import { generateDaily, gradeSetups, snapshotPrices } from "@/lib/setupEngine";
 import { checkAlerts } from "@/lib/alerts";
-import { checkTrades } from "@/lib/tradeAlerts";
 import { SITE_URL } from "@/lib/mail";
 
 export const dynamic = "force-dynamic";
@@ -57,7 +56,6 @@ async function handle(request: Request) {
     const snapshot = await snapshotPrices();
     const grading = await gradeSetups();
     const alerts = await checkAlerts();
-    const tradeAlerts = await checkTrades().catch((e) => ({ error: e instanceof Error ? e.message : "failed" }));
     const result = await generateDaily(wantsForce);
     // The day's ideas are in: start the morning email and watchlist scans in a run of their own (once a day; a forced
     // regeneration from Admin doesn't email anyone).
@@ -72,7 +70,7 @@ async function handle(request: Request) {
           .catch((e) => console.error("morning-digest start failed:", e))
       );
     }
-    return NextResponse.json({ ...result, grading, snapshot, alerts, tradeAlerts });
+    return NextResponse.json({ ...result, grading, snapshot, alerts });
   } catch (e) {
     console.error("generate-setups failed:", e);
     return NextResponse.json(
