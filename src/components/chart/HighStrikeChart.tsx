@@ -47,8 +47,9 @@ const HIT = 7;
 // Timeframes (Ben, 2026-11-18: "More timeframes. Down to 1m"): intraday bars from /api/candles?tf=…, regular hours;
 // daily from /api/candles (back to 2016 on Alpaca's free data); weekly, monthly and yearly rolled from daily here.
 const MINUTES: Partial<Record<Timeframe, number>> = { "1m": 1, "5m": 5, "15m": 15, "30m": 30, "1h": 60, "4h": 240 };
-type Settings = { tf: Timeframe; mas: number[]; volume: boolean; rsi: boolean };
-const DEFAULT_SETTINGS: Settings = { tf: "D", mas: [21, 50, 200], volume: true, rsi: true };
+// `vp`: the volume profile (Ben, 2026-11-19: "Add volume profile as a setting… light gray bars on the right side").
+type Settings = { tf: Timeframe; mas: number[]; volume: boolean; rsi: boolean; vp: boolean };
+const DEFAULT_SETTINGS: Settings = { tf: "D", mas: [21, 50, 200], volume: true, rsi: true, vp: false };
 const SETTINGS_KEY = "hs-chart-settings";
 
 const TOOLS: { key: Tool; label: string; icon: string }[] = [
@@ -847,6 +848,25 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
   for (let i = Math.max(0, Math.floor(left)); i <= Math.min(bars.length - 1, Math.ceil(v.end)); i++) visible.push(i);
   const maxVol = Math.max(1, ...visible.map((i) => bars[i].v));
   const drawnBars = visible.filter((i) => !bars[i].empty);
+  // The volume profile: how much traded at each price over the bars on screen, each bar's volume spread evenly over
+  // its high-to-low range, in 48 price rows. The busiest row (the point of control) is a shade lighter.
+  const ROWS = 48;
+  const profile = (() => {
+    if (!settings.vp || !(hi > lo)) return null;
+    const rows = new Array<number>(ROWS).fill(0);
+    const size = (hi - lo) / ROWS;
+    for (const i of drawnBars) {
+      const b = bars[i];
+      if (!(b.v > 0)) continue;
+      const from = Math.max(0, Math.floor((b.l - lo) / size));
+      const to = Math.min(ROWS - 1, Math.floor((b.h - lo) / size));
+      if (to < from) continue;
+      const each = b.v / (to - from + 1);
+      for (let r = from; r <= to; r++) rows[r] += each;
+    }
+    const max = Math.max(...rows);
+    return max > 0 ? { rows, max, size, poc: rows.indexOf(max) } : null;
+  })();
   const volH = priceH * 0.16;
   const bodyW = Math.max(1, Math.min(14, barW * 0.68));
 
@@ -981,6 +1001,9 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
         </Chip>
         <Chip on={settings.rsi} onClick={() => changeSettings({ rsi: !settings.rsi })}>
           RSI
+        </Chip>
+        <Chip on={settings.vp} onClick={() => changeSettings({ vp: !settings.vp })}>
+          Vol profile
         </Chip>
         <span className="mx-1 h-4 w-px bg-line" />
         <div ref={toolsRef} className="relative">
@@ -1202,6 +1225,19 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
                 ))}
 
                 <g clipPath={`url(#plot-${ticker})`}>
+                  {/* Volume profile: light gray rows along the right side, behind the candles */}
+                  {profile && (
+                    <g pointerEvents="none">
+                      {profile.rows.map((v, r) => {
+                        if (!(v > 0)) return null;
+                        const w = (v / profile.max) * plotW * 0.22;
+                        const top = y(lo + (r + 1) * profile.size);
+                        const h = Math.max(1, y(lo + r * profile.size) - top - 1);
+                        return <rect key={`vp${r}`} x={plotW - w} y={top} width={w} height={h} rx={1} fill="var(--color-ink-2)" opacity={r === profile.poc ? 0.3 : 0.13} />;
+                      })}
+                    </g>
+                  )}
+
                   {/* Volume */}
                   {settings.volume &&
                     drawnBars.map((i) => {
