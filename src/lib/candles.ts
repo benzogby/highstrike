@@ -106,7 +106,8 @@ export async function getCandles(raw: string): Promise<CandleSet> {
   // Alpaca first when its keys are in (about 200 requests a minute, today's bar included), else Massive.
   if (await alpacaKeys()) {
     try {
-      candles = await alpacaBars(ticker, "1Day", 730);
+      // As far back as the source goes (asked for 20 years; Alpaca's free data starts in 2016), for monthly and yearly.
+      candles = await alpacaBars(ticker, "1Day", 7305);
       if (candles.length) source = "alpaca";
     } catch (e) {
       busy = e instanceof AlpacaBusy;

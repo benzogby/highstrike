@@ -90,6 +90,8 @@ export default function Desk({
   const [mode, setMode] = useState<"shares" | "options">(start.trade ?? "shares");
   // The ticket's Auto-Send box (off each time the desk opens), kept here so it survives switching stocks and contracts.
   const [autoSend, setAutoSend] = useState(false);
+  // The share ticket's working limit, drawn on the chart (an option's limit is an option price, so it isn't).
+  const [limitLine, setLimitLine] = useState<{ price: number; side: "buy" | "sell" } | null>(null);
 
   // The view in the URL (Ben, 2026-11-18: "store the ticker in the URL as well as any other relevant parameters"):
   // ?t=NVDA&tf=4h&panel=positions, replaced in place as they change, so a reload or a shared link opens the same view.
@@ -316,6 +318,7 @@ export default function Desk({
       onDone={refresh}
       autoSend={autoSend}
       onAutoSend={setAutoSend}
+      onLimit={setLimitLine}
     />
   );
 
@@ -448,7 +451,7 @@ export default function Desk({
             style={{ paddingLeft: leftEdge, paddingRight: rightEdge, paddingBottom: 56 }}
           >
             <div className="min-h-0 flex-1">
-              <HighStrikeChart ticker={ticker} userId={userId} fill onLive={onLive} initialTimeframe={start.tf} onTimeframe={setTf} />
+              <HighStrikeChart ticker={ticker} userId={userId} fill onLive={onLive} initialTimeframe={start.tf} onTimeframe={setTf} limitLine={target.kind === "stock" ? limitLine : null} />
             </div>
           </div>
 
@@ -567,7 +570,7 @@ export default function Desk({
       <section className="rounded-xl border border-line bg-panel px-4 py-3">{accountBar}</section>
       <section className="rounded-xl border border-line bg-panel p-3">
         {symbolHead}
-        <HighStrikeChart ticker={ticker} userId={userId} height={320} onLive={onLive} initialTimeframe={start.tf} onTimeframe={setTf} />
+        <HighStrikeChart ticker={ticker} userId={userId} height={320} onLive={onLive} initialTimeframe={start.tf} onTimeframe={setTf} limitLine={target.kind === "stock" ? limitLine : null} />
       </section>
       {modeTabs}
       {mode === "shares" ? (

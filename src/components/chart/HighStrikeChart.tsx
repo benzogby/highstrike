@@ -3,9 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import type { Anchor, Candle, Drawing, DrawingKind, HouseLevels } from "@/lib/chart/types";
-import { FIB_LEVELS, niceTicks, priceLabel, rsi, sma, timeScale, toWeekly, volumeLabel } from "@/lib/chart/math";
+import { FIB_LEVELS, niceTicks, priceLabel, rsi, sma, timeScale, toMonthly, toWeekly, toYearly, volumeLabel } from "@/lib/chart/math";
 import { planNumbers } from "@/lib/chart/plan";
-import { withLive, type Tick } from "@/lib/chart/live";
+import { withLive, type Span, type Tick } from "@/lib/chart/live";
 import { TIMEFRAMES, type Timeframe } from "@/lib/chart/timeframes";
 export type { Timeframe };
 
@@ -42,7 +42,7 @@ const GAP = 6;
 const HIT = 7;
 
 // Timeframes (Ben, 2026-11-18: "More timeframes. Down to 1m"): intraday bars from /api/candles?tf=…, regular hours;
-// daily from /api/candles, weekly rolled from daily here.
+// daily from /api/candles (back to 2016 on Alpaca's free data); weekly, monthly and yearly rolled from daily here.
 const MINUTES: Partial<Record<Timeframe, number>> = { "1m": 1, "5m": 5, "15m": 15, "30m": 30, "1h": 60, "4h": 240 };
 type Settings = { tf: Timeframe; mas: number[]; volume: boolean; rsi: boolean };
 const DEFAULT_SETTINGS: Settings = { tf: "D", mas: [21, 50, 200], volume: true, rsi: true };
@@ -72,6 +72,8 @@ type Props = {
   height?: number;
   /** Fill the box's height (the desk's full-screen chart) instead of a fixed height. */
   fill?: boolean;
+  /** A working limit price to mark (the desk's ticket): a light line labelled LIMIT. */
+  limitLine?: { price: number; side: "buy" | "sell" } | null;
   /** Each live price as it arrives (the desk's price bar follows it). */
   onLive?: (tick: { price: number; open: number | null; high: number | null; low: number | null; prevClose: number | null }) => void;
   /** A timeframe to open on (the desk's URL), over the one remembered in this browser. */
@@ -80,7 +82,7 @@ type Props = {
   onTimeframe?: (tf: Timeframe) => void;
 };
 
-export default function HighStrikeChart({ ticker, userId, levels, height, fill = false, onLive, initialTimeframe, onTimeframe }: Props) {
+export default function HighStrikeChart({ ticker, userId, levels, height, fill = false, onLive, initialTimeframe, onTimeframe, limitLine }: Props) {
   // Daily candles, kept with their ticker so another ticker's never show (or a failure sticks) while a new one loads.
   const [daily, setDaily] = useState<{ ticker: string; candles: Candle[] | null; source?: string; stale?: boolean; waiting?: boolean; failed?: boolean } | null>(null);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
@@ -317,14 +319,18 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
   }, [fill]);
 
   const weekly = settings.tf === "W";
+  // Dated spans past a week: months and years (Ben, 2026-11-18: "Add month… And add year").
+  const span: Span = settings.tf === "W" || settings.tf === "M" || settings.tf === "Y" ? settings.tf : "D";
+  const long = span === "M" || span === "Y";
   const minutes = MINUTES[settings.tf] ?? null;
   const intraNow = intraKey && intra?.key === intraKey ? intra : null;
   const liveTicks = liveFeed?.ticker === ticker ? liveFeed.list : null;
   const bars = useMemo(() => {
-    const base = minutes ? (intraNow?.candles ?? []) : data ? (weekly ? toWeekly(data.candles) : data.candles) : [];
-    return liveTicks ? withLive(base, liveTicks, minutes, weekly) : base;
-  }, [minutes, intraNow, data, weekly, liveTicks]);
-  const ts = useMemo(() => timeScale(bars, minutes ?? weekly), [bars, minutes, weekly]);
+    const roll = span === "W" ? toWeekly : span === "M" ? toMonthly : span === "Y" ? toYearly : (b: Candle[]) => b;
+    const base = minutes ? (intraNow?.candles ?? []) : data ? roll(data.candles) : [];
+    return liveTicks ? withLive(base, liveTicks, minutes, span) : base;
+  }, [minutes, intraNow, data, span, liveTicks]);
+  const ts = useMemo(() => timeScale(bars, minutes ?? (span === "M" ? 30.44 * 1440 : span === "Y" ? 365.25 * 1440 : weekly)), [bars, minutes, span, weekly]);
   // Loaded, failed: for the timeframe on screen.
   const loaded = minutes ? Boolean(intraNow?.candles) : Boolean(data);
   const waiting = minutes ? Boolean(intraNow?.waiting) : Boolean(dailyNow?.waiting);
@@ -344,10 +350,10 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
   const rsiTop = priceH + TIME_H + GAP;
   const totalH = priceH + TIME_H + (settings.rsi ? RSI_H + GAP : 0);
 
-  const defaultCount = weekly ? (narrow ? 45 : 80) : minutes ? (narrow ? 80 : 160) : narrow ? 60 : 130;
+  const defaultCount = span === "Y" ? bars.length + 2 : span === "M" ? (narrow ? 60 : 132) : weekly ? (narrow ? 45 : 80) : minutes ? (narrow ? 80 : 160) : narrow ? 60 : 130;
   const v = useMemo(
-    () => view ?? { end: bars.length - 1 + (weekly ? 4 : 8), count: Math.min(defaultCount, Math.max(20, bars.length + 8)) },
-    [view, bars.length, weekly, defaultCount]
+    () => view ?? { end: bars.length - 1 + (span === "Y" ? 1 : span === "M" ? 3 : weekly ? 4 : 8), count: Math.min(defaultCount, Math.max(long ? 8 : 20, bars.length + 8)) },
+    [view, bars.length, weekly, span, long, defaultCount]
   );
   const left = v.end - v.count;
   const barW = plotW / v.count;
@@ -373,10 +379,15 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
         h = Math.max(h, p);
       }
     }
+    // The ticket's limit stays in view when it's near the price (not when it's a typo miles away).
+    if (limitLine && limitLine.price > 0 && Number.isFinite(l) && limitLine.price > l * 0.85 && limitLine.price < h * 1.15) {
+      l = Math.min(l, limitLine.price);
+      h = Math.max(h, limitLine.price);
+    }
     if (!Number.isFinite(l)) return { lo: 0, hi: 1 };
     const pad = (h - l) * 0.07 || h * 0.02 || 1;
     return { lo: l - pad, hi: h + pad };
-  }, [bars, left, v.end, levels]);
+  }, [bars, left, v.end, levels, limitLine]);
   const { lo, hi } = manual ?? auto;
   const y = (p: number) => ((hi - p) / (hi - lo)) * priceH;
   const invY = (py: number) => hi - (py / priceH) * (hi - lo);
@@ -524,14 +535,14 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
       if (tool === "plan-long" || tool === "plan-short") {
         const side = tool === "plan-long" ? "long" : "short";
         const sign = side === "long" ? 1 : -1;
-        const span = (hi - lo) * 0.08;
-        const end = ts.date(Math.round(invX(px)) + (weekly ? 6 : 20));
+        const gap = (hi - lo) * 0.08;
+        const end = ts.date(Math.round(invX(px)) + (span === "Y" ? 1 : span === "M" ? 2 : weekly ? 6 : 20));
         return finishDraft({
           id: uid(),
           kind: "plan",
           side,
           color: side === "long" ? "green" : "red",
-          pts: [a, { t: end, p: Number((a.p - sign * span).toFixed(2)) }, { t: end, p: Number((a.p + sign * span * 2).toFixed(2)) }],
+          pts: [a, { t: end, p: Number((a.p - sign * gap).toFixed(2)) }, { t: end, p: Number((a.p + sign * gap * 2).toFixed(2)) }],
         });
       }
       if (TWO_POINT.includes(tool)) {
@@ -709,7 +720,9 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
         ? days <= 3
           ? t.slice(0, 13)
           : t.slice(0, 10)
-        : weekly || v.count > 300
+        : long
+          ? t.slice(0, 4)
+          : weekly || v.count > 300
           ? t.slice(0, 4) + (v.count > 300 ? "" : t.slice(5, 7))
           : t.slice(0, 7);
       if (key !== prevKey) {
@@ -734,7 +747,7 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
     }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- recomputed from the visible window's own inputs
-  }, [bars, left, v.end, v.count, plotW, weekly, minutes, narrow]);
+  }, [bars, left, v.end, v.count, plotW, weekly, long, minutes, narrow]);
 
   const path = (vals: (number | null)[], yf: (n: number) => number) => {
     let dStr = "";
@@ -753,7 +766,9 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
 
   const rsiY = (r: number) => rsiTop + ((100 - r) / 100) * RSI_H;
 
-  const dateLabel = (t: string) => {
+  const dateLabel = (t: string, as: Span = "D") => {
+    if (as === "Y") return t.slice(0, 4);
+    if (as === "M") return new Date(`${t.slice(0, 7)}-15T12:00:00Z`).toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" });
     const d = new Date(`${t.slice(0, 10)}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
     if (t.length <= 10) return d;
     const h = Number(t.slice(11, 13));
@@ -950,7 +965,7 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
                   else if (py > priceH && py <= priceH + TIME_H) setView(null);
                 }}
                 role="img"
-                aria-label={`${ticker} ${weekly ? "weekly" : minutes ? `${settings.tf}` : "daily"} candle chart`}
+                aria-label={`${ticker} ${span === "Y" ? "yearly" : span === "M" ? "monthly" : weekly ? "weekly" : minutes ? `${settings.tf}` : "daily"} candle chart`}
               >
                 <defs>
                   <clipPath id={`plot-${ticker}`}>
@@ -1021,6 +1036,17 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
                     <path key={m.n} d={path(m.values, y)} fill="none" stroke={m.color} strokeWidth={1.4} opacity={0.9} />
                   ))}
 
+                  {/* The ticket's working limit (Ben, 2026-11-18: "show a light line on the chart with a LIMIT label") */}
+                  {limitLine && limitLine.price > lo && limitLine.price < hi && (
+                    <g pointerEvents="none">
+                      <line x1={0} x2={plotW} y1={y(limitLine.price)} y2={y(limitLine.price)} stroke={limitLine.side === "buy" ? "var(--color-up)" : "var(--color-down)"} strokeOpacity={0.55} strokeDasharray="6 4" strokeWidth={1.2} />
+                      <rect x={6} y={y(limitLine.price) - 9} width={44} height={16} rx={3} fill="var(--color-panel-3)" opacity={0.9} />
+                      <text x={28} y={y(limitLine.price) + 3} textAnchor="middle" className="font-mono text-[10px] font-semibold" fill={limitLine.side === "buy" ? "var(--color-up)" : "var(--color-down)"}>
+                        LIMIT
+                      </text>
+                    </g>
+                  )}
+
                   {/* The idea's own levels */}
                   {levels && <HouseLines levels={levels} plotW={plotW} y={y} x0={levels.from ? Math.max(0, x(ts.index(levels.from))) : 0} />}
 
@@ -1035,7 +1061,7 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
                       plotW={plotW}
                       ts={ts}
                       closes={closes}
-                      weekly={weekly}
+                      unit={span === "Y" ? "yr" : span === "M" ? "mo" : weekly ? "wk" : "bars"}
                       selected={d.id === selected}
                       markerId={`arrow-${ticker}`}
                     />
@@ -1091,6 +1117,10 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
                   </g>
                 )}
 
+                {limitLine && limitLine.price > lo && limitLine.price < hi && (
+                  <AxisTag x={plotW} y={y(limitLine.price)} fill={limitLine.side === "buy" ? "var(--color-up)" : "var(--color-down)"} text={priceLabel(limitLine.price)} />
+                )}
+
                 {/* Crosshair: the price where it crosses the price axis, and the bar's date (and time, intraday) where it
                     crosses the time axis (Ben, 2026-11-18: "so I can see where my cursor is"). The vertical line and its
                     time follow the cursor into the RSI pane too. */}
@@ -1098,7 +1128,7 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
                   const i = Math.round(invX(hover.x));
                   const cx = x(i);
                   const t = i >= 0 && i < bars.length ? bars[i].t : ts.date(i);
-                  const label = weekly ? `Week of ${dateLabel(t)}` : dateLabel(t);
+                  const label = weekly ? `Week of ${dateLabel(t)}` : dateLabel(t, span);
                   const w = label.length * 6.3 + 14;
                   const tx = Math.max(0, Math.min(plotW - w, cx - w / 2));
                   return (
@@ -1200,7 +1230,7 @@ function DrawingShape({
   plotW,
   ts,
   closes,
-  weekly,
+  unit,
   selected,
   markerId,
 }: {
@@ -1211,7 +1241,7 @@ function DrawingShape({
   plotW: number;
   ts: ReturnType<typeof timeScale>;
   closes: number[];
-  weekly: boolean;
+  unit: string;
   selected: boolean;
   markerId: string;
 }) {
@@ -1253,7 +1283,7 @@ function DrawingShape({
       const col = up ? "var(--color-up)" : "var(--color-down)";
       const x0 = Math.min(ax(a), ax(b));
       const y0 = Math.min(ay(a), ay(b));
-      const label = `${up ? "+" : "−"}${priceLabel(Math.abs(dp))} (${up ? "+" : "−"}${Math.abs(pct).toFixed(2)}%) · ${nBars} ${weekly ? "wk" : "bars"}`;
+      const label = `${up ? "+" : "−"}${priceLabel(Math.abs(dp))} (${up ? "+" : "−"}${Math.abs(pct).toFixed(2)}%) · ${nBars} ${unit}`;
       return (
         <g>
           <rect x={x0} y={y0} width={Math.abs(ax(b) - ax(a))} height={Math.abs(ay(b) - ay(a))} fill={col} fillOpacity={0.12} stroke={col} strokeOpacity={0.6} />

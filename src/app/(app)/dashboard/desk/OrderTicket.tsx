@@ -32,6 +32,7 @@ export default function OrderTicket({
   onDone,
   autoSend,
   onAutoSend,
+  onLimit,
 }: {
   target: TicketTarget;
   cash: number;
@@ -41,6 +42,8 @@ export default function OrderTicket({
   onDone: () => void;
   autoSend: boolean;
   onAutoSend: (on: boolean) => void;
+  /** The working limit, as it changes (the desk draws it on the chart); null when the order is at market. */
+  onLimit?: (l: { price: number; side: "buy" | "sell" } | null) => void;
 }) {
   const [side, setSide] = useState<"buy" | "sell">(target.side);
   const [qty, setQty] = useState(target.kind === "option" ? "1" : "10");
@@ -59,9 +62,18 @@ export default function OrderTicket({
     setType("limit");
   };
   const nudge = (dir: 1 | -1) => {
-    const base = Number(limit) > 0 ? Number(limit) : (market ?? 0);
-    setLimit(Math.max(0.01, Math.round((base + dir * step) / step) * step).toFixed(2));
+    setTyped((cur) => {
+      const now = Number(cur ?? limit) > 0 ? Number(cur ?? limit) : (market ?? 0);
+      return Math.max(0.01, Math.round((now + dir * step) / step) * step).toFixed(2);
+    });
+    setType("limit");
   };
+  // Tell the desk where the limit is, so it can mark it on the chart.
+  const limitNow = type === "limit" && Number(limit) > 0 ? Number(limit) : null;
+  useEffect(() => {
+    onLimit?.(limitNow != null ? { price: limitNow, side } : null);
+  }, [limitNow, side, onLimit]);
+  useEffect(() => () => onLimit?.(null), [onLimit]);
   const mult = target.kind === "option" ? 100 : 1;
   const n = Math.max(0, Math.floor(Number(qty) || 0));
   const price = type === "limit" && Number(limit) > 0 ? Number(limit) : side === "buy" ? (target.ask ?? target.last) : (target.bid ?? target.last);
@@ -142,20 +154,33 @@ export default function OrderTicket({
             )}
           </span>
           <div className="flex">
-            <button type="button" onClick={() => nudge(-1)} aria-label={`Lower the limit by ${step.toFixed(2)}`} className="h-9 rounded-l-lg border border-r-0 border-line-strong bg-panel-2 px-2 text-ink-2 hover:text-ink">
-              −
-            </button>
             <input
               inputMode="decimal"
               value={limit}
               onChange={(e) => setLimit(e.target.value)}
               onFocus={(e) => e.target.select()}
-              className={`${INPUT} rounded-none text-center font-mono-nums ${type === "market" ? "text-ink-3" : ""}`}
+              onKeyDown={(e) => {
+                // Up and down step the price (Shift: ten steps).
+                if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+                  e.preventDefault();
+                  for (let i = 0; i < (e.shiftKey ? 10 : 1); i++) nudge(e.key === "ArrowUp" ? 1 : -1);
+                }
+              }}
+              className={`${INPUT} rounded-r-none font-mono-nums ${type === "market" ? "text-ink-3" : ""}`}
               aria-label="Limit price"
             />
-            <button type="button" onClick={() => nudge(1)} aria-label={`Raise the limit by ${step.toFixed(2)}`} className="h-9 rounded-r-lg border border-l-0 border-line-strong bg-panel-2 px-2 text-ink-2 hover:text-ink">
-              +
-            </button>
+            <div className="flex h-9 w-7 shrink-0 flex-col overflow-hidden rounded-r-lg border border-l-0 border-line-strong bg-panel-2">
+              <button type="button" onClick={() => nudge(1)} aria-label={`Raise the limit by ${step.toFixed(2)}`} className="grid flex-1 place-items-center text-ink-2 hover:bg-panel-3 hover:text-ink">
+                <svg viewBox="0 0 10 6" className="h-1.5 w-2.5" fill="currentColor" aria-hidden="true">
+                  <path d="M5 0l5 6H0z" />
+                </svg>
+              </button>
+              <button type="button" onClick={() => nudge(-1)} aria-label={`Lower the limit by ${step.toFixed(2)}`} className="grid flex-1 place-items-center border-t border-line-strong text-ink-2 hover:bg-panel-3 hover:text-ink">
+                <svg viewBox="0 0 10 6" className="h-1.5 w-2.5" fill="currentColor" aria-hidden="true">
+                  <path d="M0 0h10L5 6z" />
+                </svg>
+              </button>
+            </div>
           </div>
           <span className="mt-1 block text-[11px] text-ink-3">{type === "market" ? "Sends at market; change the price for a limit" : typed == null ? "Following the market price" : "Your price"}</span>
         </label>

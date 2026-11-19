@@ -15,15 +15,22 @@ export function nyStamp(ms: number) {
   return `${p.year}-${p.month}-${p.day}T${p.hour === "24" ? "00" : p.hour}:${p.minute}`;
 }
 
-/** The start of the bar a moment falls in: its day for daily, the Monday's date for weekly, else "YYYY-MM-DDTHH:MM". */
-function periodOf(ms: number, minutes: number | null, weekly: boolean): string | null {
-  const s = nyStamp(ms);
-  const date = s.slice(0, 10);
-  if (weekly) {
+export type Span = "D" | "W" | "M" | "Y";
+
+/** A dated bar's group: the day, the week's Monday, the month or the year. */
+function spanKey(date: string, span: Span) {
+  if (span === "W") {
     const d = new Date(`${date}T12:00:00Z`);
     const dow = (d.getUTCDay() + 6) % 7;
     return new Date(d.getTime() - dow * 86_400_000).toISOString().slice(0, 10);
   }
+  return span === "M" ? date.slice(0, 7) : span === "Y" ? date.slice(0, 4) : date;
+}
+
+/** The start of the intraday bar a moment falls in ("YYYY-MM-DDTHH:MM"), or for dated bars the moment's date. */
+function periodOf(ms: number, minutes: number | null): string | null {
+  const s = nyStamp(ms);
+  const date = s.slice(0, 10);
   if (!minutes) return date;
   // 4:00 AM to 8:00 PM, counted from each session's start like the server's bars (src/lib/chart/sessions.ts).
   const start = barStart(minuteOf(s), minutes);
@@ -31,21 +38,21 @@ function periodOf(ms: number, minutes: number | null, weekly: boolean): string |
 }
 
 /** The bars with the live prices folded in. */
-export function withLive(bars: Candle[], ticks: Tick[], minutes: number | null, weekly: boolean): Candle[] {
+export function withLive(bars: Candle[], ticks: Tick[], minutes: number | null, span: Span = "D"): Candle[] {
   if (!ticks.length || !bars.length) return bars;
   const out = bars.slice();
-  // Weekly bars are stamped with their first trading day, which can be after the Monday: compare by week.
-  const weekOf = (t: string) => periodOf(Date.parse(`${t.slice(0, 10)}T17:00:00Z`), null, true);
   for (const tk of ticks) {
     // Daily and weekly bars are the regular session: prices before the open or after the close don't move them.
     if (!minutes) {
       const hm = nyStamp(tk.at).slice(11, 16);
       if (hm < "09:30" || hm >= "16:00") continue;
     }
-    const period = periodOf(tk.at, minutes, weekly);
-    if (!period) continue;
+    const at = periodOf(tk.at, minutes);
+    if (!at) continue;
     const last = out[out.length - 1];
-    const lastKey = weekly ? weekOf(last.t) : last.t;
+    // Dated bars are stamped with their first trading day: compare by their group (week, month, year).
+    const period = minutes ? at : spanKey(at, span);
+    const lastKey = minutes ? last.t : spanKey(last.t.slice(0, 10), span);
     if (lastKey === period) {
       // On a daily or weekly bar the quote's own day high and low are the truth; intraday, the prices seen.
       const hi = !minutes && tk.high ? tk.high : tk.price;
@@ -54,7 +61,7 @@ export function withLive(bars: Candle[], ticks: Tick[], minutes: number | null, 
     } else if (period > lastKey!) {
       const o = !minutes && tk.open ? tk.open : tk.price;
       out.push({
-        t: period,
+        t: at,
         o,
         h: Math.max(o, tk.price, !minutes && tk.high ? tk.high : tk.price),
         l: Math.min(o, tk.price, !minutes && tk.low ? tk.low : tk.price),

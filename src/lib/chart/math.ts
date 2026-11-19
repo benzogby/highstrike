@@ -4,11 +4,17 @@ import type { Candle } from "./types";
 // anything that wants the same numbers (the planner, the backtester).
 
 /** Daily bars rolled into weeks (Monday to Friday), each stamped with its first trading day. */
-export function toWeekly(daily: Candle[]): Candle[] {
+export const toWeekly = (daily: Candle[]) => rollup(daily, weekKey);
+/** Daily bars rolled into calendar months, each stamped with its first trading day. */
+export const toMonthly = (daily: Candle[]) => rollup(daily, (t) => t.slice(0, 7));
+/** Daily bars rolled into calendar years, each stamped with its first trading day. */
+export const toYearly = (daily: Candle[]) => rollup(daily, (t) => t.slice(0, 4));
+
+function rollup(daily: Candle[], keyOf: (t: string) => string): Candle[] {
   const out: Candle[] = [];
   let key = "";
   for (const d of daily) {
-    const k = weekKey(d.t);
+    const k = keyOf(d.t);
     const last = out[out.length - 1];
     if (k !== key || !last) {
       out.push({ ...d });
@@ -80,7 +86,8 @@ const fromMinuteNum = (n: number, intraday: boolean) => {
  * kind of chart: a date alone means noon that day. `pace` is `true` for weekly, `false` for daily, or minutes a bar.
  */
 export function timeScale(bars: Candle[], pace: boolean | number) {
-  const intraday = typeof pace === "number";
+  // Minutes a bar under a day is intraday (times); a day or more (monthly, yearly) is dated.
+  const intraday = typeof pace === "number" && pace < 1440;
   const step = typeof pace === "number" ? pace : pace ? 7 * 1440 : (7 / 5) * 1440;
   const nums = bars.map((b) => minuteNum(b.t));
   const first = nums[0] ?? 0;
