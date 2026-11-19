@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { execFileSync } from "node:child_process";
 /**
  * Set up and update HighStrike's always-on worker (worker/) on Railway, through Railway's API.
  *
@@ -114,9 +115,12 @@ await gql("mutation($input: VariableCollectionUpsertInput!) { variableCollection
   },
 });
 console.log("railway: settings saved");
-await gql("mutation($serviceId: String!, $environmentId: String!) { serviceInstanceDeployV2(serviceId: $serviceId, environmentId: $environmentId) }", {
+// The newest commit on GitHub's main, named outright (left to itself Railway kept redeploying an old one; 2026-11-19).
+const head = execFileSync("git", ["ls-remote", "origin", "refs/heads/main"]).toString().split(/\s/)[0];
+await gql("mutation($serviceId: String!, $environmentId: String!, $commitSha: String) { serviceInstanceDeployV2(serviceId: $serviceId, environmentId: $environmentId, commitSha: $commitSha) }", {
   serviceId: service.id,
   environmentId: environment.id,
+  commitSha: head || null,
 });
 notify("HighStrike's worker is deploying on Railway.");
 console.log(`railway: deploying (project ${project.id}, service ${service.id}, environment ${environment.id})`);
