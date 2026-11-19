@@ -16,6 +16,7 @@ export type Operand =
   | { kind: "bbUpper" | "bbLower"; n: number }
   | { kind: "volume" }
   | { kind: "volumeAvg"; n: number }
+  | { kind: "volumeRatio"; n: number }
   | { kind: "highest" | "lowest"; n: number }
   | { kind: "change"; n: number }
   | { kind: "gap" }
@@ -63,6 +64,7 @@ export const OPERANDS: { kind: OperandKind; label: string; params?: ("n" | "valu
   { kind: "bbLower", label: "Bollinger lower band", params: ["n"], def: { kind: "bbLower", n: 20 }, group: "Indicators" },
   { kind: "volume", label: "Volume", def: { kind: "volume" }, group: "Volume" },
   { kind: "volumeAvg", label: "Average volume of N bars", params: ["n"], def: { kind: "volumeAvg", n: 20 }, group: "Volume" },
+  { kind: "volumeRatio", label: "Volume ÷ its N-bar average", params: ["n"], def: { kind: "volumeRatio", n: 20 }, group: "Volume" },
   { kind: "newsCount", label: "Headlines in the last N days", params: ["n"], def: { kind: "newsCount", n: 1 }, group: "News" },
   { kind: "newsTone", label: "News tone over N days", params: ["n"], def: { kind: "newsTone", n: 3 }, group: "News" },
   { kind: "value", label: "A number", params: ["value"], def: { kind: "value", value: 30 }, group: "Number" },
@@ -104,6 +106,8 @@ export function operandText(o: Operand): string {
       return "Volume";
     case "volumeAvg":
       return `${o.n}-bar avg volume`;
+    case "volumeRatio":
+      return `Volume ÷ ${o.n}-bar avg`;
     case "highest":
       return `${o.n}-bar high`;
     case "lowest":
@@ -289,6 +293,12 @@ export class Calc {
       case "volumeAvg":
         s = smaOf(b.map((x) => x.v), o.n);
         break;
+      case "volumeRatio": {
+        // Against the N bars before this one, so a big day doesn't raise its own bar.
+        const avg = smaOf(b.map((x) => x.v), o.n);
+        s = b.map((x, i) => (i > 0 && avg[i - 1] ? x.v / avg[i - 1]! : null));
+        break;
+      }
       case "highest":
       case "lowest":
         // The last N bars before this one, so "price crosses above the 20-bar high" can happen.

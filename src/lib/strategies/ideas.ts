@@ -10,7 +10,14 @@ import { readScan } from "@/lib/scan/build";
 import { NEWS_START, stockNews } from "@/lib/alpaca";
 import { suggestOption } from "@/lib/optionIdea";
 import type { Candle } from "@/lib/chart/types";
-import { Calc, conditionText, usesNews } from "./rules";
+import { Calc } from "./rules";
+import { entryConditions, entryText, usesNewsSpec, type Spec } from "./spec";
+
+/** An idea's target, stop and time limit, from its strategy's stock-move and days criteria when they're on. */
+function levelsOf(s: Spec) {
+  const get = (list: Spec["exit"]["criteria"], id: string) => list.find((c) => c.id === id && c.on)?.p.x ?? null;
+  return { targetPct: get(s.exit.criteria, "x-stockGain"), stopPct: get(s.stop.criteria, "s-stockLoss"), days: get(s.exit.criteria, "x-days") ?? get(s.stop.criteria, "s-days") };
+}
 import { backtest } from "./backtest";
 import { TEMPLATES, type Template } from "./templates";
 
@@ -26,7 +33,7 @@ export type IdeaRecord = {
   winRate: number;
   /** Average result per trade, percent (on the option when the strategy trades one). */
   avg: number;
-  basis: "option" | "stock";
+  basis: "option" | "spread" | "stock";
   since: string;
 };
 
@@ -37,9 +44,11 @@ export async function firedOn(ticker: string, bars: Candle[]): Promise<Fired[]> 
   if (bars.length < 250) return [];
   const out: Fired[] = [];
   for (const t of TEMPLATES) {
-    const ctx = usesNews(t.rules) ? { news: await stockNews(ticker).catch(() => []), newsFrom: NEWS_START } : {};
-    if (!new Calc(bars, ctx).all(t.rules.entry, bars.length - 1)) continue;
-    const r = backtest(bars, t.rules, ctx);
+    const ctx = usesNewsSpec(t.spec) ? { news: await stockNews(ticker).catch(() => []), newsFrom: NEWS_START } : {};
+    const calc = new Calc(bars, ctx);
+    const conds = entryConditions(t.spec);
+    if (!conds.length || !conds.every((c) => calc.holds(c, bars.length - 1))) continue;
+    const r = backtest(bars, t.spec, ctx);
     const s = r.stats;
     if (s.count < MIN_TRADES || s.expectancy == null || s.expectancy <= 0 || s.winRate == null) continue;
     out.push({
@@ -85,11 +94,12 @@ export async function generateStrategyIdeas(date: string): Promise<{ checked: nu
   await db.from("setups").delete().eq("report_date", date).eq("source", "strategy");
   if (picks.length) {
     const rows = picks.map((f) => {
-      const r = f.template.rules;
+      const r = f.template.spec;
       const long = r.direction === "long";
-      const target = r.targetPct ? f.price * (1 + ((long ? 1 : -1) * r.targetPct) / 100) : null;
-      const stop = r.stopPct ? f.price * (1 - ((long ? 1 : -1) * r.stopPct) / 100) : null;
-      const days = r.maxDays ?? 20;
+      const lv = levelsOf(r);
+      const target = lv.targetPct ? f.price * (1 + ((long ? 1 : -1) * lv.targetPct) / 100) : null;
+      const stop = lv.stopPct ? f.price * (1 - ((long ? 1 : -1) * lv.stopPct) / 100) : null;
+      const days = lv.days ?? 20;
       const expiresOn = new Date(Date.parse(`${date}T12:00:00Z`) + Math.ceil(days * 1.45) * 86_400_000).toISOString().slice(0, 10);
       const timeFrame = `Up to ${days} trading days`;
       const rec = f.record;
@@ -100,8 +110,8 @@ export async function generateStrategyIdeas(date: string): Promise<{ checked: nu
         source: "strategy",
         style: "swing",
         headline: `${f.template.name} fired on ${f.ticker}`,
-        justification: `${f.template.blurb} On ${f.ticker} since ${rec.since}, this strategy took ${rec.trades} trades and won ${rec.winRate}% of them, averaging ${rec.avg > 0 ? "+" : ""}${rec.avg}% a trade on the ${rec.basis === "option" ? "option (estimated)" : "shares"}. Past results don't promise future ones.`,
-        entry_criteria: r.entry.map(conditionText),
+        justification: `${f.template.blurb} On ${f.ticker} since ${rec.since}, this strategy took ${rec.trades} trades and won ${rec.winRate}% of them, averaging ${rec.avg > 0 ? "+" : ""}${rec.avg}% a trade on the ${rec.basis === "stock" ? "shares" : rec.basis === "spread" ? "spread (estimated)" : "option (estimated)"}. Past results don't promise future ones.`,
+        entry_criteria: entryText(r).split(" and "),
         price_target: target ? `$${target.toFixed(2)}` : "the exit rules",
         time_frame: timeFrame,
         entry_price: Math.round(f.price * 100) / 100,

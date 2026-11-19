@@ -1,22 +1,35 @@
-// The backtester (docs/plans/strategies.md): runs a strategy's rules over a stock's daily history and reports every
-// trade it would have taken. Entries happen at the close of the bar where every entry rule is true; exits at the
-// target or the stop (inside a bar, at that price, or at the open when it gaps through), at the close when an exit rule
-// is true or the time limit is up, or at the option's expiry. The option is priced with Black-Scholes at the stock's
-// own recent volatility (a stand-in for implied volatility, so marked "estimated" everywhere). Pure.
+// The backtester (docs/plans/strategies.md): runs a strategy (spec.ts) over a stock's daily history and reports every
+// trade it would have taken.
+// - Entry at the close of a bar where every entry criterion and custom rule is true.
+// - The contract by its rule: a call (a put when bearish) or a debit spread of them, at the expiry nearest (or first at
+//   least) its days out — listed options expire on Fridays — and the strike nearest its delta, a percent from the
+//   price, or at the money; or shares. Sized by contracts, dollars or a percent of the $25,000 account.
+// - Each later bar, the stop group, then the exit group: "any" fires when one of its checks is true, "all" when every
+//   one is. In "any", a stock-move level is caught inside the bar at that price (or the open when it gaps through);
+//   otherwise checks are at the close. The option is closed at its expiry if nothing came first.
+// - Options are priced with Black-Scholes at the stock's own recent volatility (a stand-in for implied volatility,
+//   so "estimated" everywhere). Pure.
 
 import type { Candle } from "@/lib/chart/types";
 import { bs, normCdf, roundStrike, strikeStep, volatility, RATE } from "@/lib/options/pricing";
-import { Calc, type Context, type Rules } from "./rules";
+import { Calc, type Context } from "./rules";
+import { ACCOUNT, checksOf, type Check, type Exits, type Spec } from "./spec";
 
 export type Trade = {
   entryT: string;
   exitT: string | null;
   entryPrice: number;
   exitPrice: number;
-  reason: "target" | "stop" | "rule" | "time" | "expiry" | "open";
+  reason: "exit" | "stop" | "expiry" | "open";
+  /** Which checks fired, in words. */
+  why: string;
   /** The stock's move in the trade's favour, percent. */
   stockPct: number;
-  option: { type: "call" | "put"; strike: number; expiry: string; entry: number; exit: number; pct: number } | null;
+  option: { type: "call" | "put"; strike: number; short: number | null; expiry: string; entry: number; exit: number; pct: number } | null;
+  qty: number;
+  /** Profit or loss in dollars, and as a percent of what it cost. */
+  dollars: number;
+  pct: number;
   bars: number;
 };
 
@@ -30,132 +43,218 @@ export type Result = {
     avgLoss: number | null;
     /** Average result per trade, percent. */
     expectancy: number | null;
-    /** Dollars made with $1,000 in each trade. */
     totalDollars: number;
+    avgDollars: number | null;
     maxDrawdown: number;
     avgBars: number | null;
   };
-  /** Running total of dollars (at $1,000 a trade), one point per closed trade. */
+  /** Running total of dollars, one point per closed trade. */
   equity: { t: string; v: number }[];
-  /** On the option when the strategy has one, else on the shares. */
-  basis: "option" | "stock";
+  basis: "option" | "spread" | "stock";
   from: string;
   to: string;
 };
 
-/** A premium over the stock's own volatility, since options usually price above what the stock has been doing. */
 const IV_PREMIUM = 1.1;
 const ivAt = (closes: number[], i: number) => volatility(closes.slice(Math.max(0, i - 20), i + 1)) * IV_PREMIUM;
-const days = (a: string, b: string) => (Date.parse(`${b.slice(0, 10)}T12:00:00Z`) - Date.parse(`${a.slice(0, 10)}T12:00:00Z`)) / 86_400_000;
-const addDays = (t: string, n: number) => new Date(Date.parse(`${t.slice(0, 10)}T12:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
+const dayMs = 86_400_000;
+const at = (t: string) => Date.parse(`${t.slice(0, 10)}T12:00:00Z`);
+const iso = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+const round = (n: number) => Math.round(n * 100) / 100;
 
-/** The listed-style strike whose delta is nearest the one asked for. */
-function strikeFor(type: "call" | "put", S: number, T: number, v: number, delta: number) {
+/** The listed-style expiry (a Friday) nearest to, or first at least, `dte` days after `from`. */
+function expiryFor(from: string, dte: number, rule: "nearest" | "atLeast") {
+  const target = at(from) + dte * dayMs;
+  const d = new Date(target);
+  const toFri = (5 - d.getUTCDay() + 7) % 7;
+  const after = target + toFri * dayMs;
+  const before = after - 7 * dayMs;
+  if (rule === "atLeast" || before <= at(from)) return iso(after);
+  return iso(target - before <= after - target ? before : after);
+}
+
+function deltaOf(type: "call" | "put", S: number, K: number, T: number, v: number) {
+  const d1 = (Math.log(S / K) + (RATE + (v * v) / 2) * T) / (v * Math.sqrt(T));
+  return type === "call" ? normCdf(d1) : 1 - normCdf(d1);
+}
+
+/** The strike the contract rule picks. */
+function pickStrike(spec: Spec, type: "call" | "put", S: number, T: number, v: number) {
   const step = strikeStep(S);
+  const by = spec.contract.strike;
+  if (by.by === "atm") return roundStrike(S, step);
+  if (by.by === "otmPct") return roundStrike(S * (1 + ((type === "call" ? 1 : -1) * by.value) / 100), step);
   let best = roundStrike(S, step);
   let gap = Infinity;
   for (let k = -40; k <= 40; k++) {
     const K = roundStrike(S, step) + k * step;
     if (K <= 0) continue;
-    const d1 = (Math.log(S / K) + (RATE + (v * v) / 2) * T) / (v * Math.sqrt(T));
-    const d = type === "call" ? normCdf(d1) : 1 - normCdf(d1);
-    if (Math.abs(d - delta) < gap) {
-      gap = Math.abs(d - delta);
+    const g = Math.abs(deltaOf(type, S, K, T, v) - by.value);
+    if (g < gap) {
+      gap = g;
       best = K;
     }
   }
   return best;
 }
 
-export function backtest(bars: Candle[], rules: Rules, ctx: Context = {}): Result {
+/** Whether a group (stop or exit) fires on bar j, and the price it fires at. */
+export function groupFires(
+  g: Exits,
+  checks: Check[],
+  calc: Calc,
+  j: number,
+  s: { long: boolean; entry: number; bar: Candle; optPct: number | null; dollars: number; days: number; dte: number | null; positive: boolean }
+): { price: number; why: string } | null {
+  if (!checks.length) return null;
+  const close = s.bar.c;
+  const fav = (p: number) => ((p - s.entry) / s.entry) * 100 * (s.long ? 1 : -1);
+  let levelPrice: number | null = null;
+  const results = checks.map((k) => {
+    if ("cond" in k) return calc.holds(k.cond, j);
+    const want = k.value;
+    switch (k.trade) {
+      case "stockPct": {
+        // In "any", the level is caught inside the bar.
+        if (g.mode === "any") {
+          const extreme = want >= 0 ? (s.long ? s.bar.h : s.bar.l) : s.long ? s.bar.l : s.bar.h;
+          if (want >= 0 ? fav(extreme) >= want : fav(extreme) <= want) {
+            const level = s.entry * (1 + ((s.long ? 1 : -1) * want) / 100);
+            const gapped = want >= 0 ? fav(s.bar.o) >= want : fav(s.bar.o) <= want;
+            levelPrice = gapped ? s.bar.o : level;
+            return true;
+          }
+          return false;
+        }
+        return want >= 0 ? fav(close) >= want : fav(close) <= want;
+      }
+      case "optionPct":
+        return s.optPct != null && (want >= 0 ? s.optPct >= want : s.optPct <= want);
+      case "dollars":
+        return want >= 0 ? s.dollars >= want : s.dollars <= want;
+      case "days":
+        return s.days >= want;
+      case "dte":
+        return s.dte != null && s.dte <= want;
+    }
+  });
+  const fired = g.mode === "any" ? results.some(Boolean) : results.every(Boolean);
+  if (!fired) return null;
+  const why = checks
+    .map((k, n) => (results[n] ? k : null))
+    .filter(Boolean)
+    .map((k) => ("cond" in k! ? "rule" : k!.trade))
+    .join(", ");
+  return { price: g.mode === "any" && levelPrice != null ? levelPrice : close, why };
+}
+
+export function backtest(bars: Candle[], spec: Spec, ctx: Context = {}): Result {
   const calc = new Calc(bars, ctx);
   const closes = bars.map((b) => b.c);
-  const long = rules.direction === "long";
+  const long = spec.direction === "long";
   const type: "call" | "put" = long ? "call" : "put";
+  const ct = spec.contract;
+  const basis: Result["basis"] = ct.kind === "shares" ? "stock" : ct.kind === "spread" ? "spread" : "option";
+  const entryChecks = checksOf(spec.entry).flatMap((k) => ("cond" in k ? [k.cond] : []));
+  const exitChecks = checksOf(spec.exit);
+  const stopChecks = checksOf(spec.stop);
   const trades: Trade[] = [];
+
+  const valueAt = (leg: { strike: number; short: number | null; expiry: string } | null, S: number, t: string, i: number) => {
+    if (!leg) return S;
+    const T = Math.max(0, (at(leg.expiry) - at(t)) / dayMs) / 365;
+    const v = ivAt(closes, i);
+    const a = bs(type, S, leg.strike, T, v);
+    return leg.short != null ? Math.max(0, a - bs(type, S, leg.short, T, v)) : a;
+  };
 
   let i = 1;
   while (i < bars.length) {
-    if (!calc.all(rules.entry, i)) {
+    if (!entryChecks.length || !entryChecks.every((c) => calc.holds(c, i))) {
       i++;
       continue;
     }
-    // Enter at this bar's close.
     const e = bars[i];
-    const entry = e.c;
-    const target = rules.targetPct ? entry * (1 + ((long ? 1 : -1) * rules.targetPct) / 100) : null;
-    const stop = rules.stopPct ? entry * (1 - ((long ? 1 : -1) * rules.stopPct) / 100) : null;
-    let opt: { strike: number; expiry: string; entry: number } | null = null;
-    if (rules.option) {
-      const v = ivAt(closes, i);
-      const T = rules.option.dte / 365;
-      const strike = strikeFor(type, entry, T, v, rules.option.delta);
-      opt = { strike, expiry: addDays(e.t, rules.option.dte), entry: Math.max(0.05, bs(type, entry, strike, T, v)) };
+    const S0 = e.c;
+    let leg: { strike: number; short: number | null; expiry: string } | null = null;
+    if (ct.kind !== "shares") {
+      const expiry = expiryFor(e.t, ct.dte, ct.expiryRule);
+      const T = Math.max(1, (at(expiry) - at(e.t)) / dayMs) / 365;
+      const strike = pickStrike(spec, type, S0, T, ivAt(closes, i));
+      const step = strikeStep(S0);
+      leg = { strike, short: ct.kind === "spread" ? strike + (type === "call" ? 1 : -1) * ct.width * step : null, expiry };
     }
+    const entryVal = Math.max(leg ? 0.05 : 0.01, valueAt(leg, S0, e.t, i));
+    const mult = leg ? 100 : 1;
+    const each = entryVal * mult;
+    const qty = Math.max(1, ct.size.by === "contracts" ? ct.size.value : Math.floor((ct.size.by === "dollars" ? ct.size.value : (ACCOUNT * ct.size.value) / 100) / each));
 
     let exitAt = -1;
-    let exitPrice = entry;
+    let exitPrice = S0;
     let reason: Trade["reason"] = "open";
+    let why = "";
     for (let j = i + 1; j < bars.length; j++) {
       const b = bars[j];
-      // The stop first when a bar touches both (the cautious reading).
-      if (stop != null && (long ? b.l <= stop : b.h >= stop)) {
-        exitAt = j;
-        exitPrice = long ? Math.min(b.o, stop) : Math.max(b.o, stop);
-        reason = "stop";
+      const val = valueAt(leg, b.c, b.t, j);
+      const st = {
+        long,
+        entry: S0,
+        bar: b,
+        optPct: leg ? ((val - entryVal) / entryVal) * 100 : null,
+        dollars: (val - entryVal) * qty * mult,
+        days: j - i,
+        dte: leg ? (at(leg.expiry) - at(b.t)) / dayMs : null,
+        positive: val >= entryVal,
+      };
+      // The stop first (the cautious reading when both happen in a bar).
+      const stop = groupFires(spec.stop, stopChecks, calc, j, st);
+      if (stop) {
+        [exitAt, exitPrice, reason, why] = [j, stop.price, "stop", stop.why];
         break;
       }
-      if (target != null && (long ? b.h >= target : b.l <= target)) {
-        exitAt = j;
-        exitPrice = long ? Math.max(b.o, target) : Math.min(b.o, target);
-        reason = "target";
+      const ex = groupFires(spec.exit, exitChecks, calc, j, st);
+      if (ex) {
+        [exitAt, exitPrice, reason, why] = [j, ex.price, "exit", ex.why];
         break;
       }
-      if (opt && b.t.slice(0, 10) >= opt.expiry) {
-        exitAt = j;
-        exitPrice = b.c;
-        reason = "expiry";
-        break;
-      }
-      if (calc.any(rules.exit, j)) {
-        exitAt = j;
-        exitPrice = b.c;
-        reason = "rule";
-        break;
-      }
-      if (rules.maxDays && j - i >= rules.maxDays) {
-        exitAt = j;
-        exitPrice = b.c;
-        reason = "time";
+      if (leg && b.t.slice(0, 10) >= leg.expiry) {
+        [exitAt, exitPrice, reason, why] = [j, b.c, "expiry", "expiry"];
         break;
       }
     }
     const end = exitAt >= 0 ? exitAt : bars.length - 1;
     if (exitAt < 0) exitPrice = bars[end].c;
-    const stockPct = ((exitPrice - entry) / entry) * 100 * (long ? 1 : -1);
-    let option: Trade["option"] = null;
-    if (opt) {
-      const T = Math.max(0, days(bars[end].t, opt.expiry)) / 365;
-      const exitOpt = Math.max(0, bs(type, exitPrice, opt.strike, T, ivAt(closes, end)));
-      option = { type, strike: opt.strike, expiry: opt.expiry, entry: round(opt.entry), exit: round(exitOpt), pct: ((exitOpt - opt.entry) / opt.entry) * 100 };
-    }
-    trades.push({ entryT: e.t, exitT: exitAt >= 0 ? bars[end].t : null, entryPrice: round(entry), exitPrice: round(exitPrice), reason, stockPct, option, bars: end - i });
-    // The next trade can start after this one ends.
+    const exitVal = valueAt(leg, exitPrice, bars[end].t, end);
+    const dollars = (exitVal - entryVal) * qty * mult;
+    const stockPct = ((exitPrice - S0) / S0) * 100 * (long ? 1 : -1);
+    const pct = leg ? ((exitVal - entryVal) / entryVal) * 100 : stockPct;
+    trades.push({
+      entryT: e.t,
+      exitT: exitAt >= 0 ? bars[end].t : null,
+      entryPrice: round(S0),
+      exitPrice: round(exitPrice),
+      reason,
+      why,
+      stockPct,
+      option: leg ? { type, strike: leg.strike, short: leg.short, expiry: leg.expiry, entry: round(entryVal), exit: round(exitVal), pct } : null,
+      qty,
+      dollars: Math.round(dollars),
+      pct,
+      bars: end - i,
+    });
     i = exitAt >= 0 ? exitAt + 1 : bars.length;
   }
 
-  const basis: Result["basis"] = rules.option ? "option" : "stock";
-  const pctOf = (t: Trade) => (basis === "option" && t.option ? t.option.pct : t.stockPct);
   const closed = trades.filter((t) => t.reason !== "open");
-  const wins = closed.filter((t) => pctOf(t) > 0);
-  const losses = closed.filter((t) => pctOf(t) <= 0);
+  const wins = closed.filter((t) => t.dollars > 0);
+  const losses = closed.filter((t) => t.dollars <= 0);
   const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
   let run = 0;
   let peak = 0;
   let dd = 0;
   const equity: Result["equity"] = [];
   for (const t of closed) {
-    run += pctOf(t) * 10; // $1,000 a trade
+    run += t.dollars;
     peak = Math.max(peak, run);
     dd = Math.max(dd, peak - run);
     equity.push({ t: t.exitT!, v: Math.round(run) });
@@ -166,10 +265,11 @@ export function backtest(bars: Candle[], rules: Rules, ctx: Context = {}): Resul
       count: closed.length,
       wins: wins.length,
       winRate: closed.length ? Math.round((wins.length / closed.length) * 1000) / 10 : null,
-      avgWin: avg(wins.map(pctOf)),
-      avgLoss: avg(losses.map(pctOf)),
-      expectancy: avg(closed.map(pctOf)),
+      avgWin: avg(wins.map((t) => t.pct)),
+      avgLoss: avg(losses.map((t) => t.pct)),
+      expectancy: avg(closed.map((t) => t.pct)),
       totalDollars: Math.round(run),
+      avgDollars: avg(closed.map((t) => t.dollars)),
       maxDrawdown: Math.round(dd),
       avgBars: avg(closed.map((t) => t.bars)),
     },
@@ -179,5 +279,3 @@ export function backtest(bars: Candle[], rules: Rules, ctx: Context = {}): Resul
     to: bars[bars.length - 1]?.t ?? "",
   };
 }
-
-const round = (n: number) => Math.round(n * 100) / 100;

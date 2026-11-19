@@ -2,7 +2,8 @@ import Link from "next/link";
 import { CARD } from "@/components/ui";
 import { supabaseService } from "@/lib/stripe";
 import { getCandles } from "@/lib/candles";
-import { Calc, cleanRules, conditionText, usesNews, type Rules } from "@/lib/strategies/rules";
+import { Calc } from "@/lib/strategies/rules";
+import { cleanSpec, entryConditions, entryText, usesNewsSpec, type Spec } from "@/lib/strategies/spec";
 import { NEWS_START, stockNews } from "@/lib/alpaca";
 import { TEMPLATES } from "@/lib/strategies/templates";
 import type { StockRow } from "@/lib/scan/types";
@@ -16,12 +17,13 @@ import { pct, tone } from "./fmt";
 const UNIVERSE = 80;
 const KEEP_MS = 10 * 60_000;
 
-type Choice = { key: string; name: string; rules: Rules };
+type Choice = { key: string; name: string; spec: Spec };
 type Match = { t: string; price: number; asOf: string };
 
 async function matchesFor(choice: Choice, tickers: string[]): Promise<{ rows: Match[]; at: string }> {
   const db = supabaseService();
-  const cacheKey = `smatch:${JSON.stringify(choice.rules.entry)}`;
+  const conds = entryConditions(choice.spec);
+  const cacheKey = `smatch:${JSON.stringify(conds)}`;
   const { data: hit } = await db.from("market_cache").select("body, fetched_at").eq("key", cacheKey).maybeSingle();
   if (hit && Date.now() - Date.parse(hit.fetched_at) < KEEP_MS) return { rows: hit.body as Match[], at: hit.fetched_at };
   const rows: Match[] = [];
@@ -29,8 +31,9 @@ async function matchesFor(choice: Choice, tickers: string[]): Promise<{ rows: Ma
     const sets = await Promise.all(tickers.slice(k, k + 10).map((t) => getCandles(t).then((s) => [t, s.candles] as const).catch(() => [t, [] as Candle[]] as const)));
     for (const [t, bars] of sets) {
       if (bars.length < 30) continue;
-      const ctx = usesNews(choice.rules) ? { news: await stockNews(t).catch(() => []), newsFrom: NEWS_START } : {};
-      if (new Calc(bars, ctx).all(choice.rules.entry, bars.length - 1)) rows.push({ t, price: bars[bars.length - 1].c, asOf: bars[bars.length - 1].t.slice(0, 10) });
+      const ctx = usesNewsSpec(choice.spec) ? { news: await stockNews(t).catch(() => []), newsFrom: NEWS_START } : {};
+      const calc = new Calc(bars, ctx);
+      if (conds.length && conds.every((c) => calc.holds(c, bars.length - 1))) rows.push({ t, price: bars[bars.length - 1].c, asOf: bars[bars.length - 1].t.slice(0, 10) });
     }
   }
   const at = new Date().toISOString();
@@ -41,10 +44,10 @@ async function matchesFor(choice: Choice, tickers: string[]): Promise<{ rows: Ma
 export default async function StrategyMatches({ stocks, chosen, userId }: { stocks: StockRow[]; chosen?: string; userId: string }) {
   const { data } = await supabaseService().from("strategies").select("id, name, rules").eq("user_id", userId).order("updated_at", { ascending: false }).limit(50);
   const mine: Choice[] = (data ?? []).flatMap((r) => {
-    const rules = cleanRules(r.rules);
-    return rules ? [{ key: r.id as string, name: r.name as string, rules }] : [];
+    const spec = cleanSpec(r.rules);
+    return spec ? [{ key: r.id as string, name: r.name as string, spec }] : [];
   });
-  const choices: Choice[] = [...mine, ...TEMPLATES.map((t) => ({ key: t.key, name: t.name, rules: t.rules }))];
+  const choices: Choice[] = [...mine, ...TEMPLATES.map((t) => ({ key: t.key, name: t.name, spec: t.spec }))];
   const choice = choices.find((c) => c.key === chosen) ?? choices[0];
   const byTicker = new Map(stocks.map((s) => [s.t, s]));
   const universe = [...stocks].sort((a, b) => (b.dollarVol ?? 0) - (a.dollarVol ?? 0)).slice(0, UNIVERSE).map((s) => s.t);
@@ -66,7 +69,7 @@ export default async function StrategyMatches({ stocks, chosen, userId }: { stoc
           ))}
         </div>
         <p className="mt-3 font-mono text-[12px] leading-relaxed text-ink-3">
-          {choice.rules.direction === "long" ? "Bullish" : "Bearish"} · if {choice.rules.entry.map(conditionText).join(" and ")}
+          {choice.spec.direction === "long" ? "Bullish" : "Bearish"} · if {entryText(choice.spec)}
         </p>
       </div>
 

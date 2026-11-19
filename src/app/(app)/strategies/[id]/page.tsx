@@ -3,21 +3,20 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireMember } from "@/lib/membership";
 import { PageHeader } from "@/components/ui";
-import { cleanRules, type Rules } from "@/lib/strategies/rules";
+import { DEFAULT_CONTRACT, cleanSpec, on, type Spec } from "@/lib/strategies/spec";
 import { templateByKey } from "@/lib/strategies/templates";
 import StrategyEditor, { type SignalRow } from "../StrategyEditor";
 import type { LiveSettings } from "../actions";
 
 export const metadata: Metadata = { title: "Strategy — HighStrike" };
 
-const BLANK: Rules = {
+const BLANK: Spec = {
+  version: 2,
   direction: "long",
-  entry: [{ left: { kind: "close" }, op: "crossesAbove", right: { kind: "sma", n: 50 } }],
-  exit: [],
-  targetPct: 8,
-  stopPct: 4,
-  maxDays: 20,
-  option: { dte: 30, delta: 0.4 },
+  entry: { criteria: on("entry", [["aboveMA", { n: 50 }]]), custom: [] },
+  contract: DEFAULT_CONTRACT,
+  exit: { mode: "any", criteria: on("exit", [["x-stockGain", { x: 8 }], ["x-days", { x: 20 }]]), custom: [] },
+  stop: { mode: "any", criteria: on("stop", [["s-stockLoss", { x: 4 }]]), custom: [] },
 };
 
 /** One strategy in the editor: /strategies/new (blank, or ?template=key), or a saved one by its id. */
@@ -27,16 +26,16 @@ export default async function StrategyPage({ params, searchParams }: { params: P
   const { template, t: wantTicker } = await searchParams;
   const asked = wantTicker && /^[A-Z][A-Z0-9.]{0,7}$/.test(wantTicker.toUpperCase()) ? wantTicker.toUpperCase() : null;
 
-  let start: { id: string | null; name: string; rules: Rules; ticker: string; template: string | null };
+  let start: { id: string | null; name: string; rules: Spec; ticker: string; template: string | null };
   let settings: LiveSettings = { watch: [], live: false, alerts: true, autoTrade: false };
   let signals: SignalRow[] = [];
   if (id === "new") {
     const t = template ? templateByKey(template) : null;
-    start = { id: null, name: t?.name ?? "My strategy", rules: t?.rules ?? BLANK, ticker: asked ?? "SPY", template: t?.key ?? null };
+    start = { id: null, name: t?.name ?? "My strategy", rules: t?.spec ?? BLANK, ticker: asked ?? "SPY", template: t?.key ?? null };
   } else {
     if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
     const { data } = await supabase.from("strategies").select("id, name, rules, ticker, template, watch, live, alerts, auto_trade").eq("id", id).eq("user_id", user.id).maybeSingle();
-    const rules = data ? cleanRules(data.rules) : null;
+    const rules = data ? cleanSpec(data.rules) : null;
     if (!data || !rules) notFound();
     start = { id: data.id, name: data.name, rules, ticker: asked ?? data.ticker, template: data.template };
     settings = { watch: data.watch ?? [], live: data.live, alerts: data.alerts, autoTrade: data.auto_trade };

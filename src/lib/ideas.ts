@@ -53,12 +53,12 @@ export type Idea = {
   /** Its option, estimated when it was made (src/lib/optionIdea.ts); read it through asOption. */
   option: unknown;
   /** For an idea from a strategy: the strategy and how it did on this stock before (src/lib/strategies/ideas.ts). */
-  record: { strategy: string; name: string; trades: number; winRate: number; avg: number; basis: "option" | "stock"; since: string } | null;
+  record: { strategy: string; name: string; trades: number; winRate: number; avg: number; basis: "option" | "spread" | "stock"; since: string } | null;
 };
 
 /** "Won 58% of 31 trades since 2016, +17.6% a trade on the option". */
 export const recordLine = (r: NonNullable<Idea["record"]>) =>
-  `Won ${r.winRate}% of ${r.trades} trades since ${r.since}, ${r.avg > 0 ? "+" : ""}${r.avg}% a trade on the ${r.basis === "option" ? "option" : "shares"}`;
+  `Won ${r.winRate}% of ${r.trades} trades since ${r.since}, ${r.avg > 0 ? "+" : ""}${r.avg}% a trade on the ${r.basis === "stock" ? "shares" : r.basis}`;
 
 export const IDEA_COLUMNS =
   "id, report_date, ticker, direction, source, style, headline, justification, entry_criteria, price_target, time_frame, status, entry_price, target_price, current_pct, result_pct, stop_price, contract, owner_id, option, record";

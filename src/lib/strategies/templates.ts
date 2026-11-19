@@ -1,161 +1,118 @@
-// Ready-made strategies to start from (docs/plans/strategies.md: "6–10 classics, each one click to backtest and copy").
-// Daily bars; each trades a call (or a put when short) about a month out near 0.40 delta.
+// Ready-made strategies to start from (docs/plans/strategies.md: "6–10 classics, each one click to backtest and copy"),
+// in the switch-and-sensitivity form (spec.ts). Daily bars; each trades a call (a put when bearish) about a month out
+// near 0.40 delta, one contract, unless it says otherwise.
 
-import type { Rules } from "./rules";
+import { DEFAULT_CONTRACT, on, type Spec } from "./spec";
 
-export type Template = { key: string; name: string; blurb: string; rules: Rules };
+export type Template = { key: string; name: string; blurb: string; spec: Spec };
 
-const OPT = { dte: 30, delta: 0.4 };
+const t = (s: Omit<Spec, "version" | "contract"> & { contract?: Partial<Spec["contract"]> }): Spec => ({ version: 2, ...s, contract: { ...DEFAULT_CONTRACT, ...s.contract } });
+const none = { custom: [] };
 
 export const TEMPLATES: Template[] = [
   {
     key: "rsi-bounce",
     name: "RSI oversold bounce",
     blurb: "Buys a dip in an uptrend: RSI under 30 while price holds above its 200-day average.",
-    rules: {
+    spec: t({
       direction: "long",
-      entry: [
-        { left: { kind: "rsi", n: 14 }, op: "crossesBelow", right: { kind: "value", value: 30 } },
-        { left: { kind: "close" }, op: "above", right: { kind: "sma", n: 200 } },
-      ],
-      exit: [{ left: { kind: "rsi", n: 14 }, op: "crossesAbove", right: { kind: "value", value: 55 } }],
-      targetPct: 6,
-      stopPct: 4,
-      maxDays: 15,
-      option: OPT,
-    },
+      entry: { criteria: on("entry", [["rsiDown", { n: 14, x: 30 }], ["aboveMA", { n: 200 }]]), ...none },
+      exit: { mode: "any", criteria: on("exit", [["x-stockGain", { x: 6 }], ["x-rsiHigh", { n: 14, x: 55 }], ["x-days", { x: 15 }]]), ...none },
+      stop: { mode: "any", criteria: on("stop", [["s-stockLoss", { x: 4 }]]), ...none },
+    }),
   },
   {
     key: "breakout-20",
     name: "20-day breakout",
     blurb: "Price closes over its highest high of the last 20 days on above-average volume.",
-    rules: {
+    spec: t({
       direction: "long",
-      entry: [
-        { left: { kind: "close" }, op: "crossesAbove", right: { kind: "highest", n: 20 } },
-        { left: { kind: "volume" }, op: "above", right: { kind: "volumeAvg", n: 20 } },
-      ],
-      exit: [{ left: { kind: "close" }, op: "crossesBelow", right: { kind: "ema", n: 10 } }],
-      targetPct: 8,
-      stopPct: 4,
-      maxDays: 20,
-      option: OPT,
-    },
+      entry: { criteria: on("entry", [["breakout", { n: 20 }], ["volume", { x: 1, n: 20 }]]), ...none },
+      exit: { mode: "any", criteria: on("exit", [["x-stockGain", { x: 8 }], ["x-belowEMA", { n: 10 }], ["x-days", { x: 20 }]]), ...none },
+      stop: { mode: "any", criteria: on("stop", [["s-stockLoss", { x: 4 }]]), ...none },
+    }),
   },
   {
     key: "golden-cross",
     name: "Moving-average cross",
     blurb: "The 20-day average crosses above the 50-day: momentum turning up.",
-    rules: {
+    spec: t({
       direction: "long",
-      entry: [{ left: { kind: "sma", n: 20 }, op: "crossesAbove", right: { kind: "sma", n: 50 } }],
-      exit: [{ left: { kind: "sma", n: 20 }, op: "crossesBelow", right: { kind: "sma", n: 50 } }],
-      targetPct: 10,
-      stopPct: 5,
-      maxDays: 30,
-      option: { dte: 45, delta: 0.45 },
-    },
+      entry: { criteria: on("entry", [["goldenCross", { a: 20, b: 50 }]]), ...none },
+      contract: { dte: 45, strike: { by: "delta", value: 0.45 } },
+      exit: { mode: "any", criteria: on("exit", [["x-stockGain", { x: 10 }], ["x-days", { x: 30 }]]), ...none },
+      stop: { mode: "any", criteria: on("stop", [["s-stockLoss", { x: 5 }]]), custom: [{ left: { kind: "sma", n: 20 }, op: "crossesBelow", right: { kind: "sma", n: 50 } }] },
+    }),
   },
   {
     key: "gap-and-go",
     name: "Gap and go",
     blurb: "Opens 2%+ higher and closes near the day's high on heavy volume.",
-    rules: {
+    spec: t({
       direction: "long",
-      entry: [
-        { left: { kind: "gap" }, op: "above", right: { kind: "value", value: 2 } },
-        { left: { kind: "close" }, op: "above", right: { kind: "open" } },
-        { left: { kind: "volume" }, op: "above", right: { kind: "volumeAvg", n: 20 } },
-      ],
-      exit: [],
-      targetPct: 5,
-      stopPct: 3,
-      maxDays: 5,
-      option: { dte: 14, delta: 0.45 },
-    },
+      entry: { criteria: on("entry", [["gapUp", { x: 2 }], ["volume", { x: 1, n: 20 }]]), custom: [{ left: { kind: "close" }, op: "above", right: { kind: "open" } }] },
+      contract: { dte: 14, strike: { by: "delta", value: 0.45 } },
+      exit: { mode: "any", criteria: on("exit", [["x-stockGain", { x: 5 }], ["x-days", { x: 5 }]]), ...none },
+      stop: { mode: "any", criteria: on("stop", [["s-stockLoss", { x: 3 }]]), ...none },
+    }),
   },
   {
     key: "macd-turn",
     name: "MACD turn up",
     blurb: "The MACD line crosses over its signal while price is above the 50-day average.",
-    rules: {
+    spec: t({
       direction: "long",
-      entry: [
-        { left: { kind: "macd" }, op: "crossesAbove", right: { kind: "macdSignal" } },
-        { left: { kind: "close" }, op: "above", right: { kind: "sma", n: 50 } },
-      ],
-      exit: [{ left: { kind: "macd" }, op: "crossesBelow", right: { kind: "macdSignal" } }],
-      targetPct: 7,
-      stopPct: 4,
-      maxDays: 20,
-      option: OPT,
-    },
+      entry: { criteria: on("entry", [["macdUp"], ["aboveMA", { n: 50 }]]), ...none },
+      exit: { mode: "any", criteria: on("exit", [["x-stockGain", { x: 7 }], ["x-macdDown"], ["x-days", { x: 20 }]]), ...none },
+      stop: { mode: "any", criteria: on("stop", [["s-stockLoss", { x: 4 }]]), ...none },
+    }),
   },
   {
     key: "band-squeeze-bounce",
     name: "Lower band bounce",
     blurb: "Price closes back above the lower Bollinger band after tagging it.",
-    rules: {
+    spec: t({
       direction: "long",
-      entry: [{ left: { kind: "close" }, op: "crossesAbove", right: { kind: "bbLower", n: 20 } }],
-      exit: [{ left: { kind: "close" }, op: "crossesAbove", right: { kind: "sma", n: 20 } }],
-      targetPct: 5,
-      stopPct: 4,
-      maxDays: 10,
-      option: OPT,
-    },
+      entry: { criteria: on("entry", [["bbBounce", { n: 20 }]]), ...none },
+      exit: { mode: "any", criteria: on("exit", [["x-stockGain", { x: 5 }], ["x-days", { x: 10 }]]), custom: [{ left: { kind: "close" }, op: "crossesAbove", right: { kind: "sma", n: 20 } }] },
+      stop: { mode: "any", criteria: on("stop", [["s-stockLoss", { x: 4 }]]), ...none },
+    }),
   },
   {
     key: "news-breakout",
     name: "Good-news breakout",
     blurb: "Price breaks its 10-day high on a day the headlines lean positive. News history starts Apr 29, 2026.",
-    rules: {
+    spec: t({
       direction: "long",
-      entry: [
-        { left: { kind: "close" }, op: "crossesAbove", right: { kind: "highest", n: 10 } },
-        { left: { kind: "newsTone", n: 2 }, op: "above", right: { kind: "value", value: 0 } },
-      ],
-      exit: [{ left: { kind: "newsTone", n: 2 }, op: "below", right: { kind: "value", value: 0 } }],
-      targetPct: 6,
-      stopPct: 3,
-      maxDays: 10,
-      option: { dte: 21, delta: 0.45 },
-    },
+      entry: { criteria: on("entry", [["breakout", { n: 10 }], ["newsGood", { n: 2, x: 0 }]]), ...none },
+      contract: { dte: 21, strike: { by: "delta", value: 0.45 } },
+      exit: { mode: "any", criteria: on("exit", [["x-stockGain", { x: 6 }], ["x-newsBad", { n: 2, x: 0 }], ["x-days", { x: 10 }]]), ...none },
+      stop: { mode: "any", criteria: on("stop", [["s-stockLoss", { x: 3 }]]), ...none },
+    }),
   },
   {
     key: "breakdown-20",
     name: "20-day breakdown (short)",
     blurb: "Price closes under its lowest low of the last 20 days, below the 50-day: buys puts.",
-    rules: {
+    spec: t({
       direction: "short",
-      entry: [
-        { left: { kind: "close" }, op: "crossesBelow", right: { kind: "lowest", n: 20 } },
-        { left: { kind: "close" }, op: "below", right: { kind: "sma", n: 50 } },
-      ],
-      exit: [{ left: { kind: "close" }, op: "crossesAbove", right: { kind: "ema", n: 10 } }],
-      targetPct: 7,
-      stopPct: 4,
-      maxDays: 15,
-      option: OPT,
-    },
+      entry: { criteria: on("entry", [["breakdown", { n: 20 }], ["belowMA", { n: 50 }]]), ...none },
+      exit: { mode: "any", criteria: on("exit", [["x-stockGain", { x: 7 }], ["x-aboveEMA", { n: 10 }], ["x-days", { x: 15 }]]), ...none },
+      stop: { mode: "any", criteria: on("stop", [["s-stockLoss", { x: 4 }]]), ...none },
+    }),
   },
   {
     key: "overbought-fade",
     name: "Overbought fade (short)",
     blurb: "RSI over 75 after a 10%+ run in two weeks: buys puts for the pullback.",
-    rules: {
+    spec: t({
       direction: "short",
-      entry: [
-        { left: { kind: "rsi", n: 14 }, op: "crossesAbove", right: { kind: "value", value: 75 } },
-        { left: { kind: "change", n: 10 }, op: "above", right: { kind: "value", value: 10 } },
-      ],
-      exit: [{ left: { kind: "rsi", n: 14 }, op: "crossesBelow", right: { kind: "value", value: 55 } }],
-      targetPct: 6,
-      stopPct: 4,
-      maxDays: 10,
-      option: { dte: 21, delta: 0.4 },
-    },
+      entry: { criteria: on("entry", [["rsiUp", { n: 14, x: 75 }], ["runUp", { x: 10, n: 10 }]]), ...none },
+      contract: { dte: 21 },
+      exit: { mode: "any", criteria: on("exit", [["x-stockGain", { x: 6 }], ["x-rsiLow", { n: 14, x: 55 }], ["x-days", { x: 10 }]]), ...none },
+      stop: { mode: "any", criteria: on("stop", [["s-stockLoss", { x: 4 }]]), ...none },
+    }),
   },
 ];
 
-export const templateByKey = (k: string) => TEMPLATES.find((t) => t.key === k) ?? null;
+export const templateByKey = (k: string) => TEMPLATES.find((x) => x.key === k) ?? null;
