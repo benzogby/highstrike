@@ -45,10 +45,23 @@ export default function OrderTicket({
   const [side, setSide] = useState<"buy" | "sell">(target.side);
   const [qty, setQty] = useState(target.kind === "option" ? "1" : "10");
   const [type, setType] = useState<"market" | "limit">("market");
-  const [limit, setLimit] = useState("");
+  // The limit price (Ben, 2026-11-18: "should START at the market price and be adjustable from there"): it follows the
+  // market price until the member changes it; from then on it's theirs. Typing or stepping it makes the order a limit.
+  const [typed, setTyped] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [pending, start] = useTransition();
 
+  const market = marketPrice(target);
+  const limit = typed ?? (market != null ? market.toFixed(2) : "");
+  const step = target.kind === "option" && (market ?? 0) >= 3 ? 0.05 : 0.01;
+  const setLimit = (v: string) => {
+    setTyped(v);
+    setType("limit");
+  };
+  const nudge = (dir: 1 | -1) => {
+    const base = Number(limit) > 0 ? Number(limit) : (market ?? 0);
+    setLimit(Math.max(0.01, Math.round((base + dir * step) / step) * step).toFixed(2));
+  };
   const mult = target.kind === "option" ? 100 : 1;
   const n = Math.max(0, Math.floor(Number(qty) || 0));
   const price = type === "limit" && Number(limit) > 0 ? Number(limit) : side === "buy" ? (target.ask ?? target.last) : (target.bid ?? target.last);
@@ -58,11 +71,7 @@ export default function OrderTicket({
   const vsRule = side === "buy" && target.kind === "option" && total != null && budget ? total / budget : null;
   const what = `${n} ${target.kind === "option" ? (n === 1 ? "contract" : "contracts") : n === 1 ? "share" : "shares"}`;
 
-  const chooseLimit = () => {
-    setType("limit");
-    const m = marketPrice(target);
-    if (!limit && m != null) setLimit(m.toFixed(2));
-  };
+  const chooseLimit = () => setType("limit");
 
   function send() {
     if (!n) return toastError("Enter a quantity.");
@@ -124,15 +133,31 @@ export default function OrderTicket({
           <input inputMode="numeric" value={qty} onChange={(e) => setQty(e.target.value)} className={`${INPUT} font-mono-nums`} />
         </label>
         <label className="block">
-          <span className={LABEL}>Limit price</span>
-          <input
-            inputMode="decimal"
-            value={type === "limit" ? limit : ""}
-            disabled={type !== "limit"}
-            placeholder={type === "limit" ? (price?.toFixed(2) ?? "") : "Market"}
-            onChange={(e) => setLimit(e.target.value)}
-            className={`${INPUT} font-mono-nums disabled:opacity-50`}
-          />
+          <span className={`${LABEL} flex items-baseline justify-between`}>
+            Limit price
+            {typed != null && market != null && (
+              <button type="button" onClick={() => setTyped(null)} className="text-[11px] font-normal text-ink-3 hover:text-ink" title="Back to the market price">
+                Reset
+              </button>
+            )}
+          </span>
+          <div className="flex">
+            <button type="button" onClick={() => nudge(-1)} aria-label={`Lower the limit by ${step.toFixed(2)}`} className="h-9 rounded-l-lg border border-r-0 border-line-strong bg-panel-2 px-2 text-ink-2 hover:text-ink">
+              −
+            </button>
+            <input
+              inputMode="decimal"
+              value={limit}
+              onChange={(e) => setLimit(e.target.value)}
+              onFocus={(e) => e.target.select()}
+              className={`${INPUT} rounded-none text-center font-mono-nums ${type === "market" ? "text-ink-3" : ""}`}
+              aria-label="Limit price"
+            />
+            <button type="button" onClick={() => nudge(1)} aria-label={`Raise the limit by ${step.toFixed(2)}`} className="h-9 rounded-r-lg border border-l-0 border-line-strong bg-panel-2 px-2 text-ink-2 hover:text-ink">
+              +
+            </button>
+          </div>
+          <span className="mt-1 block text-[11px] text-ink-3">{type === "market" ? "Sends at market; change the price for a limit" : typed == null ? "Following the market price" : "Your price"}</span>
         </label>
       </div>
 
