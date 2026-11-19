@@ -2,7 +2,7 @@
 // in the (app) layout and stays mounted while pages change, so the current page is read from the URL rather than passed
 // in.
 
-export type NavKey = "home" | "ideas" | "plan" | "journal" | "scanner" | "watchlists" | "insiders" | "chatter" | "education" | "admin" | "settings" | "none";
+export type NavKey = "home" | "ideas" | "strategies" | "plan" | "journal" | "scanner" | "watchlists" | "insiders" | "chatter" | "education" | "admin" | "settings" | "none";
 export type NavLink = { label: string; key: NavKey; href?: string; icon: string };
 
 export const NAV: NavLink[] = [
@@ -19,6 +19,13 @@ export const NAV: NavLink[] = [
     key: "ideas",
     href: "/ideas",
     icon: "M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z",
+  },
+  // Strategies (docs/plans/strategies.md): entry and exit rules from blocks, backtested on years of history.
+  {
+    label: "Strategies",
+    key: "strategies",
+    href: "/strategies",
+    icon: "M4 19V5m0 14h16M8 15l3-4 3 2 5-6",
   },
   // The Trade Planner (docs/plans/offer-overhaul.md item 4): plan a trade on the chart, size it, grade it A–F.
   {

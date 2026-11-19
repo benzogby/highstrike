@@ -80,6 +80,8 @@ type Props = {
   limitLine?: { price: number; side: "buy" | "sell" } | null;
   /** An option contract's expiry date ("2026-12-18"): a dashed vertical line at 4:00 PM New York time that day. */
   expiry?: string | null;
+  /** A strategy's backtest trades (docs/plans/strategies.md): an arrow under the bar where it entered, a mark over the bar where it left. */
+  markers?: { t: string; kind: "entry" | "exit"; side: "long" | "short"; win?: boolean }[];
   /** An option's strike on its stock's chart: a line at that price, labelled (Ben, 2026-11-19). */
   strikeLine?: { price: number; type: "call" | "put" } | null;
   /** A timeframe to follow as it changes (two charts kept on the same one); the chart's own picks go out through onTimeframe. */
@@ -96,7 +98,7 @@ type Props = {
   onTimeframe?: (tf: Timeframe) => void;
 };
 
-export default function HighStrikeChart({ ticker, userId, levels, height, fill = false, onLive, initialTimeframe, onTimeframe, limitLine, expiry, underlyingPrice, workingOrders, strikeLine, timeframe }: Props) {
+export default function HighStrikeChart({ ticker, userId, levels, height, fill = false, onLive, initialTimeframe, onTimeframe, limitLine, expiry, underlyingPrice, workingOrders, strikeLine, timeframe, markers }: Props) {
   // Daily candles, kept with their ticker so another ticker's never show (or a failure sticks) while a new one loads.
   const [daily, setDaily] = useState<{ ticker: string; candles: Candle[] | null; source?: string; stale?: boolean; waiting?: boolean; failed?: boolean } | null>(null);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
@@ -1275,6 +1277,25 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
                   {maLines.map((m) => (
                     <path key={m.n} d={path(m.values, y)} fill="none" stroke={m.color} strokeWidth={1.4} opacity={0.9} />
                   ))}
+
+                  {/* A strategy's entries and exits */}
+                  {markers?.map((m, k) => {
+                    const i = Math.round(ts.index(m.t));
+                    if (i < Math.floor(left) || i > Math.ceil(v.end) || i < 0 || i >= bars.length) return null;
+                    const b = bars[i];
+                    const cx = x(i);
+                    const s = Math.max(5, Math.min(9, bodyW * 0.8));
+                    if (m.kind === "entry") {
+                      const yy = y(b.l) + 6;
+                      const col = m.side === "long" ? "var(--color-up)" : "var(--color-down)";
+                      return <path key={`mk${k}`} d={`M${cx},${yy} L${cx - s},${yy + s * 1.5} L${cx + s},${yy + s * 1.5} Z`} fill={col} pointerEvents="none" />;
+                    }
+                    const yy = y(b.h) - 6;
+                    const col = m.win ? "var(--color-up)" : "var(--color-down)";
+                    return (
+                      <path key={`mk${k}`} d={`M${cx},${yy} L${cx - s},${yy - s * 1.5} L${cx + s},${yy - s * 1.5} Z`} fill="none" stroke={col} strokeWidth={1.6} pointerEvents="none" />
+                    );
+                  })}
 
                   {/* An option contract's strike (Ben, 2026-11-18: "show the strike of that contract"), and where the stock is */}
                   {contract && <StrikeBadge contract={contract} spot={underlyingPrice ?? null} />}
