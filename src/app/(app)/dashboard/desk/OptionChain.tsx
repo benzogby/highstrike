@@ -42,14 +42,14 @@ export default function OptionChain({ ticker, picked, onPick, fill = false }: { 
 
   const cell = (s: Side | null, which: "bid" | "ask", shade = "") => {
     const v = s?.[which] ?? null;
-    if (!s || v == null) return <td className={`px-2 py-1.5 text-right text-ink-3 ${shade}`}>—</td>;
+    if (!s || v == null) return <td className={`px-2 py-1.5 text-center text-ink-3 ${shade}`}>—</td>;
     const on = picked === s.contract;
     return (
-      <td className={`p-0 text-right ${shade}`}>
+      <td className={`p-0 text-center ${shade}`}>
         <button
           type="button"
           onClick={() => onPick({ contract: s.contract, side: which === "ask" ? "buy" : "sell", bid: s.bid, ask: s.ask })}
-          className={`w-full px-2 py-1.5 text-right font-mono-nums transition hover:bg-accent-soft hover:text-accent-ink ${on ? "bg-accent-soft text-accent-ink" : which === "ask" ? "text-ink" : "text-ink-2"}`}
+          className={`w-full px-2 py-1.5 text-center font-mono-nums transition hover:bg-accent-soft hover:text-accent-ink ${on ? "bg-accent-soft text-accent-ink" : which === "ask" ? "text-ink" : "text-ink-2"}`}
           title={which === "ask" ? "Buy at the ask" : "Sell at the bid"}
         >
           {money(v)}
@@ -100,13 +100,11 @@ export default function OptionChain({ ticker, picked, onPick, fill = false }: { 
           <table className={`w-full text-[12px] ${fill ? "" : "min-w-[460px]"}`}>
             <thead className="sticky top-0 bg-panel-2 text-[11px] text-ink-3">
               <tr>
-                <th className="px-2 py-1.5 text-right font-medium">Δ</th>
-                <th className="px-2 py-1.5 text-right font-medium">Bid</th>
-                <th className="px-2 py-1.5 text-right font-medium text-up">Ask · calls</th>
+                <th className="px-2 py-1.5 text-center font-medium">Bid</th>
+                <th className="px-2 py-1.5 text-center font-medium text-up">Ask · calls</th>
                 <th className="px-2 py-1.5 text-center font-medium text-ink">Strike</th>
-                <th className="px-2 py-1.5 text-right font-medium">Bid</th>
-                <th className="px-2 py-1.5 text-right font-medium text-down">Ask · puts</th>
-                <th className="px-2 py-1.5 text-right font-medium">Δ</th>
+                <th className="px-2 py-1.5 text-center font-medium">Bid</th>
+                <th className="px-2 py-1.5 text-center font-medium text-down">Ask · puts</th>
               </tr>
             </thead>
             <tbody>
@@ -117,13 +115,11 @@ export default function OptionChain({ ticker, picked, onPick, fill = false }: { 
                 const priceLine = spot != null && i > 0 && rows[i - 1].strike >= spot && r.strike < spot;
                 return (
                   <tr key={r.strike} ref={priceLine ? priceRow : undefined} className={`border-t ${priceLine ? "border-t-2 border-accent" : "border-line/60"}`}>
-                    <td className={`px-2 py-1.5 text-right font-mono-nums text-ink-3 ${callItm ? "bg-up/[0.06]" : ""}`}>{r.call?.delta != null ? r.call.delta.toFixed(2) : "—"}</td>
                     {cell(r.call, "bid", callItm ? "bg-up/[0.06]" : "")}
                     {cell(r.call, "ask", callItm ? "bg-up/[0.06]" : "")}
                     <td className="bg-panel-2/60 px-2 py-1.5 text-center font-mono-nums font-medium text-ink">{Number.isInteger(r.strike) ? r.strike : r.strike.toFixed(2)}</td>
                     {cell(r.put, "bid", putItm ? "bg-down/[0.06]" : "")}
                     {cell(r.put, "ask", putItm ? "bg-down/[0.06]" : "")}
-                    <td className={`px-2 py-1.5 text-right font-mono-nums text-ink-3 ${putItm ? "bg-down/[0.06]" : ""}`}>{r.put?.delta != null ? r.put.delta.toFixed(2) : "—"}</td>
                   </tr>
                 );
               })}
