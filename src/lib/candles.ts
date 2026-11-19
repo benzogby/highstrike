@@ -3,7 +3,7 @@ import { fetchQuotes } from "@/lib/quotes";
 import { isSession, marketOpen, newYorkDate } from "@/lib/marketCalendar";
 import type { Candle } from "@/lib/chart/types";
 import { barStart, hhmm, minuteOf } from "@/lib/chart/sessions";
-import { AlpacaBusy, SIP_DELAY_MS, alpacaBars, alpacaKeys, nyStamp as nyStampOf, occOf, optionBars, recentMinutes } from "@/lib/alpaca";
+import { AlpacaBusy, SIP_DELAY_MS, alpacaBars, alpacaKeys, iexRecent, nyStamp as nyStampOf, occOf, optionBars, recentMinutes } from "@/lib/alpaca";
 
 // Daily candles for HighStrike Chart (Ben, 2026-11-17: "our own custom charts, with our UI, and deep markup ability";
 // data from a Massive/Polygon account, docs/plans/offer-overhaul.md). Two years of daily bars per ticker, cached in
@@ -245,9 +245,18 @@ async function intradayFromAlpaca(ticker: string, tf: Intraday): Promise<Candle[
 export async function getIntraday(raw: string, tf: Intraday): Promise<CandleSet> {
   const set = await intradayHistory(raw, tf);
   if (!set.candles.length || !marketOpen(Date.now(), 4 * 60)) return set;
-  const recent = await recentMinutes(raw.toUpperCase());
-  if (!recent.length) return set;
   const cutoff = nyStampOf(Date.now() - SIP_DELAY_MS);
+  let recent = await recentMinutes(raw.toUpperCase());
+  // The worker records the stocks it knows of; when it's missing minutes since the history's end (a stock nobody had
+  // open, or a break in its stream), Alpaca's real-time IEX bars fill them, the worker's own winning where both have one.
+  const covered = recent.length > 0 && recent[0].t <= cutoff && recent[recent.length - 1].t >= nyStampOf(Date.now() - 3 * 60_000);
+  if (!covered) {
+    const iex = await iexRecent(raw.toUpperCase());
+    const mine = new Map(recent.map((m) => [m.t, m]));
+    for (const m of iex) if (!mine.has(m.t)) mine.set(m.t, m);
+    recent = [...mine.values()].sort((x, y) => (x.t < y.t ? -1 : x.t > y.t ? 1 : 0));
+  }
+  if (!recent.length) return set;
   const size = TF_MINUTES[tf];
   const out = set.candles.slice();
   for (const m of recent) {

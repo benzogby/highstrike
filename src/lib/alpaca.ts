@@ -79,6 +79,27 @@ export async function alpacaBars(ticker: string, timeframe: string, days: number
   return out;
 }
 
+/**
+ * The last `minutes` of real-time minute bars for one stock from Alpaca's free IEX feed (no 15-minute wait on it), for
+ * when the always-on worker hasn't recorded them (a stock nobody had open yet; Ben, 2026-11-19: ANT's chart stopped 16
+ * minutes back). Shared for 15 seconds per stock.
+ */
+const iexMemo = new Map<string, { at: number; value: Promise<Candle[]> }>();
+export function iexRecent(ticker: string, minutes = 20): Promise<Candle[]> {
+  const hit = iexMemo.get(ticker);
+  if (hit && Date.now() - hit.at < 15_000) return hit.value;
+  const value = (async () => {
+    const keys = await alpacaKeys();
+    if (!keys) return [];
+    const q = new URLSearchParams({ timeframe: "1Min", start: new Date(Date.now() - minutes * 60_000).toISOString(), limit: "1000", feed: "iex", sort: "asc" });
+    const body: { bars?: Bar[] | null } = await get(`/v2/stocks/${encodeURIComponent(ticker)}/bars?${q}`, keys);
+    return (body.bars ?? []).map((b) => ({ t: nyStamp(Date.parse(b.t)), o: b.o, h: b.h, l: b.l, c: b.c, v: b.v ?? 0 }));
+  })().catch(() => [] as Candle[]);
+  iexMemo.set(ticker, { at: Date.now(), value });
+  if (iexMemo.size > 500) iexMemo.delete(iexMemo.keys().next().value as string);
+  return value;
+}
+
 /** The worker's recorded minute bars for one stock (the last 40 minutes), oldest first. */
 export async function recentMinutes(ticker: string): Promise<Candle[]> {
   try {

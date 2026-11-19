@@ -148,6 +148,8 @@ async function refreshTrades() {
     return;
   }
   const want = new Set(next);
+  // Stocks open on a chart get their minute bars kept too, even ones the 10-minute list hasn't picked up yet.
+  for (const t of next) wanted.add(t);
   const add = next.filter((t) => !tradeSubs.has(t));
   const drop = [...tradeSubs].filter((t) => !want.has(t));
   if (drop.length) socket.send(JSON.stringify({ action: "unsubscribe", trades: drop }));
