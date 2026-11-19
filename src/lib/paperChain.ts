@@ -1,7 +1,7 @@
 import { getCandles } from "@/lib/candles";
 import { bs, volatility } from "@/lib/options/pricing";
 import { alpacaListed, chainSnapshot, contractQuote, expiriesFor, strikesFor } from "@/lib/optionQuotes";
-import { alpacaKeys } from "@/lib/alpaca";
+import { alpacaKeys, nyStamp } from "@/lib/alpaca";
 import { liveStock } from "@/lib/paper";
 import { indicativeChain } from "@/lib/alpaca";
 
@@ -33,8 +33,11 @@ export async function chainView(underlying: string, wanted?: string | null): Pro
   const listed = (await alpacaKeys()) ? await alpacaListed(u, spot) : [];
   const expiries = listed.length ? [...new Set(listed.map((r) => r.expiry))].sort() : await expiriesFor(u, spot);
   if (!expiries.length) return empty;
-  const soon = new Date(Date.now() + 5 * 86_400_000).toISOString().slice(0, 10);
-  const expiry = wanted && expiries.includes(wanted) ? wanted : (expiries.find((e) => e >= soon) ?? expiries[0]);
+  // The soonest expiry that still trades (Ben, 2026-11-18: "default to the soonest expiration date"): today's until the
+  // 4:00 PM close, New York time.
+  const now = nyStamp(Date.now());
+  const open = expiries.filter((e) => e > now.slice(0, 10) || (e === now.slice(0, 10) && now.slice(11, 16) < "16:00"));
+  const expiry = wanted && expiries.includes(wanted) ? wanted : (open[0] ?? expiries[expiries.length - 1]);
   const strikes = listed.length
     ? (() => {
         const out = { call: new Map<number, string>(), put: new Map<number, string>() };
