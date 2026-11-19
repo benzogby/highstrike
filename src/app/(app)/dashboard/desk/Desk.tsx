@@ -88,6 +88,8 @@ export default function Desk({
   const [tf, setTf] = useState<Timeframe | null>(start.tf);
   // The Trade panel's two tabs (Ben, 2026-11-18: "Split the trade tab into 2 subtabs… Shares and Options").
   const [mode, setMode] = useState<"shares" | "options">(start.trade ?? "shares");
+  // The ticket's Auto-Send box (off each time the desk opens), kept here so it survives switching stocks and contracts.
+  const [autoSend, setAutoSend] = useState(false);
 
   // The view in the URL (Ben, 2026-11-18: "store the ticker in the URL as well as any other relevant parameters"):
   // ?t=NVDA&tf=4h&panel=positions, replaced in place as they change, so a reload or a shared link opens the same view.
@@ -134,10 +136,6 @@ export default function Desk({
   };
   const held = (symbol: string) => state.positions.find((p) => p.symbol === symbol)?.qty ?? 0;
 
-  const target: TicketTarget =
-    mode === "options" && pick
-    ? { symbol: pick.contract, kind: "option", side: pick.side, bid: pick.bid, ask: pick.ask, last: null, held: held(pick.contract) }
-    : { symbol: ticker, kind: "stock", side: "buy", bid: null, ask: null, last: q?.price ?? null, held: held(ticker) };
 
   const reset = () => {
     if (!confirm("Reset your paper account to $25,000? Positions and working orders are cleared.")) return;
@@ -303,7 +301,23 @@ export default function Desk({
     </div>
   );
 
-  const ticket = <OrderTicket key={`${target.symbol}:${target.side}`} target={target} cash={state.cash} budget={budget} open={state.open} onDone={refresh} />;
+  const target: TicketTarget =
+    mode === "options" && pick
+    ? { symbol: pick.contract, kind: "option", side: pick.side, bid: pick.bid, ask: pick.ask, last: null, held: held(pick.contract) }
+    : { symbol: ticker, kind: "stock", side: "buy", bid: null, ask: null, last: liveNow?.price ?? q?.price ?? null, held: held(ticker) };
+
+  const ticket = (
+    <OrderTicket
+      key={`${target.symbol}:${target.side}`}
+      target={target}
+      cash={state.cash}
+      budget={budget}
+      open={state.open}
+      onDone={refresh}
+      autoSend={autoSend}
+      onAutoSend={setAutoSend}
+    />
+  );
 
   /** Shares | Options, across the top of the Trade panel. */
   const modeTabs = (

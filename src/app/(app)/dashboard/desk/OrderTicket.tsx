@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { BUTTON_PRIMARY, INPUT, LABEL } from "@/components/ui";
+import { useEffect, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
+import { BUTTON_PRIMARY, BUTTON_SECONDARY, INPUT, LABEL } from "@/components/ui";
 import { toastError, toastSuccess } from "@/lib/toastBus";
 import { sendOrder } from "../paperActions";
 import { symbolLabel, usd } from "./fmt";
@@ -13,10 +14,15 @@ const seg = (on: boolean, tone: "up" | "down" | "neutral" = "neutral") =>
     on ? (tone === "up" ? "bg-up/15 text-up ring-1 ring-inset ring-up/40" : tone === "down" ? "bg-down/15 text-down ring-1 ring-inset ring-down/40" : "bg-panel-3 text-ink ring-1 ring-inset ring-line-strong") : "text-ink-3 hover:text-ink"
   }`;
 
+/** The market price a limit starts at: the last trade for shares; the mark (halfway between bid and ask) for an option. */
+const marketPrice = (t: TicketTarget) => (t.kind === "stock" ? t.last : t.bid != null && t.ask != null ? (t.bid + t.ask) / 2 : (t.ask ?? t.last));
+
 /**
  * The order ticket: buy or sell the selected stock or contract, market or limit, with the cost, what it leaves in cash,
  * and (for a member who answered the three questions) how it compares with their own risk rule. Fills happen on the
  * server (src/lib/paper.ts).
+ * Ben, 2026-11-18: an Auto-Send box, off to start: while it's off, sending opens a confirmation of the whole order
+ * first; ticked, orders go straight out. A limit price starts at the market price.
  */
 export default function OrderTicket({
   target,
@@ -24,6 +30,8 @@ export default function OrderTicket({
   budget,
   open,
   onDone,
+  autoSend,
+  onAutoSend,
 }: {
   target: TicketTarget;
   cash: number;
@@ -31,11 +39,14 @@ export default function OrderTicket({
   budget: number | null;
   open: boolean;
   onDone: () => void;
+  autoSend: boolean;
+  onAutoSend: (on: boolean) => void;
 }) {
   const [side, setSide] = useState<"buy" | "sell">(target.side);
   const [qty, setQty] = useState(target.kind === "option" ? "1" : "10");
   const [type, setType] = useState<"market" | "limit">("market");
   const [limit, setLimit] = useState("");
+  const [confirming, setConfirming] = useState(false);
   const [pending, start] = useTransition();
 
   const mult = target.kind === "option" ? 100 : 1;
@@ -45,17 +56,33 @@ export default function OrderTicket({
   const tooMuch = side === "buy" && total != null && total > cash;
   const overHeld = side === "sell" && n > target.held;
   const vsRule = side === "buy" && target.kind === "option" && total != null && budget ? total / budget : null;
+  const what = `${n} ${target.kind === "option" ? (n === 1 ? "contract" : "contracts") : n === 1 ? "share" : "shares"}`;
 
-  function submit() {
+  const chooseLimit = () => {
+    setType("limit");
+    const m = marketPrice(target);
+    if (!limit && m != null) setLimit(m.toFixed(2));
+  };
+
+  function send() {
     if (!n) return toastError("Enter a quantity.");
+    if (type === "limit" && !(Number(limit) > 0)) return toastError("Enter a limit price.");
     start(async () => {
       const r = await sendOrder({ symbol: target.symbol, side, qty: n, type, limit: type === "limit" ? Number(limit) : null });
+      setConfirming(false);
       if ("error" in r) toastError(r.error);
       else if (r.status === "filled" && r.fill) toastSuccess(`${side === "buy" ? "Bought" : "Sold"} ${n} ${symbolLabel(target.symbol)} at ${usd(r.fill.price)}${r.fill.source === "est" ? " (est.)" : ""}`);
       else toastSuccess(r.note ?? "Order working");
       onDone();
     });
   }
+
+  const submit = () => {
+    if (!n) return toastError("Enter a quantity.");
+    if (type === "limit" && !(Number(limit) > 0)) return toastError("Enter a limit price.");
+    if (autoSend) send();
+    else setConfirming(true);
+  };
 
   return (
     <section className="rounded-xl border border-line bg-panel p-3">
@@ -87,7 +114,7 @@ export default function OrderTicket({
         <button type="button" onClick={() => setType("market")} className={seg(type === "market")}>
           Market
         </button>
-        <button type="button" onClick={() => setType("limit")} className={seg(type === "limit")}>
+        <button type="button" onClick={chooseLimit} className={seg(type === "limit")}>
           Limit
         </button>
       </div>
@@ -128,10 +155,101 @@ export default function OrderTicket({
       {tooMuch && <p className="mt-2 text-[12px] text-down">That&apos;s more than your cash.</p>}
       {overHeld && <p className="mt-2 text-[12px] text-down">{target.held ? `You hold ${target.held}.` : "You can only sell what you hold."}</p>}
 
-      <button type="button" disabled={pending || !n || tooMuch || overHeld} onClick={submit} className={`${BUTTON_PRIMARY} mt-3 w-full`}>
-        {pending ? "Sending…" : `${side === "buy" ? "Buy" : "Sell"} ${n || ""} ${target.kind === "option" ? (n === 1 ? "contract" : "contracts") : n === 1 ? "share" : "shares"}`}
-      </button>
+      <div className="mt-3 flex items-center gap-3">
+        <label className="flex shrink-0 cursor-pointer items-center gap-1.5 text-[12px] text-ink-2" title="Send orders without the confirmation step">
+          <input type="checkbox" checked={autoSend} onChange={(e) => onAutoSend(e.target.checked)} className="size-3.5 accent-[var(--color-accent)]" />
+          Auto-Send
+        </label>
+        <button type="button" disabled={pending || !n || tooMuch || overHeld} onClick={submit} className={`${BUTTON_PRIMARY} flex-1`}>
+          {pending ? "Sending…" : autoSend ? `${side === "buy" ? "Buy" : "Sell"} ${what}` : "Review order"}
+        </button>
+      </div>
       <p className="mt-2 text-[11px] leading-relaxed text-ink-3">Paper money: practice only. Stocks fill at the live price; options at the ask or bid shown.</p>
+
+      {confirming && (
+        <Confirm
+          onClose={() => setConfirming(false)}
+          onSend={send}
+          pending={pending}
+          rows={[
+            ["Action", <span key="a" className={side === "buy" ? "text-up" : "text-down"}>{side === "buy" ? "Buy" : "Sell"}</span>],
+            ["Quantity", what],
+            ["Symbol", symbolLabel(target.symbol)],
+            ["Order", type === "limit" ? `Limit ${usd(Number(limit))}` : "Market"],
+            [side === "buy" ? "Est. cost" : "Est. proceeds", usd(total)],
+            ["Cash after", total != null ? usd(side === "buy" ? cash - total : cash + total) : "—"],
+            ...(vsRule != null ? [["Vs your risk rule", `${vsRule.toFixed(1)}×`] as [string, string]] : []),
+          ]}
+          notes={[
+            !open && "The market's closed: this fills at the next open.",
+            type === "limit" && "A limit order fills only at your price or better; it waits until then.",
+            target.kind === "option" && side === "buy" && "A bought option can lose its whole cost.",
+          ].filter((x): x is string => Boolean(x))}
+          sendLabel={`Send ${side === "buy" ? "buy" : "sell"} order`}
+        />
+      )}
     </section>
+  );
+}
+
+/** The confirmation before an order goes out (Auto-Send off): the whole order, then Send or Edit. */
+function Confirm({
+  rows,
+  notes,
+  onSend,
+  onClose,
+  pending,
+  sendLabel,
+}: {
+  rows: [string, React.ReactNode][];
+  notes: string[];
+  onSend: () => void;
+  onClose: () => void;
+  pending: boolean;
+  sendLabel: string;
+}) {
+  const [mounted, setMounted] = useState(false);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- the portal needs document.body, so it waits for the browser
+  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+      if (e.key === "Enter" && !pending) onSend();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose, onSend, pending]);
+  if (!mounted) return null;
+  return createPortal(
+    <div className="fixed inset-0 z-[80] grid place-items-center bg-bg/70 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Confirm order" onClick={onClose}>
+      <div className="anim-pop w-full max-w-sm rounded-xl border border-line-strong bg-panel p-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <h2 className="text-[15px] font-medium text-ink">Confirm order</h2>
+        <dl className="mt-3 divide-y divide-line rounded-lg border border-line text-[13px]">
+          {rows.map(([k, v]) => (
+            <div key={k} className="flex justify-between gap-3 px-3 py-2">
+              <dt className="text-ink-3">{k}</dt>
+              <dd className="text-right font-mono-nums text-ink">{v}</dd>
+            </div>
+          ))}
+        </dl>
+        {notes.length > 0 && (
+          <ul className="mt-3 space-y-1 text-[12px] leading-relaxed text-ink-2">
+            {notes.map((n) => (
+              <li key={n}>· {n}</li>
+            ))}
+          </ul>
+        )}
+        <p className="mt-3 text-[11px] text-ink-3">Paper money. Tick Auto-Send on the ticket to skip this step.</p>
+        <div className="mt-4 flex gap-2">
+          <button type="button" onClick={onClose} className={`${BUTTON_SECONDARY} flex-1`}>
+            Edit
+          </button>
+          <button type="button" autoFocus disabled={pending} onClick={onSend} className={`${BUTTON_PRIMARY} flex-1`}>
+            {pending ? "Sending…" : sendLabel}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
   );
 }
