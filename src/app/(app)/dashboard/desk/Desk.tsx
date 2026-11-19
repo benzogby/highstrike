@@ -106,6 +106,10 @@ export default function Desk({
     else q.delete("trade");
     const next = `${window.location.pathname}?${q}`;
     if (next !== `${window.location.pathname}${window.location.search}`) window.history.replaceState(window.history.state, "", next);
+    // Remembered for the next visit (Ben, 2026-11-18: "the next time they come back they should be on the same ticker
+    // and timeframe"): a cookie the page reads when its address has none of its own, so it opens straight on it.
+    const keep = new URLSearchParams({ t: ticker, ...(tf ? { tf } : {}), ...(mode === "options" ? { trade: "options" } : {}) });
+    document.cookie = `hs-desk=${encodeURIComponent(keep.toString())}; path=/dashboard; max-age=31536000; samesite=lax`;
   }, [ticker, tf, over, mode]);
   const [pick, setPick] = useState<Pick | null>(null);
   const [search, setSearch] = useState("");

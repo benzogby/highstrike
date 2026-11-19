@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import MemberGate, { type Gate } from "@/components/join/MemberGate";
 import { lessonHref, librarySummary, moduleLabel, myProgress, outline } from "@/lib/education";
 import { IDEA_COLUMNS, headlineOf, type Idea } from "@/lib/ideas";
@@ -20,7 +21,10 @@ type Query = { t?: string; tf?: string; panel?: string; trade?: string };
 
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<Query> }) {
   const { supabase, user, profile, member } = await memberContext("/dashboard");
-  const q = await searchParams;
+  const asked = await searchParams;
+  // No view in the address (the sidebar's Home): the one the desk was left on, from its cookie.
+  const saved = (await cookies()).get("hs-desk")?.value;
+  const q: Query = asked.t ? asked : { ...Object.fromEntries(new URLSearchParams(saved ? decodeURIComponent(saved) : "")), ...asked };
 
   // Not a member: the paywall, over a shell with nothing in it, and nothing read for it. A first payment that went
   // through without its browser coming back to /welcome turns access on here first. The paywall offers the $14 week,
