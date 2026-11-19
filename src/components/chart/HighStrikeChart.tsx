@@ -105,6 +105,20 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
   const [drawings, setDrawings] = useState<Drawing[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [tool, setTool] = useState<Tool>("cursor");
+  // A click on the chart measures (Ben, 2026-11-18: "This measurement tool is great, default to this when a user clicks"):
+  // first click starts it, it follows the pointer, the second click pins it, a third clears it. Not saved.
+  const [quick, setQuick] = useState<{ d: Drawing; done: boolean } | null>(null);
+  // The drawing tools, in a menu in the top bar (Ben, 2026-11-18: "Hide the other tools under a discreet tools dropdown").
+  const [toolsOpen, setToolsOpen] = useState(false);
+  const toolsRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!toolsOpen) return;
+    const away = (e: MouseEvent) => {
+      if (!toolsRef.current?.contains(e.target as Node)) setToolsOpen(false);
+    };
+    document.addEventListener("mousedown", away);
+    return () => document.removeEventListener("mousedown", away);
+  }, [toolsOpen]);
   const [draft, setDraft] = useState<Drawing | null>(null);
   const [hover, setHover] = useState<{ x: number; y: number } | null>(null);
   const [color, setColor] = useState("blue");
@@ -186,7 +200,12 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
     };
   }, [ticker]);
   // Another symbol (the stock, or one of its contracts) starts from its own latest bars.
-  useEffect(() => setView(null), [ticker]);
+  const [shownTicker, setShownTicker] = useState(ticker);
+  if (shownTicker !== ticker) {
+    setShownTicker(ticker);
+    setView(null);
+    setQuick(null);
+  }
   const dailyNow = daily?.ticker === ticker ? daily : null;
   // What the chart is of, in words: the ticker, or "AAPL Dec 18 $350 call" for an option contract.
   const name = contractName(ticker) ?? ticker;
@@ -361,8 +380,8 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
   // Filling: the plot area less the legend (20px), the time axis and the RSI pane when it's on.
   const filled = fill && areaH > 0 ? Math.max(180, areaH - 20 - TIME_H - (settings.rsi ? RSI_H + GAP : 0)) : null;
   const priceH = filled ?? height ?? (narrow ? 300 : 420);
-  // The tool rail takes 40px of the box (w-8 + gap-2) beside the chart; on a phone it's a row above it.
-  const chartW = Math.max(160, narrow ? width : width - 40);
+  // The chart takes the box's whole width; the drawing tools are in the top bar's menu.
+  const chartW = Math.max(160, width);
   const plotW = chartW - AXIS_W;
   const rsiTop = priceH + TIME_H + GAP;
   const totalH = priceH + TIME_H + (settings.rsi ? RSI_H + GAP : 0);
@@ -680,6 +699,10 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
       setDraft({ ...draft, pts: [draft.pts[0], anchorAt(px, py)] });
       return;
     }
+    if (!g && quick && !quick.done && px <= plotW && py <= priceH) {
+      setQuick({ ...quick, d: { ...quick.d, pts: [quick.d.pts[0], anchorAt(px, py)] } });
+      return;
+    }
     if (!g) return;
     if (g.mode === "pan") {
       const dx = px - g.startX;
@@ -714,6 +737,16 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
   const onPointerUp = (e: React.PointerEvent<SVGSVGElement>) => {
     const g = drag.current;
     drag.current = null;
+    if (g?.mode === "pan" && !g.moved) {
+      const { px, py } = local(e);
+      if (Math.hypot(px - g.startX, py - g.startY) <= 4) {
+        const a = anchorAt(px, py);
+        if (!quick) setQuick({ d: { id: "quick-measure", kind: "measure", pts: [a, a], color: "green" }, done: false });
+        else if (!quick.done) setQuick({ d: { ...quick.d, pts: [quick.d.pts[0], a] }, done: true });
+        else setQuick(null);
+      }
+      return;
+    }
     if (g?.mode === "draw" && draft) {
       const { px, py } = local(e);
       // A drag draws it in one go; a click leaves it waiting for the second click.
@@ -727,6 +760,8 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
       const typing = e.target instanceof HTMLElement && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA");
       if (typing) return;
       if (e.key === "Escape") {
+        setQuick(null);
+        setToolsOpen(false);
         setDraft(null);
         setTool("cursor");
         setSelected(null);
@@ -866,8 +901,8 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
   const lastIntraDay = minutes && bars.length ? bars[bars.length - 1].t.slice(0, 10) : null;
   const todayNY = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
 
-  const all = draft ? [...drawings, draft] : drawings;
-  const cursor = overAxis === "price" ? "ns-resize" : overAxis === "time" ? "ew-resize" : tool !== "cursor" || draft ? "crosshair" : "default";
+  const all = [...drawings, ...(draft ? [draft] : []), ...(quick ? [quick.d] : [])];
+  const cursor = overAxis === "price" ? "ns-resize" : overAxis === "time" ? "ew-resize" : tool !== "cursor" || draft || (quick && !quick.done) ? "crosshair" : "default";
 
   return (
     <div ref={boxRef} className={`relative select-none ${fill ? "flex h-full flex-col" : ""}`}>
@@ -900,6 +935,95 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
         <Chip on={settings.rsi} onClick={() => changeSettings({ rsi: !settings.rsi })}>
           RSI
         </Chip>
+        <span className="mx-1 h-4 w-px bg-line" />
+        <div ref={toolsRef} className="relative">
+          {tool === "cursor" ? (
+            <button
+              type="button"
+              aria-haspopup="menu"
+              aria-expanded={toolsOpen}
+              onClick={() => setToolsOpen((o) => !o)}
+              className={`flex h-7 items-center gap-1 rounded-md border px-2 font-medium transition-colors ${toolsOpen ? "border-line-strong bg-panel-2 text-ink" : "border-transparent text-ink-3 hover:text-ink"}`}
+              title="Drawing tools (a click on the chart measures)"
+            >
+              Tools
+              <svg viewBox="0 0 10 6" className="h-1.5 w-2.5" fill="currentColor" aria-hidden="true">
+                <path d="M0 0h10L5 6z" />
+              </svg>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setDraft(null);
+                setTool("cursor");
+              }}
+              className="flex h-7 items-center gap-1.5 rounded-md border border-accent/60 bg-accent-soft px-2 font-medium text-accent-ink"
+              title="Stop drawing (Esc)"
+            >
+              {TOOLS.find((t) => t.key === tool)?.label}
+              <span aria-hidden="true">✕</span>
+            </button>
+          )}
+          {toolsOpen && (
+            <div role="menu" aria-label="Drawing tools" className="absolute left-0 top-8 z-30 w-56 rounded-lg border border-line-strong bg-panel p-1 shadow-xl">
+              {TOOLS.filter((t) => t.key !== "cursor").map((t) => (
+                <button
+                  key={t.key}
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setDraft(null);
+                    setQuick(null);
+                    setTool(t.key);
+                    setSelected(null);
+                    setToolsOpen(false);
+                  }}
+                  className="flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left text-[12px] text-ink-2 hover:bg-panel-2 hover:text-ink"
+                >
+                  <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d={t.icon} />
+                  </svg>
+                  {t.label}
+                </button>
+              ))}
+              <div className="my-1 h-px bg-line" />
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  undo();
+                  setToolsOpen(false);
+                }}
+                className="flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left text-[12px] text-ink-2 hover:bg-panel-2 hover:text-ink"
+              >
+                <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" aria-hidden="true">
+                  <path d="M9 14L4 9l5-5M4 9h11a5 5 0 010 10h-3" />
+                </svg>
+                Undo
+              </button>
+              {drawings.length > 0 && (
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setToolsOpen(false);
+                    if (window.confirm(`Remove all ${drawings.length} drawings on ${name}?`)) {
+                      commit([]);
+                      setSelected(null);
+                    }
+                  }}
+                  className="flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left text-[12px] text-ink-2 hover:bg-down-soft hover:text-down"
+                >
+                  <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" aria-hidden="true">
+                    <path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12M9 7V4h6v3" />
+                  </svg>
+                  Remove all drawings
+                </button>
+              )}
+            </div>
+          )}
+        </div>
         <span className="ml-auto flex items-center gap-1">
           {userId && (
             <span className="mr-2 text-[11px] text-ink-3" aria-live="polite">
@@ -929,62 +1053,7 @@ export default function HighStrikeChart({ ticker, userId, levels, height, fill =
         </span>
       </div>
 
-      <div className={`flex gap-2 ${narrow ? "flex-col" : ""} ${fill ? "min-h-0 flex-1" : ""}`}>
-        {/* Drawing tools */}
-        <div className={`flex shrink-0 gap-1 ${narrow ? "-mx-1 overflow-x-auto px-1 pb-1" : "flex-col"}`} role="toolbar" aria-label="Drawing tools">
-          {TOOLS.map((t) => (
-            <button
-              key={t.key}
-              type="button"
-              title={t.label}
-              aria-label={t.label}
-              aria-pressed={tool === t.key}
-              onClick={() => {
-                setDraft(null);
-                setTool(t.key);
-                if (t.key !== "cursor") setSelected(null);
-              }}
-              className={`grid h-8 w-8 shrink-0 place-items-center rounded-md border transition-colors ${
-                tool === t.key ? "border-accent/60 bg-accent-soft text-accent-ink" : "border-transparent text-ink-3 hover:bg-panel-2 hover:text-ink"
-              }`}
-            >
-              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d={t.icon} />
-              </svg>
-            </button>
-          ))}
-          <span className={narrow ? "mx-1 h-8 w-px shrink-0 bg-line" : "my-1 h-px w-8 bg-line"} />
-          <button
-            type="button"
-            title="Undo"
-            aria-label="Undo"
-            onClick={undo}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-ink-3 hover:bg-panel-2 hover:text-ink"
-          >
-            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" aria-hidden="true">
-              <path d="M9 14L4 9l5-5M4 9h11a5 5 0 010 10h-3" />
-            </svg>
-          </button>
-          {drawings.length > 0 && (
-            <button
-              type="button"
-              title="Remove all drawings"
-              aria-label="Remove all drawings"
-              onClick={() => {
-                if (window.confirm(`Remove all ${drawings.length} drawings on ${ticker}?`)) {
-                  commit([]);
-                  setSelected(null);
-                }
-              }}
-              className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-ink-3 hover:bg-down-soft hover:text-down"
-            >
-              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" aria-hidden="true">
-                <path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12M9 7V4h6v3" />
-              </svg>
-            </button>
-          )}
-        </div>
-
+      <div className={`flex ${fill ? "min-h-0 flex-1" : ""}`}>
         <div ref={areaRef} className={`relative min-w-0 flex-1 ${fill ? "min-h-0" : ""}`}>
           {!loaded && !failedNow && (
             <div className="grid animate-pulse place-items-center rounded-lg bg-panel-2" style={{ height: priceH + TIME_H }}>
