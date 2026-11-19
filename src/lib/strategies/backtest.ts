@@ -51,6 +51,8 @@ export type Result = {
   /** Running total of dollars, one point per closed trade. */
   equity: { t: string; v: number }[];
   basis: "option" | "spread" | "stock";
+  /** Daily bars tested. */
+  barCount: number;
   from: string;
   to: string;
 };
@@ -148,7 +150,34 @@ export function groupFires(
   return { price: g.mode === "any" && levelPrice != null ? levelPrice : close, why };
 }
 
-export function backtest(bars: Candle[], spec: Spec, ctx: Context = {}): Result {
+/** The backtest periods a member can pick (Ben, 2026-11-19: "set the backtest period with a dropdown"). */
+export const PERIODS = [
+  ["3m", "Past 3 months"],
+  ["6m", "Past 6 months"],
+  ["ytd", "Year to date"],
+  ["1y", "Past year"],
+  ["2y", "Past 2 years"],
+  ["3y", "Past 3 years"],
+  ["5y", "Past 5 years"],
+  ["all", "All (since 2016)"],
+] as const;
+export type Period = (typeof PERIODS)[number][0];
+
+/** The first day a period covers, as of `today`; null for all of it. */
+export function periodStart(p: Period, today: string): string | null {
+  if (p === "all") return null;
+  if (p === "ytd") return `${today.slice(0, 4)}-01-01`;
+  const months = { "3m": 3, "6m": 6, "1y": 12, "2y": 24, "3y": 36, "5y": 60 }[p];
+  const d = new Date(`${today}T12:00:00Z`);
+  d.setUTCMonth(d.getUTCMonth() - months);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * `from`: only take trades that enter on or after this day. The bars before it still count for the indicators (a
+ * 200-day average is ready on the first day of the period).
+ */
+export function backtest(bars: Candle[], spec: Spec, ctx: Context = {}, from: string | null = null): Result {
   const calc = new Calc(bars, ctx);
   const closes = bars.map((b) => b.c);
   const long = spec.direction === "long";
@@ -168,7 +197,10 @@ export function backtest(bars: Candle[], spec: Spec, ctx: Context = {}): Result 
     return leg.short != null ? Math.max(0, a - bs(type, S, leg.short, T, v)) : a;
   };
 
-  let i = 1;
+  // The first bar a trade can enter on (none when the period starts after the last bar).
+  const at0 = from ? bars.findIndex((b) => b.t.slice(0, 10) >= from) : 1;
+  const first = at0 < 0 ? bars.length : Math.max(1, at0);
+  let i = first;
   while (i < bars.length) {
     if (!entryChecks.length || !entryChecks.every((c) => calc.holds(c, i))) {
       i++;
@@ -275,7 +307,8 @@ export function backtest(bars: Candle[], spec: Spec, ctx: Context = {}): Result 
     },
     equity,
     basis,
-    from: bars[0]?.t ?? "",
+    barCount: Math.max(0, bars.length - first + 1),
+    from: (from ?? bars[0]?.t ?? "").slice(0, 10),
     to: bars[bars.length - 1]?.t ?? "",
   };
 }

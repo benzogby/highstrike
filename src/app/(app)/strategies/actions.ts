@@ -5,14 +5,15 @@ import { requireMember } from "@/lib/membership";
 import { getCandles } from "@/lib/candles";
 import { cleanSpec, usesNewsSpec } from "@/lib/strategies/spec";
 import { NEWS_START, stockNews } from "@/lib/alpaca";
-import { backtest, type Result } from "@/lib/strategies/backtest";
+import { PERIODS, backtest, periodStart, type Period, type Result } from "@/lib/strategies/backtest";
+import { newYorkDate } from "@/lib/marketCalendar";
 
 // The Strategies page's server side (docs/plans/strategies.md): run a backtest on a stock's daily history, save and
 // delete a member's strategies. A strategy is checked (src/lib/strategies/spec.ts) before it's run or stored.
 
 const TICKER = /^[A-Z][A-Z0-9.]{0,7}$/;
 
-export async function runBacktest(input: { rules: unknown; ticker: string }): Promise<{ result: Result; newsFrom: string | null } | { error: string }> {
+export async function runBacktest(input: { rules: unknown; ticker: string; period?: Period }): Promise<{ result: Result; newsFrom: string | null } | { error: string }> {
   await requireMember("/strategies");
   const spec = cleanSpec(input.rules);
   if (!spec) return { error: "Turn on at least one entry criterion (or add a custom rule)." };
@@ -23,7 +24,9 @@ export async function runBacktest(input: { rules: unknown; ticker: string }): Pr
   if (set.candles.length < 60) return { error: `Not enough price history for ${ticker}.` };
   // News blocks need the stock's headlines (Alpaca's free feed starts at NEWS_START).
   const news = usesNewsSpec(spec) ? await stockNews(ticker) : undefined;
-  return { result: backtest(set.candles, spec, news ? { news, newsFrom: NEWS_START } : {}), newsFrom: news ? NEWS_START : null };
+  const period: Period = PERIODS.some(([k]) => k === input.period) ? input.period! : "all";
+  const from = periodStart(period, newYorkDate(Date.now()));
+  return { result: backtest(set.candles, spec, news ? { news, newsFrom: NEWS_START } : {}, from), newsFrom: news ? NEWS_START : null };
 }
 
 export type LiveSettings = { watch: string[]; live: boolean; alerts: boolean; autoTrade: boolean };

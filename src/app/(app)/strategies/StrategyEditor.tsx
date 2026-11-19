@@ -7,7 +7,7 @@ import HighStrikeChart from "@/components/chart/HighStrikeChart";
 import { CARD, INPUT } from "@/components/ui";
 import { OPERANDS, OPS, type Condition, type Op, type Operand, type OperandKind } from "@/lib/strategies/rules";
 import { criterionDef, entryText, fullList, type Contract, type Criterion, type Exits, type Group, type Spec } from "@/lib/strategies/spec";
-import type { Result, Trade } from "@/lib/strategies/backtest";
+import { PERIODS, type Period, type Result, type Trade } from "@/lib/strategies/backtest";
 import { deleteStrategy, runBacktest, saveStrategy, type LiveSettings } from "./actions";
 
 // The strategy editor (Ben, 2026-11-19: "Each strategy should have tabs: Entry, Contract, Exit, Stop, Backtest"):
@@ -444,12 +444,13 @@ export default function StrategyEditor({
     stop: { ...initialRules.stop, criteria: fullList("stop", initialRules.stop.criteria) },
   }));
   const [ticker, setTicker] = useState(initialTicker);
+  const [period, setPeriod] = useState<Period>("all");
   const [settings, setSettings] = useState<LiveSettings>(initialSettings);
   const [watchText, setWatchText] = useState(initialSettings.watch.join(", "));
   const [result, setResult] = useState<{ ticker: string; data: Result; newsFrom: string | null; key: string } | null>(null);
   // What a run would be given: the strategy and the ticker. When they're what the shown results came from, running
   // again would give the same answer, so the button rests (Ben, 2026-11-19).
-  const runKey = JSON.stringify({ spec, t: ticker.trim().toUpperCase() });
+  const runKey = JSON.stringify({ spec, t: ticker.trim().toUpperCase(), period });
   const unchanged = result != null && result.key === runKey;
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
@@ -470,7 +471,7 @@ export default function StrategyEditor({
       setTab("backtest");
       const t = ticker.trim().toUpperCase();
       const key = runKey;
-      const r = await runBacktest({ rules: spec, ticker: t });
+      const r = await runBacktest({ rules: spec, ticker: t, period });
       if ("error" in r) setError(r.error);
       else setResult({ ticker: t, data: r.result, newsFrom: r.newsFrom, key });
     });
@@ -577,7 +578,14 @@ export default function StrategyEditor({
               className="h-9 w-28 rounded-lg border border-line-strong bg-panel px-2.5 font-mono-nums text-[14px] uppercase text-ink focus:border-accent focus:outline-none"
               aria-label="Ticker"
             />
-            <span className="text-[12px] text-ink-3">daily bars since 2016</span>
+            <select value={period} onChange={(e) => setPeriod(e.target.value as Period)} className={SELECT} aria-label="Backtest period">
+              {PERIODS.map(([k, label]) => (
+                <option key={k} value={k}>
+                  {label}
+                </option>
+              ))}
+            </select>
+            <span className="text-[12px] text-ink-3">daily bars</span>
             {result && !unchanged && !running && <span className="ml-auto text-[12px] text-warn">Changed since the last run</span>}
             <button
               type="button"
@@ -686,26 +694,43 @@ export function BacktestResults({ result, ticker, direction, userId }: { result:
     [result, direction]
   );
   const onOption = result.basis !== "stock";
+  // Each card: its value in white, a percent beside it in green or red (Ben, 2026-11-19).
+  const closed = result.trades.filter((t) => t.reason !== "open");
+  const avgOf = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
+  const winsD = avgOf(closed.filter((t) => t.dollars > 0).map((t) => t.dollars));
+  const lossD = avgOf(closed.filter((t) => t.dollars <= 0).map((t) => t.dollars));
+  const inMarket = result.barCount ? (closed.reduce((a, t) => a + t.bars, 0) / result.barCount) * 100 : null;
+  const perDay = s.expectancy != null && s.avgBars ? s.expectancy / s.avgBars : null;
+  const money = (n: number | null) => (n == null ? "—" : `${n < 0 ? "−" : ""}$${Math.abs(Math.round(n)).toLocaleString("en-US")}`);
+  // [label, white value, percent, a word after the percent, colour forced green ("+") or red ("-") for plain shares]
+  const cards: [string, string, number | null, string, ("+" | "-")?][] = [
+    ["Trades", String(s.count), inMarket, "in a trade", "+"],
+    ["Win rate", `${s.wins} of ${s.count}`, s.winRate, "won", s.winRate != null && s.winRate >= 50 ? "+" : "-"],
+    ["Average trade", money(s.avgDollars), s.expectancy, "a trade"],
+    ["Total", money(s.totalDollars), (s.totalDollars / 25_000) * 100, "of $25k"],
+    ["Average win", money(winsD), s.avgWin, ""],
+    ["Average loss", money(lossD), s.avgLoss, ""],
+    ["Worst drawdown", money(s.maxDrawdown ? -s.maxDrawdown : 0), s.maxDrawdown ? -(s.maxDrawdown / 25_000) * 100 : 0, "of $25k"],
+    ["Days held", s.avgBars == null ? "—" : s.avgBars.toFixed(1), perDay, "a day"],
+  ];
   return (
     <>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {(
-          [
-            ["Trades", String(s.count), ""],
-            ["Win rate", s.winRate == null ? "—" : `${s.winRate}%`, ""],
-            ["Average trade", pct(s.expectancy), tone(s.expectancy)],
-            ["Total", dollars(s.totalDollars), tone(s.totalDollars)],
-            ["Average win", pct(s.avgWin), "text-up"],
-            ["Average loss", pct(s.avgLoss), "text-down"],
-            ["Worst drawdown", s.maxDrawdown ? `−$${s.maxDrawdown.toLocaleString("en-US")}` : "$0", s.maxDrawdown ? "text-down" : ""],
-            ["Days held", s.avgBars == null ? "—" : s.avgBars.toFixed(1), ""],
-          ] as const
-        ).map(([k, v, c]) => (
-          <div key={k} className={`${CARD} px-3.5 py-3`}>
-            <p className="text-[11px] text-ink-3">{k}</p>
-            <p className={`mt-1 font-mono-nums text-[18px] ${c || "text-ink"}`}>{v}</p>
-          </div>
-        ))}
+        {cards.map(([k, v, p, note, force]) => {
+          const colour = p == null ? "text-ink-3" : force === "+" ? "text-up" : force === "-" ? "text-down" : tone(p);
+          return (
+            <div key={k} className={`${CARD} px-3.5 py-3`}>
+              <p className="text-[11px] text-ink-3">{k}</p>
+              <p className="mt-1 flex flex-wrap items-baseline gap-x-2">
+                <span className="font-mono-nums text-[18px] text-ink">{v}</span>
+                <span className={`font-mono-nums text-[13px] ${colour}`}>
+                  {p == null ? "—" : force ? `${p.toFixed(1)}%` : pct(p, Math.abs(p) < 10 ? 2 : 1)}
+                  {note && <span className="ml-1 text-[11px] text-ink-3">{note}</span>}
+                </span>
+              </p>
+            </div>
+          );
+        })}
       </div>
       <p className="-mt-1 text-[11px] text-ink-3">
         {onOption ? `On the ${result.basis === "spread" ? "spread" : "option"}, priced from the stock's own recent swings (estimated, not real past quotes), at the size in the Contract tab. ` : "On the shares, at the size in the Contract tab. "}
