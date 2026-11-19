@@ -95,7 +95,7 @@ async function flush() {
 
 const latest = new Map();
 function onTrade(t) {
-  if (!wanted.has(t.S) || !(t.p > 0)) return;
+  if (!(t.p > 0)) return;
   const prev = latest.get(t.S);
   if (prev && prev.at >= t.t) return;
   latest.set(t.S, { ticker: t.S, price: t.p, at: t.t });
@@ -132,9 +132,35 @@ async function prune() {
 
 // ---- The stream ------------------------------------------------------------------------------------------------------
 
+// Trades stream only for the stocks open on a chart right now (public.live_watch, stamped by the site's /api/live):
+// Alpaca's free plan allows 30 symbols for trades, while minute bars come for every stock.
+const TRADE_LIMIT = 30;
+let socket = null;
+let tradeSubs = new Set();
+async function refreshTrades() {
+  if (!socket || !state.connected) return;
+  let next = [];
+  try {
+    const since = new Date(Date.now() - 90_000).toISOString();
+    const res = await fetch(`${REST}/live_watch?select=ticker&seen_at=gte.${since}&order=seen_at.desc&limit=${TRADE_LIMIT}`, { headers: HEADERS });
+    if (res.ok) next = (await res.json()).map((r) => r.ticker).filter((t) => /^[A-Z][A-Z.]{0,7}$/.test(t));
+  } catch {
+    return;
+  }
+  const want = new Set(next);
+  const add = next.filter((t) => !tradeSubs.has(t));
+  const drop = [...tradeSubs].filter((t) => !want.has(t));
+  if (drop.length) socket.send(JSON.stringify({ action: "unsubscribe", trades: drop }));
+  if (add.length) socket.send(JSON.stringify({ action: "subscribe", trades: add }));
+  tradeSubs = want;
+  state.trading = [...want];
+}
+
 let backoff = 2000;
 function connect() {
   const ws = new WebSocket(STREAM);
+  socket = ws;
+  tradeSubs = new Set();
   ws.onopen = () => ws.send(JSON.stringify({ action: "auth", key: ALPACA_KEY_ID, secret: ALPACA_SECRET }));
   ws.onmessage = (ev) => {
     let msgs;
@@ -145,10 +171,11 @@ function connect() {
     }
     for (const m of Array.isArray(msgs) ? msgs : [msgs]) {
       if (m.T === "success" && m.msg === "authenticated") {
-        ws.send(JSON.stringify({ action: "subscribe", bars: ["*"], updatedBars: ["*"], trades: ["*"] }));
+        ws.send(JSON.stringify({ action: "subscribe", bars: ["*"], updatedBars: ["*"] }));
         state.connected = true;
         backoff = 2000;
         console.log("worker: streaming minute bars");
+        refreshTrades();
       } else if (m.T === "t") onTrade(m);
       else if (m.T === "b" || m.T === "u") onBar(m);
       else if (m.T === "error") console.error("worker: alpaca says", m.code, m.msg);
@@ -169,6 +196,7 @@ await refreshWanted();
 setInterval(refreshWanted, 10 * 60_000);
 setInterval(flush, 5_000);
 setInterval(flushQuotes, 1_000);
+setInterval(refreshTrades, 5_000);
 setInterval(prune, 5 * 60_000);
 connect();
 

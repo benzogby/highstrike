@@ -41,6 +41,15 @@ function alpacaTrade(symbol: string, keys: { id: string; secret: string }) {
   return value;
 }
 
+// Tell the worker this stock is on someone's chart (public.live_watch), at most every 20 seconds per stock.
+const stamped = new Map<string, number>();
+function stampWatch(symbol: string) {
+  if (Date.now() - (stamped.get(symbol) ?? 0) < 20_000) return;
+  stamped.set(symbol, Date.now());
+  if (stamped.size > 1000) stamped.delete(stamped.keys().next().value as string);
+  void Promise.resolve(supabaseService().from("live_watch").upsert({ ticker: symbol, seen_at: new Date().toISOString() })).catch(() => {});
+}
+
 /** The always-on worker's latest trade for a stock, when it's from the last 20 seconds. */
 async function streamedTrade(symbol: string): Promise<{ price: number; at: string } | null> {
   try {
@@ -64,6 +73,7 @@ async function fromAlpaca(symbol: string): Promise<Live | null> {
       .catch(() => null);
     dayMemo.set(symbol, { at: Date.now(), value: days });
   }
+  stampWatch(symbol);
   // The worker's latest trade (public.live_quotes, about a second old), else Alpaca's.
   const [streamed, bars] = await Promise.all([streamedTrade(symbol), days]);
   const t = streamed ?? (await alpacaTrade(symbol, keys));
