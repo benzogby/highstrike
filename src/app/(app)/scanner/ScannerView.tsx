@@ -6,6 +6,7 @@ import Heatmap from "./Heatmap";
 import Movers from "./Movers";
 import Earnings from "./Earnings";
 import RefreshNow from "./RefreshNow";
+import StrategyMatches from "./StrategyMatches";
 import { HotContracts, IvTable, NoOptions, UnusualFlow } from "./OptionsTabs";
 import { PlanIt, big, contractLabel, day, pct, tone } from "./fmt";
 
@@ -18,10 +19,11 @@ export const TABS = [
   { key: "iv", label: "IV" },
   { key: "earnings", label: "Earnings" },
   { key: "setups", label: "Setups" },
+  { key: "strategies", label: "Strategies" },
 ] as const;
 export type Tab = (typeof TABS)[number]["key"];
 
-export type Query = { tab?: string; by?: string; type?: string; dte?: string };
+export type Query = { tab?: string; by?: string; type?: string; dte?: string; s?: string };
 
 const TIME = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "2-digit" });
 
@@ -31,7 +33,7 @@ const TIME = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", ho
  * names, refreshed every 5 minutes into one kept snapshot (src/lib/scan/build.ts). Every row is a tap from its chart and
  * from the Trade Planner.
  */
-export default function ScannerView({ snap, tab, q, admin }: { snap: ScanSnapshot | null; tab: Tab; q: Query; admin: boolean }) {
+export default function ScannerView({ snap, tab, q, admin, userId }: { snap: ScanSnapshot | null; tab: Tab; q: Query; admin: boolean; userId: string }) {
   const header = (
     <PageHeader
       className="anim-rise"
@@ -155,6 +157,7 @@ export default function ScannerView({ snap, tab, q, admin }: { snap: ScanSnapsho
         {tab === "iv" && (snap.optionsFrom ? <IvTable rows={snap.byTicker} hv={new Map(snap.stocks.map((s) => [s.t, s.hv20]))} /> : <NoOptions admin={admin} />)}
         {tab === "earnings" && <Earnings rows={snap.earnings} stocks={stocks} />}
         {tab === "setups" && <ScannerTable />}
+        {tab === "strategies" && <StrategyMatches stocks={snap.stocks} chosen={q.s} userId={userId} />}
       </div>
 
       {admin && snap.notes.length > 0 && <p className="mt-6 text-xs text-ink-3">Admin notes: {snap.notes.join(" ")}</p>}

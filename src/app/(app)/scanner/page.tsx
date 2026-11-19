@@ -12,9 +12,9 @@ export const maxDuration = 300;
  * names, refreshed every 5 minutes into one kept snapshot (src/lib/scan/build.ts), drawn by ScannerView.
  */
 export default async function ScannerPage({ searchParams }: { searchParams: Promise<Query> }) {
-  const { profile } = await requireMember("/scanner");
+  const { profile, user } = await requireMember("/scanner");
   const q = await searchParams;
   const tab: Tab = TABS.some((t) => t.key === q.tab) ? (q.tab as Tab) : "heatmap";
   const snap = await readScan().catch(() => null);
-  return <ScannerView snap={snap} tab={tab} q={q} admin={Boolean(profile?.is_admin)} />;
+  return <ScannerView snap={snap} tab={tab} q={q} admin={Boolean(profile?.is_admin)} userId={user.id} />;
 }

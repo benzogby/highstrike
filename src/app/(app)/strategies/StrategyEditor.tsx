@@ -7,7 +7,44 @@ import HighStrikeChart from "@/components/chart/HighStrikeChart";
 import { CARD, INPUT } from "@/components/ui";
 import { OPERANDS, OPS, conditionText, type Condition, type Op, type Operand, type OperandKind, type Rules } from "@/lib/strategies/rules";
 import type { Result, Trade } from "@/lib/strategies/backtest";
-import { deleteStrategy, runBacktest, saveStrategy } from "./actions";
+import { deleteStrategy, runBacktest, saveStrategy, type LiveSettings } from "./actions";
+
+export type SignalRow = {
+  id: string;
+  ticker: string;
+  day: string;
+  fired_at: string;
+  price: number;
+  symbol: string | null;
+  qty: number | null;
+  status: "alerted" | "open" | "closed" | "failed";
+  note: string | null;
+  exit_reason: string | null;
+  exit_price: number | null;
+};
+
+const WHEN = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+
+/** A switch: on (green) or off. */
+function Toggle({ on, onChange, label, hint }: { on: boolean; onChange: (v: boolean) => void; label: string; hint: string }) {
+  return (
+    <label className="flex cursor-pointer items-start gap-3">
+      <button
+        type="button"
+        role="switch"
+        aria-checked={on}
+        onClick={() => onChange(!on)}
+        className={`relative mt-0.5 h-5 w-9 shrink-0 rounded-full transition ${on ? "bg-accent" : "bg-panel-3 ring-1 ring-inset ring-line-strong"}`}
+      >
+        <span className={`absolute top-0.5 size-4 rounded-full bg-white transition-all ${on ? "left-[18px]" : "left-0.5"}`} />
+      </button>
+      <span>
+        <span className="block text-[13.5px] text-ink">{label}</span>
+        <span className="block text-[12px] text-ink-3">{hint}</span>
+      </span>
+    </label>
+  );
+}
 
 // The strategy editor (docs/plans/strategies.md): IF / AND / THEN blocks for the entry, exits the same way plus a
 // target, a stop and a time limit, the option it trades, and a backtest on any stock's daily history with the trades
@@ -96,6 +133,8 @@ export default function StrategyEditor({
   initialTicker,
   template,
   userId,
+  initialSettings = { watch: [], live: false, alerts: true, autoTrade: false },
+  signals = [],
 }: {
   id: string | null;
   initialName: string;
@@ -103,11 +142,19 @@ export default function StrategyEditor({
   initialTicker: string;
   template: string | null;
   userId: string;
+  initialSettings?: LiveSettings;
+  signals?: SignalRow[];
 }) {
   const router = useRouter();
   const [name, setName] = useState(initialName);
   const [rules, setRules] = useState<Rules>(initialRules);
   const [ticker, setTicker] = useState(initialTicker);
+  const [settings, setSettings] = useState<LiveSettings>(initialSettings);
+  const [watchText, setWatchText] = useState(initialSettings.watch.join(", "));
+  const setLive = (patch: Partial<LiveSettings>) => {
+    setSettings((s) => ({ ...s, ...patch }));
+    setSaved(null);
+  };
   const [result, setResult] = useState<{ ticker: string; data: Result } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
@@ -129,7 +176,8 @@ export default function StrategyEditor({
   const save = () =>
     startSave(async () => {
       setError(null);
-      const r = await saveStrategy({ id, name, rules, ticker, template });
+      const watch = watchText.split(/[\s,]+/).filter(Boolean);
+      const r = await saveStrategy({ id, name, rules, ticker, template, settings: { ...settings, watch } });
       if ("error" in r) setError(r.error);
       else {
         setSaved("Saved");
@@ -252,6 +300,53 @@ export default function StrategyEditor({
             </div>
           ) : (
             <p className="mt-3 text-[13px] text-ink-2">Shares, {rules.direction === "long" ? "bought" : "sold short"} at the close.</p>
+          )}
+        </div>
+
+        <div className={`${CARD} p-4`}>
+          <div className="flex items-center justify-between">
+            <h2 className="text-[14px] font-medium text-ink">Live</h2>
+            {settings.live ? (
+              <span className="flex items-center gap-1.5 rounded-md bg-up-soft px-2 py-0.5 text-[11px] font-medium text-up">
+                <span className="size-1.5 rounded-full bg-up" /> Watching
+              </span>
+            ) : (
+              <span className="text-[11px] text-ink-3">Off</span>
+            )}
+          </div>
+          <label className="mt-3 block">
+            <span className="mb-1 block text-[12px] text-ink-2">Stocks to watch (up to 25)</span>
+            <input value={watchText} onChange={(e) => (setWatchText(e.target.value.toUpperCase()), setSaved(null))} placeholder="SPY, AAPL, NVDA" className={`${INPUT} font-mono-nums uppercase`} />
+          </label>
+          <div className="mt-4 flex flex-col gap-3">
+            <Toggle on={settings.live} onChange={(v) => setLive({ live: v })} label="Switch it on" hint="Checked every 5 minutes while the market's open, on today's bar so far." />
+            <Toggle on={settings.alerts} onChange={(v) => setLive({ alerts: v })} label="Alert me" hint="In the bell and by email when the entry rules are all true." />
+            <Toggle
+              on={settings.autoTrade}
+              onChange={(v) => setLive({ autoTrade: v })}
+              label="Paper-trade it by itself"
+              hint={rules.option ? "Buys 1 contract its option rule picks, and closes it at the exit." : "Buys $1,000 of shares, and sells them at the exit."}
+            />
+          </div>
+          {signals.length > 0 && (
+            <div className="mt-4 border-t border-line pt-3">
+              <p className="text-[12px] font-medium text-ink-2">Recent signals</p>
+              <ul className="mt-2 space-y-1.5">
+                {signals.map((g) => (
+                  <li key={g.id} className="flex items-center justify-between gap-3 text-[12.5px]">
+                    <span className="text-ink-2">
+                      <b className="font-mono-nums text-ink">{g.ticker}</b> {WHEN.format(new Date(g.fired_at))} at {Number(g.price).toFixed(2)}
+                    </span>
+                    <span
+                      className={`rounded-md px-1.5 py-0.5 text-[11px] font-medium ${g.status === "open" ? "bg-accent-soft text-accent-ink" : g.status === "failed" ? "bg-down-soft text-down" : "bg-panel-2 text-ink-2"}`}
+                      title={g.note ?? g.exit_reason ?? undefined}
+                    >
+                      {g.status === "open" ? "In a trade" : g.status === "closed" ? `Closed · ${g.exit_reason}` : g.status === "failed" ? "Didn't trade" : "Alerted"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
         </div>
 

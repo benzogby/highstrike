@@ -5,7 +5,8 @@ import { requireMember } from "@/lib/membership";
 import { PageHeader } from "@/components/ui";
 import { cleanRules, type Rules } from "@/lib/strategies/rules";
 import { templateByKey } from "@/lib/strategies/templates";
-import StrategyEditor from "../StrategyEditor";
+import StrategyEditor, { type SignalRow } from "../StrategyEditor";
+import type { LiveSettings } from "../actions";
 
 export const metadata: Metadata = { title: "Strategy — HighStrike" };
 
@@ -20,21 +21,32 @@ const BLANK: Rules = {
 };
 
 /** One strategy in the editor: /strategies/new (blank, or ?template=key), or a saved one by its id. */
-export default async function StrategyPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ template?: string }> }) {
+export default async function StrategyPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ template?: string; t?: string }> }) {
   const { supabase, user } = await requireMember("/strategies");
   const { id } = await params;
-  const { template } = await searchParams;
+  const { template, t: wantTicker } = await searchParams;
+  const asked = wantTicker && /^[A-Z][A-Z0-9.]{0,7}$/.test(wantTicker.toUpperCase()) ? wantTicker.toUpperCase() : null;
 
   let start: { id: string | null; name: string; rules: Rules; ticker: string; template: string | null };
+  let settings: LiveSettings = { watch: [], live: false, alerts: true, autoTrade: false };
+  let signals: SignalRow[] = [];
   if (id === "new") {
     const t = template ? templateByKey(template) : null;
-    start = { id: null, name: t?.name ?? "My strategy", rules: t?.rules ?? BLANK, ticker: "SPY", template: t?.key ?? null };
+    start = { id: null, name: t?.name ?? "My strategy", rules: t?.rules ?? BLANK, ticker: asked ?? "SPY", template: t?.key ?? null };
   } else {
     if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
-    const { data } = await supabase.from("strategies").select("id, name, rules, ticker, template").eq("id", id).eq("user_id", user.id).maybeSingle();
+    const { data } = await supabase.from("strategies").select("id, name, rules, ticker, template, watch, live, alerts, auto_trade").eq("id", id).eq("user_id", user.id).maybeSingle();
     const rules = data ? cleanRules(data.rules) : null;
     if (!data || !rules) notFound();
-    start = { id: data.id, name: data.name, rules, ticker: data.ticker, template: data.template };
+    start = { id: data.id, name: data.name, rules, ticker: asked ?? data.ticker, template: data.template };
+    settings = { watch: data.watch ?? [], live: data.live, alerts: data.alerts, autoTrade: data.auto_trade };
+    const { data: sigs } = await supabase
+      .from("strategy_signals")
+      .select("id, ticker, day, fired_at, price, symbol, qty, status, note, exit_reason, exit_price")
+      .eq("strategy_id", data.id)
+      .order("fired_at", { ascending: false })
+      .limit(20);
+    signals = (sigs ?? []) as SignalRow[];
   }
 
   return (
@@ -51,7 +63,7 @@ export default async function StrategyPage({ params, searchParams }: { params: P
         }
       />
       <div className="mt-6">
-        <StrategyEditor id={start.id} initialName={start.name} initialRules={start.rules} initialTicker={start.ticker} template={start.template} userId={user.id} />
+        <StrategyEditor id={start.id} initialName={start.name} initialRules={start.rules} initialTicker={start.ticker} template={start.template} userId={user.id} initialSettings={settings} signals={signals} />
       </div>
     </>
   );
