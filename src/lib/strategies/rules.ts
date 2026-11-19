@@ -4,6 +4,7 @@
 // live checks. No AI anywhere.
 
 import type { Candle } from "@/lib/chart/types";
+import type { NewsItem } from "@/lib/alpaca";
 
 // ---- What a rule can look at ----------------------------------------------------------------------------------------
 
@@ -18,6 +19,7 @@ export type Operand =
   | { kind: "highest" | "lowest"; n: number }
   | { kind: "change"; n: number }
   | { kind: "gap" }
+  | { kind: "newsCount" | "newsTone"; n: number }
   | { kind: "value"; value: number };
 
 export type Op = "above" | "below" | "crossesAbove" | "crossesBelow";
@@ -61,6 +63,8 @@ export const OPERANDS: { kind: OperandKind; label: string; params?: ("n" | "valu
   { kind: "bbLower", label: "Bollinger lower band", params: ["n"], def: { kind: "bbLower", n: 20 }, group: "Indicators" },
   { kind: "volume", label: "Volume", def: { kind: "volume" }, group: "Volume" },
   { kind: "volumeAvg", label: "Average volume of N bars", params: ["n"], def: { kind: "volumeAvg", n: 20 }, group: "Volume" },
+  { kind: "newsCount", label: "Headlines in the last N days", params: ["n"], def: { kind: "newsCount", n: 1 }, group: "News" },
+  { kind: "newsTone", label: "News tone over N days", params: ["n"], def: { kind: "newsTone", n: 3 }, group: "News" },
   { kind: "value", label: "A number", params: ["value"], def: { kind: "value", value: 30 }, group: "Number" },
 ];
 
@@ -108,6 +112,10 @@ export function operandText(o: Operand): string {
       return `${o.n}-bar % change`;
     case "gap":
       return "Gap %";
+    case "newsCount":
+      return `Headlines (${o.n}d)`;
+    case "newsTone":
+      return `News tone (${o.n}d)`;
     case "value":
       return String(o.value);
   }
@@ -169,13 +177,61 @@ function rsiOf(c: number[], n: number): Series {
 
 const key = (o: Operand) => JSON.stringify(o);
 
+// ---- News: counted and scored by plain keyword lists (no AI) --------------------------------------------------------
+
+const GOOD = /\b(beats?|tops?|raises?|raised|upgrades?|upgraded|record|surges?|soars?|jumps?|rall(y|ies)|approv(al|ed|es)|wins?|won|partnership|buyback|strong(er)?|outperform|bullish|boost(s|ed)?|expand(s|ed|ing)?|accelerat\w*|breakthrough)\b/i;
+const BAD = /\b(miss(es|ed)?|cuts?|downgrades?|downgraded|lawsuits?|sues|sued|probe|investigation|recalls?|plunges?|tumbles?|falls?|drops?|slumps?|weak(er|ness)?|warns?|warning|resign(s|ed|ation)?|bearish|underperform|delays?|layoffs?|fraud|halts?|bans?|fined|losses|slows?|concerns?)\b/i;
+
+/** +1 for a good-news headline, −1 for a bad-news one, 0 when it's neither or both. */
+export function toneOf(text: string) {
+  const g = GOOD.test(text);
+  const b = BAD.test(text);
+  return g === b ? 0 : g ? 1 : -1;
+}
+
+/** Whether a strategy has any news blocks (so its stock's news is fetched). */
+export const usesNews = (r: Pick<Rules, "entry" | "exit">) =>
+  [...r.entry, ...r.exit].some((c) => [c.left.kind, c.right.kind].some((k) => k === "newsCount" || k === "newsTone"));
+
+const NY_DAY = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hour12: false });
+/** The day a headline counts toward: its New York date, or the next day when it came after the 4:00 PM close. */
+function newsDay(iso: string) {
+  const p = Object.fromEntries(NY_DAY.formatToParts(new Date(iso)).map((x) => [x.type, x.value]));
+  const date = `${p.year}-${p.month}-${p.day}`;
+  if (Number(p.hour) % 24 < 16) return date;
+  return new Date(Date.parse(`${date}T12:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
+}
+
+/** What a strategy's rules can see besides the bars: the stock's news and the day it starts. */
+export type Context = { news?: NewsItem[]; newsFrom?: string };
+
 /** Every operand's values over the bars, worked out once per backtest. */
 export class Calc {
   private cache = new Map<string, Series>();
   private closes: number[];
 
-  constructor(private bars: Candle[]) {
+  private byDay: Map<string, { count: number; tone: number }> | null = null;
+
+  constructor(
+    private bars: Candle[],
+    private ctx: Context = {}
+  ) {
     this.closes = bars.map((b) => b.c);
+  }
+
+  /** Headlines per day (the count and the summed tone), built once. */
+  private news() {
+    if (!this.byDay) {
+      this.byDay = new Map();
+      for (const n of this.ctx.news ?? []) {
+        const d = newsDay(n.at);
+        const cur = this.byDay.get(d) ?? { count: 0, tone: 0 };
+        cur.count++;
+        cur.tone += toneOf(`${n.headline} ${n.summary}`);
+        this.byDay.set(d, cur);
+      }
+    }
+    return this.byDay;
   }
 
   series(o: Operand): Series {
@@ -248,6 +304,21 @@ export class Calc {
       case "gap":
         s = b.map((x, i) => (i > 0 && b[i - 1].c > 0 ? ((x.o - b[i - 1].c) / b[i - 1].c) * 100 : null));
         break;
+      case "newsCount":
+      case "newsTone": {
+        // The headlines from just after the close N bars back through this bar's close (weekend news included).
+        // Before the news history starts, unknown.
+        const days = this.news();
+        const from = this.ctx.newsFrom;
+        const dates = b.map((x) => x.t.slice(0, 10));
+        s = b.map((_, i) => {
+          if (!this.ctx.news || (from && dates[i] < from) || i < o.n) return null;
+          let total = 0;
+          for (const [d, v] of days) if (d > dates[i - o.n] && d <= dates[i]) total += o.kind === "newsCount" ? v.count : v.tone;
+          return total;
+        });
+        break;
+      }
       case "value":
         s = b.map(() => o.value);
         break;

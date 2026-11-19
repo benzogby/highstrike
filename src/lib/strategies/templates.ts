@@ -106,6 +106,23 @@ export const TEMPLATES: Template[] = [
     },
   },
   {
+    key: "news-breakout",
+    name: "Good-news breakout",
+    blurb: "Price breaks its 10-day high on a day the headlines lean positive. News history starts Apr 29, 2026.",
+    rules: {
+      direction: "long",
+      entry: [
+        { left: { kind: "close" }, op: "crossesAbove", right: { kind: "highest", n: 10 } },
+        { left: { kind: "newsTone", n: 2 }, op: "above", right: { kind: "value", value: 0 } },
+      ],
+      exit: [{ left: { kind: "newsTone", n: 2 }, op: "below", right: { kind: "value", value: 0 } }],
+      targetPct: 6,
+      stopPct: 3,
+      maxDays: 10,
+      option: { dte: 21, delta: 0.45 },
+    },
+  },
+  {
     key: "breakdown-20",
     name: "20-day breakdown (short)",
     blurb: "Price closes under its lowest low of the last 20 days, below the 50-day: buys puts.",

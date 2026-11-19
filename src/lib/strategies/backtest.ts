@@ -6,7 +6,7 @@
 
 import type { Candle } from "@/lib/chart/types";
 import { bs, normCdf, roundStrike, strikeStep, volatility, RATE } from "@/lib/options/pricing";
-import { Calc, type Rules } from "./rules";
+import { Calc, type Context, type Rules } from "./rules";
 
 export type Trade = {
   entryT: string;
@@ -67,8 +67,8 @@ function strikeFor(type: "call" | "put", S: number, T: number, v: number, delta:
   return best;
 }
 
-export function backtest(bars: Candle[], rules: Rules): Result {
-  const calc = new Calc(bars);
+export function backtest(bars: Candle[], rules: Rules, ctx: Context = {}): Result {
+  const calc = new Calc(bars, ctx);
   const closes = bars.map((b) => b.c);
   const long = rules.direction === "long";
   const type: "call" | "put" = long ? "call" : "put";

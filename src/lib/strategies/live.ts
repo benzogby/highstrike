@@ -17,7 +17,8 @@ import { chainView } from "@/lib/paperChain";
 import { placeOrder } from "@/lib/paper";
 import { parseContract } from "@/lib/optionQuotes";
 import type { Candle } from "@/lib/chart/types";
-import { Calc, cleanRules, conditionText, type Rules } from "./rules";
+import { Calc, cleanRules, conditionText, usesNews, type Context, type Rules } from "./rules";
+import { NEWS_START, stockNews } from "@/lib/alpaca";
 
 const db = () => supabaseService();
 const FROM = process.env.ALERTS_FROM || "HighStrike Alerts <alerts@mail.highstrike.com>";
@@ -27,9 +28,14 @@ type Strategy = { id: string; user_id: string; name: string; rules: Rules; watch
 type Signal = { id: string; strategy_id: string; user_id: string; ticker: string; day: string; price: number; symbol: string | null; qty: number | null; status: string };
 
 /** Whether a strategy's entry is true on the last bar, and that bar is today's. */
-export function firesNow(bars: Candle[], rules: Rules, today: string) {
+export function firesNow(bars: Candle[], rules: Rules, today: string, ctx: Context = {}) {
   if (bars.length < 30 || bars[bars.length - 1].t.slice(0, 10) !== today) return false;
-  return new Calc(bars).all(rules.entry, bars.length - 1);
+  return new Calc(bars, ctx).all(rules.entry, bars.length - 1);
+}
+
+/** The news a strategy's rules need for one stock, or nothing when they have no news blocks. */
+async function contextFor(rules: Rules, ticker: string): Promise<Context> {
+  return usesNews(rules) ? { news: await stockNews(ticker).catch(() => []), newsFrom: NEWS_START } : {};
 }
 
 async function emailUser(userId: string, subject: string, text: string) {
@@ -127,7 +133,7 @@ async function exit(sig: Signal, s: Strategy, bars: Candle[]): Promise<boolean> 
   let reason: string | null = null;
   if (rules.stopPct && move <= -rules.stopPct) reason = "stop";
   else if (rules.targetPct && move >= rules.targetPct) reason = "target";
-  else if (new Calc(bars).any(rules.exit, bars.length - 1)) reason = "exit rule";
+  else if (new Calc(bars, await contextFor(rules, sig.ticker)).any(rules.exit, bars.length - 1)) reason = "exit rule";
   else if (rules.maxDays && held >= rules.maxDays) reason = "time limit";
   else if (contract && Date.parse(`${contract.expiry}T12:00:00Z`) - Date.parse(`${today}T12:00:00Z`) <= 86_400_000) reason = "expiry";
   if (!reason || !sig.symbol || !sig.qty) return false;
@@ -188,7 +194,7 @@ export async function checkStrategies(): Promise<{ strategies: number; fired: nu
   for (const s of strategies) {
     for (const t of s.watch) {
       const b = bars.get(t);
-      if (!b || !firesNow(b, s.rules, today)) continue;
+      if (!b || !firesNow(b, s.rules, today, await contextFor(s.rules, t))) continue;
       if (open.some((o) => o.strategy_id === s.id && o.ticker === t)) continue; // already in a trade on it
       if (await enter(s, t, b[b.length - 1].c, today).catch(() => false)) out.fired++;
     }

@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { requireMember } from "@/lib/membership";
 import { getCandles } from "@/lib/candles";
-import { cleanRules } from "@/lib/strategies/rules";
+import { cleanRules, usesNews } from "@/lib/strategies/rules";
+import { NEWS_START, stockNews } from "@/lib/alpaca";
 import { backtest, type Result } from "@/lib/strategies/backtest";
 
 // The Strategies page's server side (docs/plans/strategies.md): run a backtest on a stock's daily history, save and
@@ -11,7 +12,7 @@ import { backtest, type Result } from "@/lib/strategies/backtest";
 
 const TICKER = /^[A-Z][A-Z0-9.]{0,7}$/;
 
-export async function runBacktest(input: { rules: unknown; ticker: string }): Promise<{ result: Result } | { error: string }> {
+export async function runBacktest(input: { rules: unknown; ticker: string }): Promise<{ result: Result; newsFrom: string | null } | { error: string }> {
   await requireMember("/strategies");
   const rules = cleanRules(input.rules);
   if (!rules) return { error: "Add at least one entry rule, with numbers that make sense." };
@@ -20,7 +21,9 @@ export async function runBacktest(input: { rules: unknown; ticker: string }): Pr
   const set = await getCandles(ticker);
   if (set.busy && !set.candles.length) return { error: "The data source is busy. Try again in a few seconds." };
   if (set.candles.length < 60) return { error: `Not enough price history for ${ticker}.` };
-  return { result: backtest(set.candles, rules) };
+  // News blocks need the stock's headlines (Alpaca's free feed starts at NEWS_START).
+  const news = usesNews(rules) ? await stockNews(ticker) : undefined;
+  return { result: backtest(set.candles, rules, news ? { news, newsFrom: NEWS_START } : {}), newsFrom: news ? NEWS_START : null };
 }
 
 export type LiveSettings = { watch: string[]; live: boolean; alerts: boolean; autoTrade: boolean };

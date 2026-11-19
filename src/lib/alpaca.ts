@@ -366,3 +366,39 @@ export async function optionLive(contract: string): Promise<{ price: number; ope
     prevClose: s.prevDailyBar?.c ?? null,
   };
 }
+
+// ---- News (Ben, 2026-11-19: strategy rules can use news; Alpaca's free feed) ----------------------------------------
+
+/** Alpaca's free news goes back to here; before it, news rules can't be judged. */
+export const NEWS_START = "2026-04-29";
+
+export type NewsItem = { at: string; headline: string; summary: string };
+
+const newsMemo = new Map<string, { at: number; value: Promise<NewsItem[]> }>();
+
+/** Every headline about one stock since NEWS_START, oldest first (up to 3,000), shared for 30 minutes. */
+export function stockNews(ticker: string): Promise<NewsItem[]> {
+  const hit = newsMemo.get(ticker);
+  if (hit && Date.now() - hit.at < 30 * 60_000) return hit.value;
+  const value = (async () => {
+    const keys = await alpacaKeys();
+    if (!keys) return [];
+    const out: NewsItem[] = [];
+    let token: string | null = null;
+    for (let page = 0; page < 60; page++) {
+      const q = new URLSearchParams({ symbols: ticker, start: `${NEWS_START}T00:00:00Z`, limit: "50", sort: "asc" });
+      if (token) q.set("page_token", token);
+      const body: { news?: { created_at: string; headline?: string; summary?: string }[]; next_page_token?: string | null } = await get(`/v1beta1/news?${q}`, keys);
+      for (const n of body.news ?? []) out.push({ at: n.created_at, headline: n.headline ?? "", summary: n.summary ?? "" });
+      token = body.next_page_token ?? null;
+      if (!token) break;
+    }
+    return out;
+  })().catch(() => {
+    newsMemo.delete(ticker);
+    return [] as NewsItem[];
+  });
+  newsMemo.set(ticker, { at: Date.now(), value });
+  if (newsMemo.size > 300) newsMemo.delete(newsMemo.keys().next().value as string);
+  return value;
+}

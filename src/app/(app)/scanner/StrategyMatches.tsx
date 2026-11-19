@@ -2,7 +2,8 @@ import Link from "next/link";
 import { CARD } from "@/components/ui";
 import { supabaseService } from "@/lib/stripe";
 import { getCandles } from "@/lib/candles";
-import { Calc, cleanRules, conditionText, type Rules } from "@/lib/strategies/rules";
+import { Calc, cleanRules, conditionText, usesNews, type Rules } from "@/lib/strategies/rules";
+import { NEWS_START, stockNews } from "@/lib/alpaca";
 import { TEMPLATES } from "@/lib/strategies/templates";
 import type { StockRow } from "@/lib/scan/types";
 import type { Candle } from "@/lib/chart/types";
@@ -28,7 +29,8 @@ async function matchesFor(choice: Choice, tickers: string[]): Promise<{ rows: Ma
     const sets = await Promise.all(tickers.slice(k, k + 10).map((t) => getCandles(t).then((s) => [t, s.candles] as const).catch(() => [t, [] as Candle[]] as const)));
     for (const [t, bars] of sets) {
       if (bars.length < 30) continue;
-      if (new Calc(bars).all(choice.rules.entry, bars.length - 1)) rows.push({ t, price: bars[bars.length - 1].c, asOf: bars[bars.length - 1].t.slice(0, 10) });
+      const ctx = usesNews(choice.rules) ? { news: await stockNews(t).catch(() => []), newsFrom: NEWS_START } : {};
+      if (new Calc(bars, ctx).all(choice.rules.entry, bars.length - 1)) rows.push({ t, price: bars[bars.length - 1].c, asOf: bars[bars.length - 1].t.slice(0, 10) });
     }
   }
   const at = new Date().toISOString();

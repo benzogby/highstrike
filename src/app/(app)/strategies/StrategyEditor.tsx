@@ -155,7 +155,7 @@ export default function StrategyEditor({
     setSettings((s) => ({ ...s, ...patch }));
     setSaved(null);
   };
-  const [result, setResult] = useState<{ ticker: string; data: Result } | null>(null);
+  const [result, setResult] = useState<{ ticker: string; data: Result; newsFrom: string | null } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
   const [running, startRun] = useTransition();
@@ -171,7 +171,7 @@ export default function StrategyEditor({
       const t = ticker.trim().toUpperCase();
       const r = await runBacktest({ rules, ticker: t });
       if ("error" in r) setError(r.error);
-      else setResult({ ticker: t, data: r.result });
+      else setResult({ ticker: t, data: r.result, newsFrom: r.newsFrom });
     });
   const save = () =>
     startSave(async () => {
@@ -390,6 +390,11 @@ export default function StrategyEditor({
           </div>
         )}
 
+        {result?.newsFrom && (
+          <p className="rounded-lg border border-warn/40 bg-warn-soft px-3 py-2 text-[12.5px] text-ink-2">
+            News rules can only be judged from {result.newsFrom} (where the free news history starts), so this backtest finds trades from then on.
+          </p>
+        )}
         {result && <BacktestResults result={result.data} ticker={result.ticker} direction={rules.direction} userId={userId} />}
         <p className="text-[12px] text-ink-3">
           New to these? <Link href="/education" className="text-accent hover:underline">Trading School</Link> covers RSI, moving averages and how options move.
