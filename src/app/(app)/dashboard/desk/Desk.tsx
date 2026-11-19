@@ -339,10 +339,20 @@ export default function Desk({
       ))}
     </div>
   );
+  /** Back from a contract's ticket to the chain. */
+  const backToChain = (
+    <button type="button" onClick={() => setPick(null)} className="mb-2 flex items-center gap-1.5 rounded-md px-1.5 py-1 text-[13px] font-medium text-ink-2 transition hover:bg-panel-2 hover:text-ink">
+      <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M15 6l-6 6 6 6" />
+      </svg>
+      Chain
+      <span className="font-mono-nums text-ink-3">{ticker}</span>
+    </button>
+  );
   /** Options with nothing picked yet: how to start. */
   const pickHint = (
     <p className="rounded-lg border border-dashed border-line-strong px-3 py-2.5 text-[12px] leading-relaxed text-ink-2">
-      Tap an <span className="text-ink">ask</span> in the chain to buy that contract, or a <span className="text-ink">bid</span> to sell one you hold. The ticket opens here.
+      Tap an <span className="text-ink">ask</span> in the chain to buy that contract, or a <span className="text-ink">bid</span> to sell one you hold. Its ticket opens in this panel; the back arrow returns here.
     </p>
   );
 
@@ -467,18 +477,23 @@ export default function Desk({
                   {accountBox}
                   {ticket}
                 </div>
+              ) : pick ? (
+                // A picked contract gets the panel to itself (Ben, 2026-11-18: "brought over to a limit/market buy sell
+                // panel for that contract itself… Have a back arrow… to access the chain at any time").
+                <div className="min-h-0 flex-1 overflow-y-auto p-2">
+                  {backToChain}
+                  {ticket}
+                </div>
               ) : (
-                <>
-                  <div className="max-h-[60%] flex-none overflow-y-auto p-2">{pick ? ticket : pickHint}</div>
-                  <div className="flex min-h-0 flex-1 flex-col border-t border-line">
-                    <p className="px-3 pt-2 text-[13px] font-medium text-ink">
-                      Option chain <span className="font-mono-nums text-ink-3">{ticker}</span>
-                    </p>
-                    <div className="min-h-0 flex-1">
-                      <OptionChain ticker={ticker} picked={pick?.contract ?? null} onPick={choose} fill />
-                    </div>
+                <div className="flex min-h-0 flex-1 flex-col">
+                  <div className="px-2 pt-2">{pickHint}</div>
+                  <p className="px-3 pt-2 text-[13px] font-medium text-ink">
+                    Option chain <span className="font-mono-nums text-ink-3">{ticker}</span>
+                  </p>
+                  <div className="min-h-0 flex-1">
+                    <OptionChain ticker={ticker} picked={null} onPick={choose} fill />
                   </div>
-                </>
+                </div>
               )}
             </aside>
           ) : (
@@ -575,10 +590,15 @@ export default function Desk({
       {modeTabs}
       {mode === "shares" ? (
         ticket
+      ) : pick ? (
+        <div>
+          {backToChain}
+          {ticket}
+        </div>
       ) : (
         <>
-          {pick ? ticket : pickHint}
-          <OptionChain ticker={ticker} picked={pick?.contract ?? null} onPick={choose} />
+          {pickHint}
+          <OptionChain ticker={ticker} picked={null} onPick={choose} />
         </>
       )}
       <Blotter state={state} onSelect={select} onChange={refresh} />
