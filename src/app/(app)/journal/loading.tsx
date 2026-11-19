@@ -1,6 +1,6 @@
 import { HeaderBones, SkeletonPage, StatBones, TableBones } from "@/components/Skeleton";
 
-// My trades while it loads: the record, then the open trades.
+// Positions while it loads: the record, then the open trades.
 export default function Loading() {
   return (
     <SkeletonPage label="your trades">

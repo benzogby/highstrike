@@ -36,18 +36,18 @@ function alertEmail({ trade, level, price }: Hit) {
     level === "target"
       ? `${trade.ticker} is at ${money(price)}, past the ${money(watched)} target you were watching for ${name}.`
       : `${trade.ticker} is at ${money(price)}, past the ${money(watched)} stop you set for ${name}.`;
-  const next = level === "target" ? "Close it in My trades when you take profit, or let it run." : "Close it in My trades when you get out.";
+  const next = level === "target" ? "Close it in Positions when you take profit, or let it run." : "Close it in Positions when you get out.";
   const open = `${SITE_URL}/journal`;
   const html = `<div style="margin:0;padding:28px 16px;background:#ffffff;font-family:Inter,Helvetica,Arial,sans-serif;color:#14161a">
 <div style="max-width:480px;margin:0 auto">
 <p style="margin:0 0 18px;font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#009f6f">HighStrike</p>
 <h1 style="margin:0 0 12px;font-size:24px;line-height:1.25">${esc(subject)}</h1>
 <p style="margin:0 0 14px;font-size:15px;line-height:1.55">${esc(lead)} ${esc(next)}</p>
-<p style="margin:8px 0 24px"><a href="${open}" style="display:inline-block;padding:12px 20px;border-radius:8px;background:#009f6f;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none">Open My trades</a></p>
-<p style="margin:0;font-size:13px;line-height:1.55;color:#4a5160">You get this because you're tracking this trade in My trades. Market commentary, not investment advice.</p>
+<p style="margin:8px 0 24px"><a href="${open}" style="display:inline-block;padding:12px 20px;border-radius:8px;background:#009f6f;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none">Open Positions</a></p>
+<p style="margin:0;font-size:13px;line-height:1.55;color:#4a5160">You get this because you're tracking this trade in Positions. Market commentary, not investment advice.</p>
 </div>
 </div>`;
-  const text = `${subject}\n\n${lead} ${next}\n\nOpen My trades: ${open}\n\nYou get this because you're tracking this trade in My trades. Market commentary, not investment advice.`;
+  const text = `${subject}\n\n${lead} ${next}\n\nOpen Positions: ${open}\n\nYou get this because you're tracking this trade in Positions. Market commentary, not investment advice.`;
   return { subject, html, text, lead };
 }
 

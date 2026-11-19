@@ -43,7 +43,7 @@ export default function TakeIdea({
     return (
       <section className={`${CARD} flex flex-wrap items-center justify-between gap-3 px-4 py-3.5`}>
         <p className="text-sm text-ink-2">
-          <span className="font-medium text-ink">You took this.</span> It&apos;s in My trades, watching the target and the stop.
+          <span className="font-medium text-ink">You took this.</span> It&apos;s in Positions, watching the target and the stop.
         </p>
         <div className="flex items-center gap-3">
           {!done && (
@@ -52,7 +52,7 @@ export default function TakeIdea({
             </button>
           )}
           <Link href="/journal" className="text-sm font-medium text-accent hover:underline">
-            Open My trades
+            Open Positions
           </Link>
         </div>
       </section>
@@ -64,7 +64,7 @@ export default function TakeIdea({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-[15px] font-medium text-ink">Took this trade?</p>
-          <p className="mt-0.5 text-[13px] text-ink-3">Add it to My trades to follow it, with its target and stop, and keep notes.</p>
+          <p className="mt-0.5 text-[13px] text-ink-3">Add it to Positions to follow it, with its target and stop, and keep notes.</p>
         </div>
         {!open && (
           <button type="button" onClick={() => setOpen(true)} className="h-9 rounded-lg bg-accent px-3.5 text-sm font-semibold text-on-accent transition hover:bg-accent-2">
@@ -117,7 +117,7 @@ export default function TakeIdea({
             <input value={quantity} onChange={(e) => setQuantity(e.target.value)} inputMode="decimal" className={`${INPUT} font-mono-nums`} />
           </label>
           <button type="submit" disabled={pending} className="h-9 rounded-lg bg-accent px-3.5 text-sm font-semibold text-on-accent transition hover:bg-accent-2 disabled:opacity-60">
-            {pending ? "Saving…" : "Add to My trades"}
+            {pending ? "Saving…" : "Add to Positions"}
           </button>
           {how === "option" && option && <p className="text-[13px] text-ink-3 sm:col-span-4">{option.name}. The price starts at the est. value; put what you really paid.</p>}
           {error && (

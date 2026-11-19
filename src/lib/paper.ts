@@ -3,7 +3,7 @@ import { marketOpen, newYorkDate } from "@/lib/marketCalendar";
 import { bs, volatility } from "@/lib/options/pricing";
 import { getCandles } from "@/lib/candles";
 import { contractQuote, parseContract } from "@/lib/optionQuotes";
-import { indicativeChain, type IndicativeQuote } from "@/lib/alpaca";
+import { indicativeChain, optionLive, type IndicativeQuote } from "@/lib/alpaca";
 
 // The paper trading engine (Ben, 2026-11-18: Home becomes "the paper trading charts and execution hub"; $25,000 to
 // start). Every order is priced and filled here, on the server, from real prices:
@@ -290,6 +290,12 @@ export type PositionView = {
   pnl: number | null;
   pnlPct: number | null;
   dayChangePct: number | null;
+  /** When the position was opened (ISO). */
+  openedAt: string;
+  /** What it cost to open: the average price × quantity (× 100 for a contract). */
+  cost: number;
+  /** Today's profit or loss: from the previous close, or from the entry when it was opened today. */
+  dayPnl: number | null;
   optionType: "call" | "put" | null;
   strike: number | null;
   expiry: string | null;
@@ -342,12 +348,16 @@ export async function paperState(userId: string): Promise<PaperState> {
       let mark: number | null = null;
       let markSource: PositionView["markSource"] = null;
       let day: number | null = null;
+      let prevClose: number | null = null;
       if (kind === "stock") {
         mark = s?.price ?? null;
         markSource = s ? "live" : null;
         day = s?.prevClose ? ((s.price - s.prevClose) / s.prevClose) * 100 : null;
+        prevClose = s?.prevClose ?? null;
       } else {
-        const m = await optionMarket(p.symbol, s?.price ?? null);
+        const [m, live] = await Promise.all([optionMarket(p.symbol, s?.price ?? null), optionLive(p.symbol).catch(() => null)]);
+        prevClose = live?.prevClose ?? null;
+        if (prevClose && m?.mid) day = ((m.mid - prevClose) / prevClose) * 100;
         mark = m?.mid ?? null;
         markSource = m?.source ?? null;
         if (m?.source === "quote") optionPrices = "quote";
@@ -358,6 +368,10 @@ export async function paperState(userId: string): Promise<PaperState> {
       const mult = multiplier(kind);
       const value = mark != null ? cents(mark * qty * mult) : null;
       const pnl = mark != null ? cents((mark - avg) * qty * mult) : null;
+      const openedAt = String(p.opened_at);
+      // Opened today: today's P/L is all of it; otherwise it's from the previous close.
+      const openedToday = newYorkDate(Date.parse(openedAt)) === newYorkDate(Date.now());
+      const dayPnl = mark == null ? null : openedToday ? pnl : prevClose != null ? cents((mark - prevClose) * qty * mult) : null;
       return {
         symbol: p.symbol,
         kind,
@@ -370,6 +384,9 @@ export async function paperState(userId: string): Promise<PaperState> {
         pnl,
         pnlPct: mark != null && avg > 0 ? Math.round(((mark - avg) / avg) * 1000) / 10 : null,
         dayChangePct: day != null ? Math.round(day * 100) / 100 : null,
+        openedAt,
+        cost: cents(avg * Math.abs(qty) * mult),
+        dayPnl,
         optionType: p.option_type,
         strike: p.strike != null ? Number(p.strike) : null,
         expiry: p.expiry,
