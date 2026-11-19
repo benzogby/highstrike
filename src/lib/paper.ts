@@ -425,3 +425,86 @@ export async function paperState(userId: string): Promise<PaperState> {
     optionPrices,
   };
 }
+
+// ---- Closed positions (Ben, 2026-11-19: "Positions tab should show closed positions as well") ------------------------
+
+export type ClosedView = {
+  symbol: string;
+  kind: Kind;
+  underlying: string;
+  optionType: "call" | "put" | null;
+  strike: number | null;
+  expiry: string | null;
+  /** The most held at once (shares or contracts). */
+  qty: number;
+  openedAt: string;
+  closedAt: string;
+  /** What the buys cost in all, and what the sells brought in. */
+  cost: number;
+  proceeds: number;
+  pnl: number;
+  pnlPct: number | null;
+  /** True when it ended by expiring (settled at what it was worth). */
+  expired: boolean;
+};
+
+/**
+ * Every position the member opened and closed since the account's last reset, rebuilt from the filled orders: one
+ * position runs from a buy out of nothing until the holding is back to nothing.
+ */
+export async function closedPositions(userId: string): Promise<ClosedView[]> {
+  const acct = await ensureAccount(userId);
+  const since = (acct as { reset_at?: string }).reset_at ?? "1970-01-01";
+  const { data } = await db()
+    .from("paper_orders")
+    .select("symbol, kind, underlying, side, qty, fill_price, filled_at, status, option_type, strike, expiry")
+    .eq("user_id", userId)
+    .in("status", ["filled", "expired"])
+    .not("fill_price", "is", null)
+    .gte("filled_at", since)
+    .order("filled_at", { ascending: true })
+    .limit(5000);
+  const open = new Map<string, { held: number; max: number; cost: number; proceeds: number; openedAt: string; expired: boolean; row: Record<string, unknown> }>();
+  const out: ClosedView[] = [];
+  for (const o of data ?? []) {
+    const mult = multiplier(o.kind as Kind);
+    const qty = Number(o.qty);
+    const value = Number(o.fill_price) * qty * mult;
+    let p = open.get(o.symbol);
+    if (o.side === "buy") {
+      if (!p) {
+        p = { held: 0, max: 0, cost: 0, proceeds: 0, openedAt: o.filled_at as string, expired: false, row: o };
+        open.set(o.symbol, p);
+      }
+      p.held += qty;
+      p.max = Math.max(p.max, p.held);
+      p.cost += value;
+      continue;
+    }
+    if (!p) continue;
+    p.held -= qty;
+    p.proceeds += value;
+    if (o.status === "expired") p.expired = true;
+    if (p.held <= 1e-9) {
+      const pnl = cents(p.proceeds - p.cost);
+      out.push({
+        symbol: o.symbol,
+        kind: o.kind as Kind,
+        underlying: o.underlying,
+        optionType: (o.option_type as "call" | "put" | null) ?? null,
+        strike: o.strike != null ? Number(o.strike) : null,
+        expiry: (o.expiry as string | null) ?? null,
+        qty: p.max,
+        openedAt: p.openedAt,
+        closedAt: o.filled_at as string,
+        cost: cents(p.cost),
+        proceeds: cents(p.proceeds),
+        pnl,
+        pnlPct: p.cost > 0 ? Math.round((pnl / p.cost) * 1000) / 10 : null,
+        expired: p.expired,
+      });
+      open.delete(o.symbol);
+    }
+  }
+  return out;
+}
