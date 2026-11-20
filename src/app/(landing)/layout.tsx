@@ -5,7 +5,7 @@ import { Bull } from "@/components/landing/Pieces";
 import CookieSettings from "@/components/landing/CookieSettings";
 import LandingDock from "@/components/landing/LandingDock";
 import { LEGAL } from "@/lib/legal";
-import { MONTHLY_PRICE, TRIAL_PRICE } from "@/lib/offer";
+import { MONTHLY_PRICE, TRIAL_PRICE, WAITLIST_LABEL } from "@/lib/offer";
 import "./landing.css";
 
 // The homepage's own frame in the HighStrike reels system: a black bar with the
@@ -67,7 +67,7 @@ export default function LandingLayout({ children }: Readonly<{ children: React.R
           <Link href="/signin" className="hs-bar__signin">
             Sign in
           </Link>
-          <JoinButton className="hs-btn hs-btn--sm">Try it for {TRIAL_PRICE}</JoinButton>
+          <JoinButton className="hs-btn hs-btn--sm">{WAITLIST_LABEL}</JoinButton>
         </div>
       </header>
 
@@ -120,7 +120,7 @@ export default function LandingLayout({ children }: Readonly<{ children: React.R
           </div>
         </div>
       </footer>
-      <LandingDock price={TRIAL_PRICE} />
+      <LandingDock />
       <LandingMotion />
     </div>
   );

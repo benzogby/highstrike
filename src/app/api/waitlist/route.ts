@@ -4,12 +4,16 @@ import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "@/lib/supabaseConfig";
 
 export const dynamic = "force-dynamic";
 
+/** Where a signup came from: the homepage's popup, or the paywall over the app (a signed-in account). */
+const SOURCES = ["landing", "app"];
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 export async function POST(req: Request) {
   let email: unknown;
+  let source: unknown;
   try {
-    ({ email } = await req.json());
+    ({ email, source } = await req.json());
   } catch {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
@@ -21,7 +25,7 @@ export async function POST(req: Request) {
   const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
   const { error } = await supabase
     .from("waitlist_signups")
-    .insert({ email: email.trim().toLowerCase(), source: "landing" });
+    .insert({ email: email.trim().toLowerCase(), source: SOURCES.includes(source as string) ? (source as string) : "landing" });
 
   if (error) {
     // 23505 = unique violation → already signed up; treat as success.

@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MONTHLY_PRICE, TRIAL_PRICE, type Library } from "@/lib/offer";
+import { MONTHLY_PRICE, TRIAL_PRICE, WAITLIST_ONLY, type Library } from "@/lib/offer";
+import WaitlistForm from "@/components/WaitlistForm";
 import MembershipCheckout, { PAY_BUTTON, Spinner } from "./MembershipCheckout";
 
 /** Why the account is behind the paywall. */
@@ -41,9 +42,12 @@ export default function MemberGate({
     return () => shell?.removeAttribute("inert");
   }, []);
 
-  const title = gate === "owed" ? "Your payment didn't go through" : full ? "Unlock HighStrike" : "Try HighStrike for a week";
+  const waitlist = WAITLIST_ONLY && gate !== "owed";
+  const title = gate === "owed" ? "Your payment didn't go through" : waitlist ? "HighStrike opens soon" : full ? "Unlock HighStrike" : "Try HighStrike for a week";
   const lead =
-    gate === "owed"
+    waitlist
+      ? "HighStrike isn't open to new members yet. Join the waitlist and we'll email you the moment it opens."
+      : gate === "owed"
       ? `We couldn't charge ${MONTHLY_PRICE} for your membership, so HighStrike is paused. Pay it with any card and everything opens again right away.`
       : full
         ? `Your account is ready. ${MONTHLY_PRICE}/month opens the daily ideas, every tool and all of HighStrike Trading School. Cancel anytime.`
@@ -60,6 +64,8 @@ export default function MemberGate({
           <div className="mt-6 rounded-xl border border-line bg-panel p-5 shadow-lg">
             {gate === "owed" ? (
               <Owed />
+            ) : waitlist ? (
+              <WaitlistForm compact source="app" initialEmail={email} />
             ) : (
               <MembershipCheckout
                 library={library}

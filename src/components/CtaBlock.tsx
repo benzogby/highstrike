@@ -9,10 +9,10 @@ export default function CtaBlock() {
         href={JOIN_LINK}
         className="press rounded-lg bg-accent px-8 py-3.5 font-display text-base font-bold uppercase tracking-wide text-bg transition hover:bg-accent-2"
       >
-        Try it for {TRIAL_PRICE}
+        Join the waitlist
       </a>
       <p className="text-sm text-ink-2">
-        A week of the daily ideas, the tools and HighStrike Trading School for {TRIAL_PRICE}, then {MONTHLY_PRICE}/month
+        Opening soon: the daily ideas, the tools and HighStrike Trading School, {TRIAL_PRICE} for your first week, then {MONTHLY_PRICE}/month
       </p>
     </div>
   );

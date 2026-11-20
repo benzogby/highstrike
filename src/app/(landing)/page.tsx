@@ -9,7 +9,7 @@ import JoinButton from "@/components/join/JoinButton";
 import JoinDialog from "@/components/join/JoinDialog";
 import { moduleLabel } from "@/lib/education";
 import ProofRow from "@/components/landing/Proof";
-import { MONTHLY_PRICE, TRIAL_PRICE, type Library } from "@/lib/offer";
+import { MONTHLY_PRICE, TRIAL_PRICE, WAITLIST_LABEL, type Library } from "@/lib/offer";
 import { LOOKUP_START, getLandingData, type CourseModule, type HeroSetup } from "./data";
 
 // The homepage in the HighStrike reels system (design/keyframes-2026-11-02): the dark room with one light punch, Cal
@@ -343,13 +343,13 @@ export default async function Home() {
               One platform for the whole trade: ideas from the smart scanner, 12 pro tools to check and size them, and alerts at your target and stop.
             </p>
             <div id="hero-cta" className="hs-hero__actions" data-reveal="" style={at(4)}>
-              <JoinButton className="hs-btn">Try it for {TRIAL_PRICE}</JoinButton>
+              <JoinButton className="hs-btn">{WAITLIST_LABEL}</JoinButton>
               <a href="#find" className="hs-link">
                 See how it works
               </a>
             </div>
             <p className="hs-hero__price" data-reveal="" style={at(4)}>
-              <b>{TRIAL_PRICE} for your first week.</b> Then {MONTHLY_PRICE}/month. Cancel anytime.
+              <b>Opening soon.</b> {TRIAL_PRICE} for your first week when it opens, then {MONTHLY_PRICE}/month.
             </p>
             <div data-reveal="" style={at(5)}>
               <ProofRow proof={proof} traders={badges.traders} countries={badges.countries} />
@@ -955,7 +955,7 @@ export default async function Home() {
               </span>
             </h2>
             <p className="hs-lead" data-reveal="" style={at(2)}>
-              Everything opens the second you pay: the morning ideas, all 12 tools, alerts, Trading School and the app. Then {MONTHLY_PRICE}/month. Cancel anytime in a couple of clicks.
+              When HighStrike opens, you get everything: the morning ideas, all 12 tools, alerts, Trading School and the app. Then {MONTHLY_PRICE}/month. Cancel anytime in a couple of clicks.
             </p>
             <ul className="hs-included">
               {included(library).map((t, i) => (
@@ -996,15 +996,15 @@ export default async function Home() {
               </div>
               <div>
                 <dt>Opens</dt>
-                <dd>The moment you pay</dd>
+                <dd>Soon, waitlist first</dd>
               </div>
             </dl>
             <p className="hs-order__due">
               <span>Due today</span>
-              <b>{TRIAL_PRICE}</b>
+              <b>$0</b>
             </p>
-            <JoinButton className="hs-btn hs-btn--wide">Start my week for {TRIAL_PRICE}</JoinButton>
-            <p className="hs-order__after">Card or Apple Pay through Stripe. Cancel anytime; payments are final.</p>
+            <JoinButton className="hs-btn hs-btn--wide">{WAITLIST_LABEL}</JoinButton>
+            <p className="hs-order__after">Opening soon. No card needed to join the waitlist.</p>
           </div>
         </div>
       </section>
@@ -1047,10 +1047,10 @@ export default async function Home() {
               Your next options trade deserves a plan.
             </h2>
             <p className="hs-lead" data-reveal="" style={at(1)}>
-              Ideas at 8:30 AM ET, 12 pro tools and alerts at your target and stop. {TRIAL_PRICE} for your first week.
+              Ideas at 8:30 AM ET, 12 pro tools and alerts at your target and stop. Opening soon. Join the waitlist.
             </p>
             <div data-reveal="" style={at(2)}>
-              <JoinButton className="hs-btn">Try it for {TRIAL_PRICE}</JoinButton>
+              <JoinButton className="hs-btn">{WAITLIST_LABEL}</JoinButton>
             </div>
           </div>
         </div>

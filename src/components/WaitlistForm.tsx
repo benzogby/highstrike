@@ -4,8 +4,8 @@ import { useState } from "react";
 
 type Status = "idle" | "loading" | "done" | "error";
 
-export default function WaitlistForm({ compact = false }: { compact?: boolean }) {
-  const [email, setEmail] = useState("");
+export default function WaitlistForm({ compact = false, source = "landing", initialEmail = "" }: { compact?: boolean; source?: string; initialEmail?: string }) {
+  const [email, setEmail] = useState(initialEmail);
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
 
@@ -17,7 +17,7 @@ export default function WaitlistForm({ compact = false }: { compact?: boolean })
       const res = await fetch("/api/waitlist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, source }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Something went wrong");
@@ -41,7 +41,7 @@ export default function WaitlistForm({ compact = false }: { compact?: boolean })
   return (
     <form
       onSubmit={submit}
-      className={`flex w-full ${compact ? "max-w-md" : "max-w-lg"} flex-col gap-3 sm:flex-row`}
+      className={`flex w-full ${compact ? "max-w-md" : "max-w-lg"} flex-col gap-3 sm:flex-row sm:flex-wrap`}
     >
       <input
         type="email"
@@ -57,10 +57,10 @@ export default function WaitlistForm({ compact = false }: { compact?: boolean })
         disabled={status === "loading"}
         className="h-12 shrink-0 rounded-lg bg-accent px-6 font-display text-sm font-semibold text-bg transition hover:bg-accent-2 disabled:opacity-60"
       >
-        {status === "loading" ? "Joining…" : "Get Access Now"}
+        {status === "loading" ? "Joining…" : "Join the waitlist"}
       </button>
       {status === "error" && (
-        <p className="text-sm text-down sm:absolute sm:mt-14">{message}</p>
+        <p role="alert" className="text-sm text-down sm:basis-full">{message}</p>
       )}
     </form>
   );

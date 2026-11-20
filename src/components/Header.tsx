@@ -64,7 +64,7 @@ export default function Header() {
                 href={JOIN_LINK}
                 className="rounded-lg bg-accent px-4 py-2 font-display text-sm font-semibold text-bg transition hover:bg-accent-2"
               >
-                Get access
+                Join the waitlist
               </Link>
             </>
           )}

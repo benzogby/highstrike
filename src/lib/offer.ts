@@ -23,6 +23,16 @@ export function dollars(cents: number) {
   return `$${(cents / 100).toLocaleString("en-US", { minimumFractionDigits: cents % 100 ? 2 : 0, maximumFractionDigits: 2 })}`;
 }
 
+/**
+ * Waitlist only (Ben, 2026-11-20: "Force a waitlist for all index page actions, do not let anyone pay or join yet"):
+ * every Try/Join button opens the waitlist instead of the checkout, the paywall over the app shows the waitlist too, and
+ * the server refuses new memberships (api/billing/start). Set to false to open checkout again.
+ */
+export const WAITLIST_ONLY = true;
+
+/** The label on every join button while the waitlist is on. */
+export const WAITLIST_LABEL = "Join the waitlist";
+
 export const TRIAL_PRICE = dollars(MEMBERSHIP.trialCents);
 export const MONTHLY_PRICE = dollars(MEMBERSHIP.monthlyCents);
 

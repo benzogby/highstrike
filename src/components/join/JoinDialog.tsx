@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
-import type { Library } from "@/lib/offer";
+import { WAITLIST_ONLY, type Library } from "@/lib/offer";
+import WaitlistForm from "@/components/WaitlistForm";
 import { JOIN_EVENT, JOIN_LINK } from "./events";
 import MembershipCheckout, { Spinner, type Buyer } from "./MembershipCheckout";
 
@@ -15,6 +16,8 @@ type Step =
   | { at: "checking" }
   | { at: "pay"; buyer: Buyer; publishableKey: string | null; weekUsed: boolean }
   | { at: "unreachable" }
+  /** HighStrike isn't open yet (WAITLIST_ONLY): an email for the list. */
+  | { at: "waitlist" }
   /** On to the app. */
   | { at: "leaving"; title: string };
 
@@ -40,6 +43,7 @@ export default function JoinDialog({ library }: { library: Library | null }) {
 
   /** Where the browser stands, and the step that follows. */
   const decide = useCallback(async () => {
+    if (WAITLIST_ONLY) return setStep({ at: "waitlist" });
     setStep({ at: "checking" });
     const response = await fetch("/api/billing/start", { cache: "no-store" }).catch(() => null);
     const a = (await response?.json().catch(() => null)) as Where | null;
@@ -96,7 +100,7 @@ export default function JoinDialog({ library }: { library: Library | null }) {
     >
       <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-4">
         <h2 id="hs-join-title" className="font-display text-lg font-semibold">
-          {step.at === "leaving" ? step.title : full ? "Join HighStrike" : "Try HighStrike for a week"}
+          {step.at === "waitlist" ? "Join the waitlist" : step.at === "leaving" ? step.title : full ? "Join HighStrike" : "Try HighStrike for a week"}
         </h2>
         <button
           type="button"
@@ -125,6 +129,21 @@ export default function JoinDialog({ library }: { library: Library | null }) {
           <button type="button" onClick={() => void decide()} className="mt-4 text-sm font-semibold text-ink underline-offset-2 hover:underline">
             Try again
           </button>
+        </div>
+      )}
+
+      {step.at === "waitlist" && (
+        <div className="px-5 py-5">
+          <p className="mb-4 text-sm leading-relaxed text-ink-2">
+            HighStrike isn&apos;t open to new members yet. Leave your email and we&apos;ll let you know the moment it opens. No card, nothing to pay.
+          </p>
+          <WaitlistForm compact />
+          <p className="mt-4 text-center text-xs text-ink-3">
+            Already a member?{" "}
+            <a href="/signin?next=/dashboard" className="font-semibold text-ink underline-offset-2 hover:underline">
+              Sign in
+            </a>
+          </p>
         </div>
       )}
 

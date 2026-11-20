@@ -1,3 +1,4 @@
+import { WAITLIST_ONLY } from "@/lib/offer";
 import { NextResponse, after } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
 import { isMember } from "@/lib/membership";
@@ -71,6 +72,7 @@ export async function GET(request: Request) {
  */
 export async function POST(request: Request) {
   if (!sameOrigin(request)) return NextResponse.json({ error: "Open checkout from highstrike.com." }, { status: 403 });
+  if (WAITLIST_ONLY) return NextResponse.json({ error: "HighStrike isn't open to new members yet. Join the waitlist. Nothing was charged." }, { status: 403 });
   if (!billingReady()) return NextResponse.json({ error: "Checkout isn't set up yet. Nothing was charged." }, { status: 503 });
   const body = (await request.json().catch(() => ({}))) as {
     email?: unknown;
