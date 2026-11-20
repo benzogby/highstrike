@@ -1,6 +1,6 @@
 "use client";
 
-import { FFmpeg } from "@ffmpeg/ffmpeg";
+import type { FFmpeg } from "@ffmpeg/ffmpeg";
 import { toBlobURL } from "@ffmpeg/util";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { LESSONS_BUCKET } from "@/lib/educationShared";
@@ -19,6 +19,9 @@ import { LESSONS_BUCKET } from "@/lib/educationShared";
 const CORE = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm";
 // ffmpeg's own worker, unbundled: the bundler can't follow the worker's import() of the core, so it runs as published.
 const WORKER = "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm/worker.js";
+/** The FFmpeg class itself, from the same published build at run time: bundled, its `new URL(worker, import.meta.url)`
+ * stops Next 16.4's Turbopack build (the worker comes from WORKER above anyway). */
+const FFMPEG_MODULE = "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm/index.js";
 const SEGMENT_SEC = 6;
 const CHUNK_SEC = 300;
 const RENDITION = "720p";
@@ -43,7 +46,8 @@ let shared: Promise<FFmpeg> | null = null;
 /** ffmpeg's ~30 MB core, fetched once per visit. */
 function loadFFmpeg(): Promise<FFmpeg> {
   shared ??= (async () => {
-    const ff = new FFmpeg();
+    const mod = (await import(/* turbopackIgnore: true */ /* webpackIgnore: true */ FFMPEG_MODULE)) as { FFmpeg: new () => FFmpeg };
+    const ff = new mod.FFmpeg();
     await ff.load({
       // A worker has to come from this page's origin, so a one-line module here imports the published one.
       classWorkerURL: URL.createObjectURL(new Blob([`import ${JSON.stringify(WORKER)};`], { type: "text/javascript" })),
