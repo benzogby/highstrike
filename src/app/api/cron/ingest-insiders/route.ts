@@ -3,6 +3,7 @@ import { supabaseServer } from "@/lib/supabase/server";
 import { supabaseService } from "@/lib/stripe";
 import { ingestInsiders } from "@/lib/insiders";
 import { ingestChatter } from "@/lib/chatter";
+import { isCron } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -12,9 +13,7 @@ export const maxDuration = 60;
 // idempotent, so the worst an anonymous hit can do is run it early.
 async function handle(request: Request) {
   let privileged = false;
-  const secret = process.env.CRON_SECRET;
-  const auth = request.headers.get("authorization");
-  if (secret && auth === `Bearer ${secret}`) privileged = true;
+  if (isCron(request)) privileged = true;
 
   if (!privileged) {
     const supabase = await supabaseServer();

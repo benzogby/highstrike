@@ -1,5 +1,6 @@
 import { LESSONS_BUCKET } from "@/lib/education";
 import { ATTACHMENT_TYPES, MAX_ATTACHMENT_BYTES, adminContext, fail, lessonParam, ok, slugFile } from "@/lib/educationAdmin";
+import { throttle } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +12,8 @@ type Ctx = { params: Promise<{ lesson: string }> };
  *  - "add" { path, filename }: once it's uploaded, list it on the lesson.
  */
 export async function POST(request: Request, ctx: Ctx) {
+  const limited = await throttle(request, "admin-edu", { max: 120, windowSec: 60 });
+  if (limited) return limited;
   const id = lessonParam((await ctx.params).lesson);
   if (!id) return fail("There's no such lesson.", 404);
   const { supabase, error } = await adminContext();
@@ -51,6 +54,8 @@ export async function POST(request: Request, ctx: Ctx) {
 
 /** DELETE { path }: take a file off the lesson and out of storage. */
 export async function DELETE(request: Request, ctx: Ctx) {
+  const limited = await throttle(request, "admin-edu", { max: 120, windowSec: 60 });
+  if (limited) return limited;
   const id = lessonParam((await ctx.params).lesson);
   if (!id) return fail("There's no such lesson.", 404);
   const { supabase, error } = await adminContext();

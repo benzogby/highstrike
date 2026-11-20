@@ -4,6 +4,7 @@ import type { EmailOtpType } from "@supabase/supabase-js";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabaseConfig";
 import { getStripe } from "@/lib/stripe";
 import { billingReady, claimFirstSignIn, paidMembership, settleCheckout, settleMembership, signInToken, type Settled } from "@/lib/billing";
+import { throttle } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,8 @@ export const dynamic = "force-dynamic";
  * says so. Session cookies go on the redirect itself, as in /auth/callback.
  */
 export async function GET(request: NextRequest) {
+  const limited = await throttle(request, "billing-complete", { max: 30, windowSec: 600 }, true);
+  if (limited) return limited;
   const url = new URL(request.url);
   const home = NextResponse.redirect(new URL("/", url.origin));
   if (!billingReady()) return home;

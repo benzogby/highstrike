@@ -3,6 +3,8 @@ import { createServerClient } from "@supabase/ssr";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "@/lib/supabaseConfig";
 import { agreedToTerms, termsAgreement } from "@/lib/terms";
+import { throttle } from "@/lib/security";
+import { safeNext } from "@/lib/safeNext";
 
 export const dynamic = "force-dynamic";
 
@@ -11,14 +13,14 @@ export const dynamic = "force-dynamic";
 // directly onto the redirect response — never rely on ambient cookie
 // propagation from a route handler.
 export async function GET(request: NextRequest) {
+  const limited = await throttle(request, "auth-callback", { max: 30, windowSec: 300 }, true);
+  if (limited) return limited;
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
   const tokenHash = url.searchParams.get("token_hash");
   const type = url.searchParams.get("type") as EmailOtpType | null;
-  const rawNext = url.searchParams.get("next") ?? "/dashboard";
-  // Only allow same-site relative redirects.
-  const next =
-    rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/dashboard";
+  // Only a path on this site (lib/safeNext).
+  const next = safeNext(url.searchParams.get("next"));
 
   const response = NextResponse.redirect(new URL(next, url.origin));
 

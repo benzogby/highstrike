@@ -1,5 +1,6 @@
 import { NextResponse, after } from "next/server";
 import { checkAlerts } from "@/lib/alerts";
+import { throttle } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,8 @@ function sampleQuote(symbol: string) {
 }
 
 export async function GET(request: Request) {
+  const limited = await throttle(request, "quotes", { max: 60, windowSec: 60 }, true);
+  if (limited) return limited;
   // Piggyback a throttled alert sweep on member traffic (runs after the
   // response is sent; internally rate-limited to one sweep per ~2 minutes).
   after(() => checkAlerts({ throttled: true }).catch(() => {}));

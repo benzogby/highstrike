@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { viewer } from "@/lib/membership";
 import { billingReady, owedInvoiceUrl } from "@/lib/billing";
+import { throttle } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +11,8 @@ export const dynamic = "force-dynamic";
  * app again. Nothing owed (paid meanwhile): back to the dashboard.
  */
 export async function GET(request: Request) {
+  const limited = await throttle(request, "billing-pay", { max: 20, windowSec: 600 }, true);
+  if (limited) return limited;
   const origin = new URL(request.url).origin;
   const me = await viewer();
   if (!me) return NextResponse.redirect(new URL("/signin?next=/dashboard", origin));

@@ -2,12 +2,15 @@ import { NextResponse } from "next/server";
 import { viewer } from "@/lib/membership";
 import { getCandles } from "@/lib/candles";
 import { realOption } from "@/lib/optionQuotes";
+import { throttle } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
 // /api/options/contract?u=AAPL&type=call&from=2026-12-10&strike=350 — the real listed contract for a plan's option and
 // its price (src/lib/optionQuotes.ts), members only. { quote: null } when there's none to show; the page keeps its estimate.
 export async function GET(request: Request) {
+  const limited = await throttle(request, "contract", { max: 300, windowSec: 60 });
+  if (limited) return limited;
   const q = new URL(request.url).searchParams;
   const u = (q.get("u") ?? "").trim().toUpperCase();
   const type = q.get("type");

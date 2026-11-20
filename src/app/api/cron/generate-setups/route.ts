@@ -4,6 +4,7 @@ import { supabaseServer } from "@/lib/supabase/server";
 import { generateDaily, gradeSetups, snapshotPrices } from "@/lib/setupEngine";
 import { checkAlerts } from "@/lib/alerts";
 import { SITE_URL } from "@/lib/mail";
+import { isCron } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -26,9 +27,7 @@ async function handle(request: Request) {
 
   let authorized = false;
   let admin = false;
-  const secret = process.env.CRON_SECRET;
-  const auth = request.headers.get("authorization");
-  if (secret && auth === `Bearer ${secret}`) authorized = true;
+  if (isCron(request)) authorized = true;
 
   if (!authorized) {
     const supabase = await supabaseServer();

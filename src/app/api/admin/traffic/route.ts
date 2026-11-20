@@ -8,6 +8,7 @@ import {
   TrafficNotMigrated,
   type TrafficRow,
 } from "@/lib/trafficAggregate";
+import { throttle } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,8 @@ type SessionEntry = {
 };
 
 export async function POST(req: NextRequest) {
+  const limited = await throttle(req, "admin-traffic", { max: 60, windowSec: 60 });
+  if (limited) return limited;
   try {
     const supabase = await supabaseServer();
     const {

@@ -1,9 +1,12 @@
 import { adminContext, fail, ok, renumber } from "@/lib/educationAdmin";
+import { throttle } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
 /** PATCH { title?, order? }: rename a module, or put its lessons in the order given (lesson ids). */
 export async function PATCH(request: Request, ctx: { params: Promise<{ module: string }> }) {
+  const limited = await throttle(request, "admin-edu", { max: 120, windowSec: 60 });
+  if (limited) return limited;
   const { module: moduleId } = await ctx.params;
   const { supabase, error } = await adminContext();
   if (error) return error;

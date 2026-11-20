@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "@/lib/supabaseConfig";
+import { supabaseService } from "@/lib/stripe";
 import { supabaseServer } from "@/lib/supabase/server";
+import { throttle } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +16,8 @@ const BOT_RE =
   /bot|crawl|spider|slurp|bingpreview|facebookexternalhit|headless|lighthouse|pingdom|uptime|monitor|scrape|python-requests|curl\/|wget\//i;
 
 export async function POST(req: NextRequest) {
+  const limited = await throttle(req, "track", { max: 120, windowSec: 60 });
+  if (limited) return limited;
   try {
     const ua = req.headers.get("user-agent") || "";
     if (!ua || BOT_RE.test(ua)) return NextResponse.json({ ok: true });
@@ -29,7 +31,7 @@ export async function POST(req: NextRequest) {
       : /mobile|iphone|android/i.test(ua) ? "mobile"
       : "desktop";
 
-    const db = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+    const db = supabaseService();
     // The signed-in account from its sign-in cookie, verified on the server (getClaims checks the token against the
     // project's signing keys here, no trip to the auth server); nobody signed in records as anonymous. The browser no
     // longer sends an id, so a view can't be credited to someone else.

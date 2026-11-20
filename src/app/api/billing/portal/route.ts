@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { viewer } from "@/lib/membership";
 import { getStripe, supabaseService } from "@/lib/stripe";
 import { billingReady, portalConfiguration } from "@/lib/billing";
+import { throttle } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +12,8 @@ export const dynamic = "force-dynamic";
  * what they've paid for). A form POST, answered with a redirect there; the paywall's owing account uses it too.
  */
 export async function POST(request: Request) {
+  const limited = await throttle(request, "billing-portal", { max: 20, windowSec: 600 }, true);
+  if (limited) return limited;
   const origin = new URL(request.url).origin;
   const settings = new URL("/settings?billing=unavailable", origin);
   if (!billingReady()) return NextResponse.redirect(settings, 303);

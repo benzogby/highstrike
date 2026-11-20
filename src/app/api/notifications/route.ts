@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
+import { throttle } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,8 @@ const unread = (me: Me) =>
   me.supabase.from("notifications").select("id", { count: "exact", head: true }).eq("user_id", me.id).is("read_at", null);
 
 export async function GET(request: Request) {
+  const limited = await throttle(request, "notifications", { max: 300, windowSec: 60 });
+  if (limited) return limited;
   const me = await signedIn();
   if (!me) return NextResponse.json({ error: "Sign in first." }, { status: 401, headers: PRIVATE });
 
@@ -49,6 +52,8 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const limited = await throttle(request, "notifications-post", { max: 120, windowSec: 60 });
+  if (limited) return limited;
   const me = await signedIn();
   if (!me) return NextResponse.json({ error: "Sign in first." }, { status: 401, headers: PRIVATE });
 

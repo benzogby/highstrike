@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
 import { LESSONS_BUCKET, isLessonId, lessonVideo } from "@/lib/education";
 import { HLS_MIME, dirOf, isSafeRelPath, playlistKind, resolveUri, rewriteMedia, segmentUris } from "@/lib/hls";
+import { throttle } from "@/lib/security";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,6 +25,8 @@ const playlist = (body: string) => new Response(body, { headers: { "content-type
  * lesson's own published version is read, and every URI must stay inside its rendition's folder (src/lib/hls.ts).
  */
 export async function GET(_request: Request, ctx: { params: Promise<{ lesson: string; path: string[] }> }) {
+  const limited = await throttle(_request, "lesson-stream", { max: 600, windowSec: 60 });
+  if (limited) return limited;
   const { lesson, path } = await ctx.params;
   if (!isLessonId(lesson)) return fail("There's no such lesson.", 404);
   const supabase = await supabaseServer();

@@ -1,5 +1,6 @@
 "use server";
 
+import { allow } from "@/lib/security";
 import { revalidatePath } from "next/cache";
 import { requireMember } from "@/lib/membership";
 import { getCandles } from "@/lib/candles";
@@ -22,6 +23,7 @@ const REF = /^([0-9a-f-]{36}|template:[a-z0-9-]{1,40}|new)$/;
 
 export async function runBacktest(input: { rules: unknown; ticker: string; period?: Period; ref?: string; runKey?: string }): Promise<{ result: Result; newsFrom: string | null } | { error: string }> {
   const { supabase, user } = await requireMember("/strategies");
+  if (!(await allow(`backtest:${user.id}`, { max: 20, windowSec: 60 }))) return { error: "You're doing that too fast. Wait a moment and try again." };
   const spec = cleanSpec(input.rules);
   if (!spec) return { error: "Turn on at least one entry criterion (or add a custom rule)." };
   const ticker = input.ticker.trim().toUpperCase().replace(/^\$/, "");
@@ -111,7 +113,8 @@ export async function strikePreview(input: {
   pct: number;
   spreadWidth: number | null;
 }): Promise<StrikePreview | { error: string }> {
-  await requireMember("/strategies");
+  const { user } = await requireMember("/strategies");
+  if (!(await allow(`strike-preview:${user.id}`, { max: 90, windowSec: 60 }))) return { error: "You're doing that too fast. Wait a moment and try again." };
   const ticker = input.ticker.trim().toUpperCase().replace(/^\$/, "");
   if (!TICKER.test(ticker)) return { error: "Enter a ticker on the Backtest tab to preview strikes." };
   const { candles } = await getCandles(ticker);

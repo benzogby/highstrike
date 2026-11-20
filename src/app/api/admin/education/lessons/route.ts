@@ -1,9 +1,12 @@
 import { adminContext, fail, newLessonId, ok } from "@/lib/educationAdmin";
+import { throttle } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
 /** POST { moduleId, title }: a new lesson at the end of its module, text only until it gets a video. */
 export async function POST(request: Request) {
+  const limited = await throttle(request, "admin-edu", { max: 120, windowSec: 60 });
+  if (limited) return limited;
   const { supabase, error } = await adminContext();
   if (error) return error;
   const body = (await request.json().catch(() => null)) as { moduleId?: unknown; title?: unknown } | null;

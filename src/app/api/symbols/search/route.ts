@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "@/lib/supabaseConfig";
+import { throttle } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
@@ -8,7 +9,11 @@ export const dynamic = "force-dynamic";
 // is configured (US common stocks/ETFs), falling back to the local symbols
 // table. Results are candidates only — /api/symbols/add validates on insert.
 export async function GET(request: Request) {
-  const q = (new URL(request.url).searchParams.get("q") ?? "").trim();
+  const limited = await throttle(request, "symbol-search", { max: 60, windowSec: 60 }, true);
+  if (limited) return limited;
+  // Letters, digits, spaces, dots and dashes only: the query goes into a PostgREST filter below, where a comma or a
+  // bracket would add filters of its own.
+  const q = (new URL(request.url).searchParams.get("q") ?? "").replace(/[^A-Za-z0-9 .&'-]/g, "").replace(/'/g, "").trim();
   if (q.length < 1 || q.length > 20) {
     return NextResponse.json({ results: [] });
   }

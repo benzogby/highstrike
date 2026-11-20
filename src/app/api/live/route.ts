@@ -3,6 +3,7 @@ import { viewer } from "@/lib/membership";
 import { supabaseService } from "@/lib/stripe";
 import { isSession, marketOpen, newYorkDate } from "@/lib/marketCalendar";
 import { alpacaKeys, latestTrades, nyStamp, occOf, optionLive, recentDailyBars, type DayBar } from "@/lib/alpaca";
+import { throttle } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
@@ -118,6 +119,8 @@ const fetchLive = async (symbol: string) =>
   occOf(symbol) ? await fromOption(symbol) : ((await fromAlpaca(symbol).catch(() => null)) ?? (await fromFinnhub(symbol)));
 
 export async function GET(request: Request) {
+  const limited = await throttle(request, "live", { max: 600, windowSec: 60 });
+  if (limited) return limited;
   const symbol = (new URL(request.url).searchParams.get("symbol") ?? "").trim().toUpperCase();
   // A stock, or one option contract ("O:AAPL261218C00350000") when the desk charts it.
   if (!/^[A-Z][A-Z.]{0,7}$/.test(symbol) && !occOf(symbol)) return NextResponse.json({ error: "Invalid symbol" }, { status: 400 });

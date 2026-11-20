@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "@/lib/supabaseConfig";
+import { supabaseService } from "@/lib/stripe";
+import { throttle } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +10,8 @@ const SOURCES = ["landing", "app"];
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 export async function POST(req: Request) {
+  const limited = await throttle(req, "waitlist", { max: 8, windowSec: 3600 }, true);
+  if (limited) return limited;
   let email: unknown;
   let source: unknown;
   try {
@@ -22,7 +24,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Enter a valid email address" }, { status: 400 });
   }
 
-  const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+  const supabase = supabaseService();
   const { error } = await supabase
     .from("waitlist_signups")
     .insert({ email: email.trim().toLowerCase(), source: SOURCES.includes(source as string) ? (source as string) : "landing" });

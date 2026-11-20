@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { supabaseService } from "@/lib/stripe";
 import { etToday } from "@/lib/setupEngine";
 import { scanWatchlists, sendDigests, validMorningToken } from "@/lib/morning";
+import { isCron } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -12,8 +13,7 @@ export const maxDuration = 300;
 // day it sent.
 export async function GET(request: Request) {
   const day = etToday();
-  const secret = process.env.CRON_SECRET;
-  const cron = secret ? request.headers.get("authorization") === `Bearer ${secret}` : (request.headers.get("user-agent") ?? "").startsWith("vercel-cron");
+  const cron = isCron(request);
   if (!cron && !validMorningToken(day, request.headers.get("x-morning-token"))) return NextResponse.json({ error: "Cron only." }, { status: 401 });
   const dow = new Date(`${day}T12:00:00Z`).getUTCDay();
   if (dow === 0 || dow === 6) return NextResponse.json({ skipped: "weekend", day });

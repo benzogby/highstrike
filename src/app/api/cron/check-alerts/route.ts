@@ -4,6 +4,7 @@ import { marketOpen } from "@/lib/marketCalendar";
 import { supabaseService } from "@/lib/stripe";
 import { sweepPaper } from "@/lib/paper";
 import { checkStrategies } from "@/lib/strategies/live";
+import { isCron } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -14,8 +15,7 @@ export const maxDuration = 60;
 // stock that closes past a level still alerts. Each check sweeps price alerts (src/lib/alerts.ts), paper trading's
 // working orders (src/lib/paper.ts) and, every fifth minute, live strategies (src/lib/strategies/live.ts). Member traffic and the morning job sweep too; each alert goes out once.
 export async function GET(request: Request) {
-  const secret = process.env.CRON_SECRET;
-  const cron = secret ? request.headers.get("authorization") === `Bearer ${secret}` : (request.headers.get("user-agent") ?? "").startsWith("vercel-cron");
+  const cron = isCron(request);
   if (!cron) return NextResponse.json({ error: "Cron only." }, { status: 401 });
   if (!marketOpen(Date.now(), 5)) return NextResponse.json({ skipped: "The market's closed." });
   const failed = (e: unknown) => ({ error: e instanceof Error ? e.message : "failed" });

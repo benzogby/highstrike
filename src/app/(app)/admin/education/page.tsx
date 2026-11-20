@@ -1,3 +1,4 @@
+import { requireAdmin } from "@/lib/adminGate";
 import { supabaseServer } from "@/lib/supabase/server";
 import { outline, publishedVideos } from "@/lib/education";
 import EducationManager, { type AdminLesson } from "./EducationManager";
@@ -10,6 +11,7 @@ export const dynamic = "force-dynamic";
 
 /** Admin → Trading School: every module and lesson of HighStrike Trading School, to edit (the admin layout has already checked is_admin). */
 export default async function AdminEducationPage() {
+  await requireAdmin();
   const supabase = await supabaseServer();
   const [{ modules, lessons }, videos] = await Promise.all([outline(supabase), publishedVideos(supabase)]);
   const rows: AdminLesson[] = lessons.map((l) => {

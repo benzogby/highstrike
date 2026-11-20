@@ -10,11 +10,12 @@ import AuthShell, {
   authLabelClass,
 } from "@/components/AuthShell";
 import GoogleAuthButton, { AuthDivider } from "@/components/GoogleAuthButton";
+import { safeNext } from "@/lib/safeNext";
 
 function SignInForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const next = searchParams.get("next") ?? "/dashboard";
+  const next = safeNext(searchParams.get("next"));
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);

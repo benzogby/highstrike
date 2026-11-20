@@ -8,7 +8,7 @@ import { supabaseService } from "@/lib/stripe";
 export async function setDigest(on: boolean) {
   const v = await viewer();
   if (!v) throw new Error("Sign in first.");
-  const { error } = await supabaseService().from("profiles").update({ digest_email: on }).eq("id", v.user.id);
+  const { error } = await supabaseService().from("profiles").update({ digest_email: on === true }).eq("id", v.user.id);
   if (error) throw new Error(error.message);
   revalidatePath("/settings");
 }

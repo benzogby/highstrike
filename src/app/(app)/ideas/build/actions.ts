@@ -1,5 +1,6 @@
 "use server";
 
+import { allow } from "@/lib/security";
 import { redirect } from "next/navigation";
 import { viewer } from "@/lib/membership";
 import { fetchQuotes } from "@/lib/quotes";
@@ -26,6 +27,7 @@ function wantOf(w: Partial<Want>): Want {
 export async function findIdeas(w: Partial<Want>): Promise<{ ideas: Built[]; scanned: number } | { error: string }> {
   const v = await viewer();
   if (!v?.member) return { error: "The idea builder is for members." };
+  if (!(await allow(`find-ideas:${v.user.id}`, { max: 20, windowSec: 60 }))) return { error: "You're doing that too fast. Wait a moment and try again." };
   const rows = await enrichedScan().catch(() => null);
   if (!rows) return { error: "The scan couldn't run just now. Try again in a minute." };
   const live = rows.filter((r) => r.live);

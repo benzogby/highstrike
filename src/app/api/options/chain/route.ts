@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { viewer } from "@/lib/membership";
 import { chainView } from "@/lib/paperChain";
+import { throttle } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
 // /api/options/chain?u=AAPL&expiry=2026-12-18 — one expiry's option chain for the desk (src/lib/paperChain.ts), members only.
 export async function GET(request: Request) {
+  const limited = await throttle(request, "chain", { max: 300, windowSec: 60 });
+  if (limited) return limited;
   const q = new URL(request.url).searchParams;
   const u = (q.get("u") ?? "").trim().toUpperCase();
   const expiry = q.get("expiry");

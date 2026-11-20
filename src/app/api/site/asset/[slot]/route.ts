@@ -2,12 +2,15 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "@/lib/supabaseConfig";
 import { SITE_IMAGES } from "@/lib/siteImages";
+import { throttle } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
 // /api/site/asset/favicon (app_icon, logo, wordmark, mark, og_image): a redirect to the image set in Admin → Site →
 // Images, or to the built-in one (src/lib/siteImages.ts). Cached 5 minutes at the edge.
 export async function GET(request: Request, { params }: { params: Promise<{ slot: string }> }) {
+  const limited = await throttle(request, "asset", { max: 300, windowSec: 60 });
+  if (limited) return limited;
   const { slot } = await params;
   const image = SITE_IMAGES.find((i) => i.key === slot);
   if (!image) return NextResponse.json({ error: "Unknown image" }, { status: 404 });

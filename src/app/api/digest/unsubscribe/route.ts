@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseService } from "@/lib/stripe";
 import { validUnsubscribe } from "@/lib/morning";
+import { throttle } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
@@ -26,10 +27,14 @@ const page = (ok: boolean) =>
   );
 
 export async function GET(request: Request) {
+  const limited = await throttle(request, "unsubscribe", { max: 20, windowSec: 60 }, true);
+  if (limited) return limited;
   return page(await stop(request));
 }
 
 export async function POST(request: Request) {
+  const limited = await throttle(request, "unsubscribe", { max: 20, windowSec: 60 }, true);
+  if (limited) return limited;
   const ok = await stop(request);
   return NextResponse.json({ ok }, { status: ok ? 200 : 400 });
 }

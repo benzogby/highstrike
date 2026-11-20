@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
 import { computeScan } from "@/lib/scanner";
+import { throttle } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
 // Member-only scanner data.
-export async function GET() {
+export async function GET(request: Request) {
+  const limited = await throttle(request, "scanner", { max: 120, windowSec: 60 });
+  if (limited) return limited;
   const supabase = await supabaseServer();
   const {
     data: { user },

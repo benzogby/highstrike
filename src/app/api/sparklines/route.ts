@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
+import { throttle } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
 // Last 12 recorded closes per symbol from first-party price history —
 // powers watchlist sparklines. Member-only; returns {} until history accrues.
 export async function GET(request: Request) {
+  const limited = await throttle(request, "sparklines", { max: 300, windowSec: 60 });
+  if (limited) return limited;
   const supabase = await supabaseServer();
   const {
     data: { user },

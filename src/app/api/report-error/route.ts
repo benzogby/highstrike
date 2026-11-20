@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { captureError } from "@/lib/capture";
+import { throttle } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
@@ -8,6 +9,8 @@ export const dynamic = "force-dynamic";
 const BOT = /bot|crawl|spider|headless|lighthouse/i;
 
 export async function POST(req: NextRequest) {
+  const limited = await throttle(req, "report-error", { max: 20, windowSec: 600 }, true);
+  if (limited) return limited;
   try {
     if (BOT.test(req.headers.get("user-agent") ?? "")) return NextResponse.json({ ok: true });
     const origin = req.headers.get("origin");

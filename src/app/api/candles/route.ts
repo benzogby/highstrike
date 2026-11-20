@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 import { viewer } from "@/lib/membership";
 import { INTRADAY, getCandles, getIntraday, getOptionCandles, type Intraday } from "@/lib/candles";
+import { throttle } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
 // /api/candles?symbol=AAPL[&tf=5m] — two years of daily candles, or intraday bars, for HighStrike Chart (src/lib/candles.ts), members only: the
 // data plan is paid for the membership.
 export async function GET(request: Request) {
+  const limited = await throttle(request, "candles", { max: 600, windowSec: 60 });
+  if (limited) return limited;
   const symbol = (new URL(request.url).searchParams.get("symbol") ?? "").trim().toUpperCase();
   // A stock ("AAPL") or one option contract ("O:AAPL261218C00350000"), whose own price the desk charts.
   const option = /^O:[A-Z.]{1,8}\d{6}[CP]\d{8}$/.test(symbol);

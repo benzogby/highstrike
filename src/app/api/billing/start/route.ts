@@ -5,6 +5,8 @@ import { isMember } from "@/lib/membership";
 import { getStripe } from "@/lib/stripe";
 import { Declined, billingReady, cleanEmail, liveMode, publishableKey, startMembership, walletDomain, weekUsedFor } from "@/lib/billing";
 import { MEMBERSHIP } from "@/lib/offer";
+import { throttle } from "@/lib/security";
+import { safeNext } from "@/lib/safeNext";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +14,7 @@ const PRIVATE = { "cache-control": "private, no-store" };
 
 /** Only a relative path on this site, for Stripe's page to come back to. */
 function backPath(raw: unknown) {
-  return typeof raw === "string" && raw.startsWith("/") && !raw.startsWith("//") && raw.length < 200 ? raw : "/";
+  return typeof raw === "string" && raw.length < 200 ? safeNext(raw, "/") : "/";
 }
 
 /** The request came from a page on this site (a browser sends Origin with every POST). */
@@ -32,6 +34,8 @@ function sameOrigin(request: Request) {
  * account's email, whether it's a member already, and whether its $14 week was used (it starts at $99 then).
  */
 export async function GET(request: Request) {
+  const limited = await throttle(request, "billing-start-get", { max: 60, windowSec: 60 });
+  if (limited) return limited;
   const key = publishableKey();
   const base = {
     ready: billingReady(),
@@ -71,6 +75,8 @@ export async function GET(request: Request) {
  * `alreadyMember` or `owes` (nothing charged), or a card's decline in Stripe's words (402).
  */
 export async function POST(request: Request) {
+  const limited = await throttle(request, "billing-start", { max: 10, windowSec: 600 }, true);
+  if (limited) return limited;
   if (!sameOrigin(request)) return NextResponse.json({ error: "Open checkout from highstrike.com." }, { status: 403 });
   if (WAITLIST_ONLY) return NextResponse.json({ error: "HighStrike isn't open to new members yet. Join the waitlist. Nothing was charged." }, { status: 403 });
   if (!billingReady()) return NextResponse.json({ error: "Checkout isn't set up yet. Nothing was charged." }, { status: 503 });

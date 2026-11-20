@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
 import { supabaseService } from "@/lib/stripe";
+import { throttle } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +10,8 @@ export const dynamic = "force-dynamic";
 // The symbols upsert needs the service role because symbols is read-only to
 // members; the watchlist insert then runs as the user under RLS.
 export async function POST(req: Request) {
+  const limited = await throttle(req, "symbol-add", { max: 60, windowSec: 60 });
+  if (limited) return limited;
   const supabase = await supabaseServer();
   const {
     data: { user },

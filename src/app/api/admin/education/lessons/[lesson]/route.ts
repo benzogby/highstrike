@@ -1,5 +1,6 @@
 import { LESSONS_BUCKET, lessonDetail, lessonVideo, posterUrl } from "@/lib/education";
 import { adminContext, fail, lessonParam, ok, parseYouTube, removeVersionFiles, renumber } from "@/lib/educationAdmin";
+import { throttle } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,8 @@ export async function GET(_request: Request, ctx: Ctx) {
 
 /** PATCH { title?, body?, youtubeId?, moduleId? }: edit a lesson. A new module puts it at the end of that module. */
 export async function PATCH(request: Request, ctx: Ctx) {
+  const limited = await throttle(request, "admin-edu", { max: 120, windowSec: 60 });
+  if (limited) return limited;
   const id = lessonParam((await ctx.params).lesson);
   if (!id) return fail("There's no such lesson.", 404);
   const { supabase, error } = await adminContext();

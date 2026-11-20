@@ -1,6 +1,7 @@
 import { LESSONS_BUCKET, lessonVideo } from "@/lib/education";
 import { isLessonVersion } from "@/lib/hls";
 import { adminContext, fail, lessonParam, newVersion, ok, readUploadedVideo, removeVersionFiles, videoFileType } from "@/lib/educationAdmin";
+import { throttle } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,8 @@ const MAX_SIGN = 200;
  *  - "discard" { version }: a cancelled or failed upload's files, gone (never the published version's).
  */
 export async function POST(request: Request, ctx: Ctx) {
+  const limited = await throttle(request, "admin-edu", { max: 120, windowSec: 60 });
+  if (limited) return limited;
   const id = lessonParam((await ctx.params).lesson);
   if (!id) return fail("There's no such lesson.", 404);
   const { supabase, error } = await adminContext();

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { throttle } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +16,9 @@ const FALLBACK = [
   { symbol: "META", price: 778.04, changePct: 0.9 },
 ];
 
-export async function GET() {
+export async function GET(request: Request) {
+  const limited = await throttle(request, "market", { max: 60, windowSec: 60 }, true);
+  if (limited) return limited;
   const token = process.env.FINNHUB_API_KEY;
   if (!token) {
     return NextResponse.json({ live: false, quotes: FALLBACK });
