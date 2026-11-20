@@ -50,7 +50,7 @@ export default function WaitlistForm({ compact = false, source = "landing", init
         onChange={(e) => setEmail(e.target.value)}
         placeholder="you@example.com"
         aria-label="Email address"
-        className="h-12 flex-1 rounded-lg border border-line bg-panel px-4 text-sm text-ink placeholder:text-ink-3 outline-none transition focus:border-accent/60 focus:ring-2 focus:ring-accent/20"
+        className="h-12 w-full min-w-0 shrink-0 rounded-lg sm:w-auto sm:flex-1 border border-line bg-panel px-4 text-sm text-ink placeholder:text-ink-3 outline-none transition focus:border-accent/60 focus:ring-2 focus:ring-accent/20"
       />
       <button
         type="submit"
