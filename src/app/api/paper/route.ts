@@ -6,7 +6,7 @@ import { throttle } from "@/lib/security";
 export const dynamic = "force-dynamic";
 
 // /api/paper — the member's paper account for the desk (src/lib/paper.ts): cash, positions marked to the market,
-// recent orders. Asked every 15 seconds while the desk is open.
+// recent orders. Asked every 3 seconds while the desk is open in market hours.
 export async function GET(request: Request) {
   const limited = await throttle(request, "paper", { max: 300, windowSec: 60 });
   if (limited) return limited;

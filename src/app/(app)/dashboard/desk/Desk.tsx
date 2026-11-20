@@ -16,7 +16,11 @@ import { parseContract, pct, signed, symbolLabel, tone, usd } from "./fmt";
 export type DeskIdea = { id: string; ticker: string; direction: "long" | "short"; headline: string; option: string | null };
 export type DeskLesson = { href: string; title: string; label: string; done: number; total: number } | null;
 
-const EVERY_MS = 15_000;
+// The account (cash, positions marked to the market, orders) is asked again every 3 seconds while the market's open and
+// the tab is in view (Ben, 2026-11-20: "Open positions mark and all other data needs to update in real time"), every
+// 30 seconds when it's closed, and at once when the tab comes back.
+const EVERY_MS = 3_000;
+const CLOSED_EVERY_MS = 30_000;
 const TICKER = /^[A-Z][A-Z0-9.]{0,7}$/;
 const WIDE = "(min-width: 1280px)";
 
@@ -119,10 +123,31 @@ export default function Desk({
     const r = await fetch("/api/paper", { cache: "no-store" }).catch(() => null);
     if (r?.ok) setState(await r.json());
   }, []);
+  const marketIsOpen = state.open;
   useEffect(() => {
-    const t = setInterval(() => document.visibilityState === "visible" && refresh(), EVERY_MS);
-    return () => clearInterval(t);
-  }, [refresh]);
+    // One request at a time: the next waits for the last answer, so a slow one never piles up.
+    let alive = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let busy = false;
+    const tick = async () => {
+      if (busy) return;
+      busy = true;
+      clearTimeout(timer);
+      if (document.visibilityState === "visible") await refresh();
+      busy = false;
+      if (alive) timer = setTimeout(tick, marketIsOpen ? EVERY_MS : CLOSED_EVERY_MS);
+    };
+    timer = setTimeout(tick, marketIsOpen ? EVERY_MS : CLOSED_EVERY_MS);
+    const onShow = () => {
+      if (document.visibilityState === "visible") void tick();
+    };
+    document.addEventListener("visibilitychange", onShow);
+    return () => {
+      alive = false;
+      clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onShow);
+    };
+  }, [refresh, marketIsOpen]);
 
   const list = useMemo(() => [...new Set([...state.positions.map((p) => p.underlying), ...watch, ...ideas.map((i) => i.ticker)])].slice(0, 40), [state.positions, watch, ideas]);
   const { quotes: all, flash } = useQuotes([...new Set([...list, ticker])]);

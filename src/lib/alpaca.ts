@@ -342,8 +342,24 @@ export async function optionBars(contract: string, timeframe: string, days: numb
   return out;
 }
 
-/** A contract's live price (its indicative quote's mark, else its last trade) and today's bar so far. */
-export async function optionLive(contract: string): Promise<{ price: number; open: number | null; high: number | null; low: number | null; prevClose: number | null } | null> {
+export type OptionLive = { price: number; bid: number | null; ask: number | null; open: number | null; high: number | null; low: number | null; prevClose: number | null };
+
+const optionLiveMemo = new Map<string, { at: number; value: Promise<OptionLive | null> }>();
+
+/**
+ * A contract's live price (its indicative quote's mark, else its last trade), its bid and ask, and today's bar so far.
+ * Alpaca's indicative quote moves every few seconds; one answer per contract is shared for 2 seconds per server.
+ */
+export function optionLive(contract: string): Promise<OptionLive | null> {
+  const hit = optionLiveMemo.get(contract);
+  if (hit && Date.now() - hit.at < 2_000) return hit.value;
+  const value = optionLiveFresh(contract).catch(() => null);
+  optionLiveMemo.set(contract, { at: Date.now(), value });
+  if (optionLiveMemo.size > 1000) optionLiveMemo.delete(optionLiveMemo.keys().next().value as string);
+  return value;
+}
+
+async function optionLiveFresh(contract: string): Promise<OptionLive | null> {
   const keys = await alpacaKeys();
   const sym = occOf(contract);
   if (!keys || !sym) return null;
@@ -360,6 +376,8 @@ export async function optionLive(contract: string): Promise<{ price: number; ope
   const todays = s.dailyBar?.t && nyStamp(Date.parse(s.dailyBar.t)).slice(0, 10) === today ? s.dailyBar : null;
   return {
     price: Math.round(price * 100) / 100,
+    bid: bid != null && bid >= 0 ? bid : null,
+    ask: ask != null && ask > 0 ? ask : null,
     open: todays?.o ?? null,
     high: todays?.h != null ? Math.max(todays.h, Math.round(price * 100) / 100) : null,
     low: todays?.l != null ? Math.min(todays.l, Math.round(price * 100) / 100) : null,

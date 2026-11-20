@@ -12,12 +12,12 @@ type Quotes = {
   live: boolean | null;
 };
 
-const EVERY_MS = 45_000;
+const EVERY_MS = 5_000;
 const FLASH_MS = 950;
 const PER_CALL = 60; // /api/quotes answers 60 tickers at most
 
 /**
- * Prices for the tickers on screen, from /api/quotes, again every 45 s while the tab is in view and at once when it
+ * Prices for the tickers on screen, from /api/quotes, again every 5 s while the tab is in view and at once when it
  * comes back. Each call also lets the server run its throttled price-alert sweep (the route does that after answering),
  * which is how alerts fire within minutes while members are around.
  */
@@ -38,7 +38,7 @@ export function useQuotes(tickers: string[]): Quotes {
       for (let i = 0; i < symbols.length; i += PER_CALL) calls.push(symbols.slice(i, i + PER_CALL));
       const answers = await Promise.all(
         calls.map((c) =>
-          fetch(`/api/quotes?symbols=${c.join(",")}`)
+          fetch(`/api/quotes?symbols=${c.join(",")}`, { cache: "no-store" })
             .then((r) => (r.ok ? (r.json() as Promise<{ quotes?: LiveQuote[] }>) : null))
             .catch(() => null)
         )

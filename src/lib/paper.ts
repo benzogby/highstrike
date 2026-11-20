@@ -4,6 +4,7 @@ import { bs, volatility } from "@/lib/options/pricing";
 import { getCandles } from "@/lib/candles";
 import { contractQuote, parseContract } from "@/lib/optionQuotes";
 import { indicativeChain, optionLive, type IndicativeQuote } from "@/lib/alpaca";
+import { livePrices } from "@/lib/livePrices";
 
 // The paper trading engine (Ben, 2026-11-18: Home becomes "the paper trading charts and execution hub"; $25,000 to
 // start). Every order is priced and filled here, on the server, from real prices:
@@ -36,24 +37,19 @@ const TICKER = /^[A-Z][A-Z0-9.]{0,7}$/;
 export const kindOf = (symbol: string): Kind => (symbol.startsWith("O:") ? "option" : "stock");
 export const multiplier = (k: Kind) => (k === "option" ? 100 : 1);
 
-/** The live stock price, fetched fresh (not the 60-second cached quote), or null when there's no live price. */
+/** The live stock price (lib/livePrices: real time, shared 2 seconds), or null when there's no live price. */
 export async function liveStock(ticker: string): Promise<{ price: number; prevClose: number | null } | null> {
-  const token = process.env.FINNHUB_API_KEY;
-  if (!token) return null;
-  try {
-    const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(ticker)}&token=${token}`, { cache: "no-store", signal: AbortSignal.timeout(4000) });
-    if (!res.ok) return null;
-    const q = (await res.json()) as { c?: number; pc?: number };
-    return q.c && q.c > 0 ? { price: q.c, prevClose: q.pc || null } : null;
-  } catch {
-    return null;
-  }
+  const p = (await livePrices([ticker])).get(ticker.toUpperCase());
+  return p ? { price: p.price, prevClose: p.prevClose } : null;
 }
 
 /** An option's fair price now (per share), from its quote or the model, and the bid and ask a fill would get. */
 export async function optionMarket(contract: string, spot: number | null): Promise<{ bid: number; ask: number; mid: number; source: "quote" | "indicative" | "est" } | null> {
   const p = parseContract(contract);
   if (!p) return null;
+  // Alpaca's free indicative quote for this one contract first: it moves every few seconds (shared 2 s).
+  const live = await optionLive(contract);
+  if (live && live.bid != null && live.ask != null && live.ask > 0) return { bid: live.bid, ask: live.ask, mid: cents((live.bid + live.ask) / 2), source: "indicative" };
   const { candles } = await getCandles(p.underlying);
   const closes = new Map(candles.map((c) => [c.t, c.c]));
   const q = await contractQuote(contract, (day) => closes.get(day) ?? candles.at(-1)?.c ?? null);
@@ -339,7 +335,7 @@ export async function paperState(userId: string): Promise<PaperState> {
     db().from("paper_orders").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(60),
   ]);
   const underlyings = [...new Set((pos ?? []).map((p) => p.underlying as string))];
-  const spots = new Map(await Promise.all(underlyings.map(async (u) => [u, await liveStock(u)] as const)));
+  const spots = await livePrices(underlyings);
   let optionPrices: "quote" | "indicative" | "est" = "est";
   const positions: PositionView[] = await Promise.all(
     (pos ?? []).map(async (p) => {
@@ -355,7 +351,7 @@ export async function paperState(userId: string): Promise<PaperState> {
         day = s?.prevClose ? ((s.price - s.prevClose) / s.prevClose) * 100 : null;
         prevClose = s?.prevClose ?? null;
       } else {
-        const [m, live] = await Promise.all([optionMarket(p.symbol, s?.price ?? null), optionLive(p.symbol).catch(() => null)]);
+        const [m, live] = await Promise.all([optionMarket(p.symbol, s?.price ?? null), optionLive(p.symbol)]);
         prevClose = live?.prevClose ?? null;
         if (prevClose && m?.mid) day = ((m.mid - prevClose) / prevClose) * 100;
         mark = m?.mid ?? null;
