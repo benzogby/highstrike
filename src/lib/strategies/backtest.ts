@@ -11,7 +11,7 @@
 //   so "estimated" everywhere). Pure.
 
 import type { Candle } from "@/lib/chart/types";
-import { bs, normCdf, roundStrike, strikeStep, volatility, RATE } from "@/lib/options/pricing";
+import { bs, roundStrike, strikeStep, volatility } from "@/lib/options/pricing";
 import { Calc, type Context } from "./rules";
 import { ACCOUNT, checksOf, type Check, type Exits, type Spec } from "./spec";
 
@@ -65,7 +65,7 @@ const iso = (ms: number) => new Date(ms).toISOString().slice(0, 10);
 const round = (n: number) => Math.round(n * 100) / 100;
 
 /** The listed-style expiry (a Friday) nearest to, or first at least, `dte` days after `from`. */
-function expiryFor(from: string, dte: number, rule: "nearest" | "atLeast") {
+export function expiryFor(from: string, dte: number, rule: "nearest" | "atLeast") {
   const target = at(from) + dte * dayMs;
   const d = new Date(target);
   const toFri = (5 - d.getUTCDay() + 7) % 7;
@@ -75,29 +75,9 @@ function expiryFor(from: string, dte: number, rule: "nearest" | "atLeast") {
   return iso(target - before <= after - target ? before : after);
 }
 
-function deltaOf(type: "call" | "put", S: number, K: number, T: number, v: number) {
-  const d1 = (Math.log(S / K) + (RATE + (v * v) / 2) * T) / (v * Math.sqrt(T));
-  return type === "call" ? normCdf(d1) : 1 - normCdf(d1);
-}
-
-/** The strike the contract rule picks. */
-function pickStrike(spec: Spec, type: "call" | "put", S: number, T: number, v: number) {
-  const step = strikeStep(S);
-  const by = spec.contract.strike;
-  if (by.by === "atm") return roundStrike(S, step);
-  if (by.by === "otmPct") return roundStrike(S * (1 + ((type === "call" ? 1 : -1) * by.value) / 100), step);
-  let best = roundStrike(S, step);
-  let gap = Infinity;
-  for (let k = -40; k <= 40; k++) {
-    const K = roundStrike(S, step) + k * step;
-    if (K <= 0) continue;
-    const g = Math.abs(deltaOf(type, S, K, T, v) - by.value);
-    if (g < gap) {
-      gap = g;
-      best = K;
-    }
-  }
-  return best;
+/** The strike the contract rule picks: a percent from the price, at a listed-style strike. */
+function pickStrike(spec: Spec, type: "call" | "put", S: number) {
+  return roundStrike(S * (1 + ((type === "call" ? 1 : -1) * spec.contract.strike.pct) / 100), strikeStep(S));
 }
 
 /** Whether a group (stop or exit) fires on bar j, and the price it fires at. */
@@ -211,8 +191,7 @@ export function backtest(bars: Candle[], spec: Spec, ctx: Context = {}, from: st
     let leg: { strike: number; short: number | null; expiry: string } | null = null;
     if (ct.kind !== "shares") {
       const expiry = expiryFor(e.t, ct.dte, ct.expiryRule);
-      const T = Math.max(1, (at(expiry) - at(e.t)) / dayMs) / 365;
-      const strike = pickStrike(spec, type, S0, T, ivAt(closes, i));
+      const strike = pickStrike(spec, type, S0);
       const step = strikeStep(S0);
       leg = { strike, short: ct.kind === "spread" ? strike + (type === "call" ? 1 : -1) * ct.width * step : null, expiry };
     }

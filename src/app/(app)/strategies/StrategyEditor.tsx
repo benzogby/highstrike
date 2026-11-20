@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import HighStrikeChart from "@/components/chart/HighStrikeChart";
 import { CARD, INPUT } from "@/components/ui";
 import { OPERANDS, OPS, type Condition, type Op, type Operand, type OperandKind } from "@/lib/strategies/rules";
-import { criterionDef, entryText, fullList, type Contract, type Criterion, type Exits, type Group, type Spec } from "@/lib/strategies/spec";
+import { STRIKE_RANGE, criterionDef, entryText, fullList, type Contract, type Criterion, type Exits, type Group, type Spec } from "@/lib/strategies/spec";
 import { PERIODS, type Period, type Result, type Trade } from "@/lib/strategies/backtest";
-import { deleteStrategy, runBacktest, saveStrategy, type KeptBacktest, type LiveSettings } from "./actions";
+import { deleteStrategy, runBacktest, saveStrategy, strikePreview, type KeptBacktest, type LiveSettings, type StrikePreview } from "./actions";
 import { StrategyIcon } from "./icons";
 
 // The strategy editor (Ben, 2026-11-19: "Each strategy should have tabs: Entry, Contract, Exit, Stop, Backtest"):
@@ -225,7 +225,132 @@ function ExitsTab({ g, value, onChange, title, blurb }: { g: Group; value: Exits
   );
 }
 
-function ContractTab({ value, onChange, direction }: { value: Contract; onChange: (c: Contract) => void; direction: "long" | "short" }) {
+/** "2% out of the money", "at the money", "5% in the money". */
+const strikeWords = (pct: number) => (pct === 0 ? "at the money" : `${Math.abs(pct)}% ${pct > 0 ? "out of" : "in"} the money`);
+
+const ITM_TIP = "In the money: the strike is already past the stock's price (below it for a call, above it for a put). Costs more, and moves almost like the stock.";
+const OTM_TIP = "Out of the money: the stock still has to move to reach the strike (up for a call, down for a put). Cheaper, but it needs a bigger move to pay.";
+const ATM_TIP = "At the money: the strike nearest the stock's price.";
+
+/** The strike as a percent from the price: a slider from 20% in the money to 20% out of it, and a number box. */
+function StrikePicker({ value, onChange, side }: { value: Contract; onChange: (c: Contract) => void; side: "call" | "put" }) {
+  const pct = value.strike.pct;
+  const set = (n: number) => onChange({ ...value, strike: { pct: Math.round(Math.max(-STRIKE_RANGE, Math.min(STRIKE_RANGE, n)) * 2) / 2 } });
+  return (
+    <div className="max-w-xl">
+      <div className="flex items-center gap-3">
+        <input
+          type="range"
+          min={-STRIKE_RANGE}
+          max={STRIKE_RANGE}
+          step={0.5}
+          value={pct}
+          onChange={(e) => set(Number(e.target.value))}
+          className="h-2 flex-1 cursor-pointer accent-[var(--color-accent)]"
+          aria-label="Strike, percent from the price"
+        />
+        <span className="flex items-center gap-1">
+          <input type="number" min={-STRIKE_RANGE} max={STRIKE_RANGE} step={0.5} value={pct} onChange={(e) => set(Number(e.target.value))} className={NUM} aria-label="Percent from the price" />
+          <span className="text-[13px] text-ink-3">%</span>
+        </span>
+      </div>
+      <div className="mt-1.5 flex justify-between text-[11.5px]">
+        <button type="button" onClick={() => set(-5)} title={ITM_TIP} className="text-ink-3 underline decoration-dotted underline-offset-2 hover:text-ink">
+          ← In the money
+        </button>
+        <button type="button" onClick={() => set(0)} title={ATM_TIP} className={`underline decoration-dotted underline-offset-2 hover:text-ink ${pct === 0 ? "text-accent-ink" : "text-ink-3"}`}>
+          At the money
+        </button>
+        <button type="button" onClick={() => set(5)} title={OTM_TIP} className="text-ink-3 underline decoration-dotted underline-offset-2 hover:text-ink">
+          Out of the money →
+        </button>
+      </div>
+      <p className="mt-2 text-[13px] text-ink" title={pct === 0 ? ATM_TIP : pct > 0 ? OTM_TIP : ITM_TIP}>
+        The {side} {strikeWords(pct)}
+        <span className="text-ink-3">
+          {" "}
+          ·{" "}
+          {pct === 0
+            ? "the strike nearest the price"
+            : pct > 0
+              ? `a strike ${pct}% ${side === "call" ? "above" : "below"} the price: cheaper, needs a bigger move`
+              : `a strike ${Math.abs(pct)}% ${side === "call" ? "below" : "above"} the price: costs more, moves more like the stock`}
+        </span>
+      </p>
+    </div>
+  );
+}
+
+/** A small chain around today's price on the backtest's stock, with the strike the rule picks (and a spread's other leg). */
+function StrikeChain({ value, direction, ticker }: { value: Contract; direction: "long" | "short"; ticker: string }) {
+  const [view, setView] = useState<{ key: string; data: StrikePreview | { error: string } } | null>(null);
+  const t = ticker.trim().toUpperCase();
+  const key = JSON.stringify([t, direction, value.dte, value.expiryRule, value.strike.pct, value.kind === "spread" ? value.width : null]);
+  useEffect(() => {
+    let alive = true;
+    const timer = setTimeout(() => {
+      strikePreview({ ticker: t, direction, dte: value.dte, expiryRule: value.expiryRule, pct: value.strike.pct, spreadWidth: value.kind === "spread" ? value.width : null })
+        .then((data) => alive && setView({ key, data }))
+        .catch(() => alive && setView({ key, data: { error: "The preview couldn't load." } }));
+    }, 300);
+    return () => {
+      alive = false;
+      clearTimeout(timer);
+    };
+    // The key holds everything the preview depends on.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+  const data = view?.data;
+  const stale = view?.key !== key;
+  const day = (iso: string) => new Date(`${iso}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+  if (!data) return <div className="h-48 animate-pulse rounded-lg bg-panel-2/50" />;
+  if ("error" in data) return <p className="rounded-lg bg-panel-2/50 px-3 py-2.5 text-[12.5px] text-ink-3">{data.error}</p>;
+  const pick = data.rows.find((r) => r.chosen);
+  const short = data.rows.find((r) => r.short);
+  const cost = pick ? (short ? pick.price - short.price : pick.price) : null;
+  const spotRow = data.rows.findIndex((r) => r.strike < data.spot);
+  return (
+    <div className={`max-w-xl rounded-lg border border-line bg-bg/60 transition ${stale ? "opacity-60" : ""}`}>
+      <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-line px-3 py-2">
+        <p className="text-[12.5px] text-ink-2">
+          On <b className="font-mono-nums text-ink">{data.ticker}</b> today ({data.spot.toFixed(2)}), {day(data.expiry)} {data.type}s
+        </p>
+        {pick && cost != null && (
+          <p className="font-mono-nums text-[12.5px] text-ink">
+            ${pick.strike}
+            {short ? `/${short.strike}` : ""} {data.type} ≈ ${cost.toFixed(2)} <span className="text-ink-3">(${Math.round(cost * 100).toLocaleString("en-US")} a contract)</span>
+          </p>
+        )}
+      </div>
+      <table className="w-full text-[12.5px]">
+        <thead className="text-[11px] text-ink-3">
+          <tr>
+            <th className="px-3 py-1.5 text-left font-medium">Strike</th>
+            <th className="px-3 py-1.5 text-left font-medium" />
+            <th className="px-3 py-1.5 text-right font-medium">Est. price</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.rows.map((r, k) => (
+            <tr
+              key={r.strike}
+              className={`${k === spotRow ? "border-t-2 border-accent" : "border-t border-line/50"} ${r.chosen ? "bg-accent-soft" : r.short ? "bg-down-soft" : r.itm ? "bg-panel-2/40" : ""}`}
+            >
+              <td className={`px-3 py-1 font-mono-nums ${r.chosen ? "font-semibold text-accent-ink" : r.short ? "text-down" : "text-ink"}`}>${r.strike}</td>
+              <td className="px-3 py-1 text-[11.5px]">
+                {r.chosen ? <span className="text-accent-ink">{short ? "Buys this" : "Picks this"}</span> : r.short ? <span className="text-down">Sells this</span> : <span className="text-ink-3">{r.itm ? "in the money" : ""}</span>}
+              </td>
+              <td className="px-3 py-1 text-right font-mono-nums text-ink-2">{r.price.toFixed(2)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="border-t border-line px-3 py-1.5 text-[11px] text-ink-3">The green line is today&apos;s price. Prices are estimated from the stock&apos;s recent swings.</p>
+    </div>
+  );
+}
+
+function ContractTab({ value, onChange, direction, ticker }: { value: Contract; onChange: (c: Contract) => void; direction: "long" | "short"; ticker: string }) {
   const opt = value.kind !== "shares";
   const side = direction === "long" ? "call" : "put";
   const field = (label: string, child: React.ReactNode, hint?: string, icon?: string) => (
@@ -241,7 +366,7 @@ function ContractTab({ value, onChange, direction }: { value: Contract; onChange
   const summary = !opt
     ? `${direction === "long" ? "Buys" : "Sells short"} shares`
     : `${value.kind === "spread" ? `A ${side} debit spread, ${value.width} strike${value.width === 1 ? "" : "s"} wide` : `A ${side}`}, ${value.expiryRule === "nearest" ? "the expiry nearest" : "the first expiry at least"} ${value.dte} days out, ${
-        value.strike.by === "delta" ? `the strike nearest ${value.strike.value} delta` : value.strike.by === "atm" ? "at the money" : `${Math.abs(value.strike.value)}% ${value.strike.value >= 0 ? "out of" : "in"} the money`
+        strikeWords(value.strike.pct)
       }`;
   const size = value.size.by === "contracts" ? `${value.size.value} ${opt ? (value.size.value === 1 ? "contract" : "contracts") : "shares"}` : value.size.by === "dollars" ? `$${value.size.value.toLocaleString("en-US")} a trade` : `${value.size.value}% of the $25,000 account`;
   return (
@@ -278,37 +403,11 @@ function ContractTab({ value, onChange, direction }: { value: Contract; onChange
           )}
           {field(
             "Strike",
-            <div className="flex flex-wrap items-center gap-2 text-[13.5px] text-ink-2">
-              <select
-                className={SELECT}
-                value={value.strike.by}
-                onChange={(e) => {
-                  const by = e.target.value as Contract["strike"]["by"];
-                  onChange({ ...value, strike: { by, value: by === "delta" ? 0.4 : by === "otmPct" ? 2 : 0 } });
-                }}
-                aria-label="Strike rule"
-              >
-                <option value="delta">Nearest a delta of</option>
-                <option value="otmPct">A percent from the price</option>
-                <option value="atm">At the money</option>
-              </select>
-              {value.strike.by !== "atm" && (
-                <input
-                  type="number"
-                  step={value.strike.by === "delta" ? 0.05 : 0.5}
-                  min={value.strike.by === "delta" ? 0.05 : -30}
-                  max={value.strike.by === "delta" ? 0.95 : 30}
-                  className={NUM}
-                  value={value.strike.value}
-                  onChange={(e) => onChange({ ...value, strike: { ...value.strike, value: Number(e.target.value) } })}
-                  aria-label="Strike value"
-                />
-              )}
-              {value.strike.by === "otmPct" && <span>% (positive: out of the money)</span>}
-            </div>,
-            value.strike.by === "delta" ? "0.50 is about at the money; lower is further out (cheaper, less likely to pay)." : undefined,
+            <StrikePicker value={value} onChange={onChange} side={side} />,
+            undefined,
             "f-strike"
           )}
+          <StrikeChain value={value} direction={direction} ticker={ticker} />
           {value.kind === "spread" &&
             field(
               "Spread width",
@@ -588,7 +687,7 @@ export default function StrategyEditor({
           <CustomRules list={spec.entry.custom} onChange={(custom) => set({ entry: { ...spec.entry, custom } })} join="And" />
         </div>
       )}
-      {tab === "contract" && <ContractTab value={spec.contract} onChange={(contract) => set({ contract })} direction={spec.direction} />}
+      {tab === "contract" && <ContractTab value={spec.contract} onChange={(contract) => set({ contract })} direction={spec.direction} ticker={ticker} />}
       {tab === "exit" && <ExitsTab g="exit" value={spec.exit} onChange={(exit) => set({ exit })} title="Take profit" blurb="When to close a trade that's working." />}
       {tab === "stop" && <ExitsTab g="stop" value={spec.stop} onChange={(stop) => set({ stop })} title="Cut the loss" blurb="When to close a trade that isn't. Checked before the exits." />}
 

@@ -68,16 +68,15 @@ async function pickContract(ticker: string, spec: Spec, spot: number): Promise<{
       : [...dated].sort((a, b) => Math.abs(a.ms - want) - Math.abs(b.ms - want))[0].e;
   const chain = expiry === first.expiry ? first : await chainView(ticker, expiry);
   const side = spec.direction === "long" ? "call" : "put";
-  const target =
-    ct.strike.by === "atm" ? spot : ct.strike.by === "otmPct" ? spot * (1 + ((side === "call" ? 1 : -1) * ct.strike.value) / 100) : null;
+  const target = spot * (1 + ((side === "call" ? 1 : -1) * ct.strike.pct) / 100);
   let best: { contract: string; ask: number | null; gap: number } | null = null;
   for (const row of chain.rows) {
     const s = row[side];
     if (!s?.contract) continue;
-    const gap = target != null ? Math.abs(row.strike - target) : s.delta != null ? Math.abs(Math.abs(s.delta) - ct.strike.value) : Infinity;
+    const gap = Math.abs(row.strike - target);
     if (!best || gap < best.gap) best = { contract: s.contract, ask: s.ask, gap };
   }
-  return best && best.gap < Infinity ? { contract: best.contract, ask: best.ask } : null;
+  return best ? { contract: best.contract, ask: best.ask } : null;
 }
 
 /** How many to buy, by the contract rule's size. */

@@ -39,7 +39,7 @@ export const TEMPLATES: Template[] = [
     spec: t({
       direction: "long",
       entry: { criteria: on("entry", [["goldenCross", { a: 20, b: 50 }]]), ...none },
-      contract: { dte: 45, strike: { by: "delta", value: 0.45 } },
+      contract: { dte: 45, strike: { pct: 1 } },
       exit: { mode: "any", criteria: on("exit", [["x-stockGain", { x: 10 }], ["x-days", { x: 30 }]]), ...none },
       stop: { mode: "any", criteria: on("stop", [["s-stockLoss", { x: 5 }]]), custom: [{ left: { kind: "sma", n: 20 }, op: "crossesBelow", right: { kind: "sma", n: 50 } }] },
     }),
@@ -51,7 +51,7 @@ export const TEMPLATES: Template[] = [
     spec: t({
       direction: "long",
       entry: { criteria: on("entry", [["gapUp", { x: 2 }], ["volume", { x: 1, n: 20 }]]), custom: [{ left: { kind: "close" }, op: "above", right: { kind: "open" } }] },
-      contract: { dte: 14, strike: { by: "delta", value: 0.45 } },
+      contract: { dte: 14, strike: { pct: 1 } },
       exit: { mode: "any", criteria: on("exit", [["x-stockGain", { x: 5 }], ["x-days", { x: 5 }]]), ...none },
       stop: { mode: "any", criteria: on("stop", [["s-stockLoss", { x: 3 }]]), ...none },
     }),
@@ -85,7 +85,7 @@ export const TEMPLATES: Template[] = [
     spec: t({
       direction: "long",
       entry: { criteria: on("entry", [["breakout", { n: 10 }], ["newsGood", { n: 2, x: 0 }]]), ...none },
-      contract: { dte: 21, strike: { by: "delta", value: 0.45 } },
+      contract: { dte: 21, strike: { pct: 1 } },
       exit: { mode: "any", criteria: on("exit", [["x-stockGain", { x: 6 }], ["x-newsBad", { n: 2, x: 0 }], ["x-days", { x: 10 }]]), ...none },
       stop: { mode: "any", criteria: on("stop", [["s-stockLoss", { x: 3 }]]), ...none },
     }),

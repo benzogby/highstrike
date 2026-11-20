@@ -5,7 +5,8 @@ import { requireMember } from "@/lib/membership";
 import { getCandles } from "@/lib/candles";
 import { cleanSpec, usesNewsSpec } from "@/lib/strategies/spec";
 import { NEWS_START, stockNews } from "@/lib/alpaca";
-import { PERIODS, backtest, periodStart, type Period, type Result } from "@/lib/strategies/backtest";
+import { PERIODS, backtest, expiryFor, periodStart, type Period, type Result } from "@/lib/strategies/backtest";
+import { bs, roundStrike, strikeStep, volatility } from "@/lib/options/pricing";
 import { newYorkDate } from "@/lib/marketCalendar";
 
 // The Strategies page's server side (docs/plans/strategies.md): run a backtest on a stock's daily history, save and
@@ -91,4 +92,54 @@ export async function deleteStrategy(id: string): Promise<{ ok: true } | { error
   if (error) return { error: "It didn't delete. Try again." };
   revalidatePath("/strategies");
   return { ok: true };
+}
+
+/** The strikes around a stock's price for the Contract tab's preview, the chosen one (and a spread's other leg) marked. */
+export type StrikePreview = {
+  ticker: string;
+  spot: number;
+  expiry: string;
+  type: "call" | "put";
+  rows: { strike: number; price: number; chosen: boolean; short: boolean; itm: boolean }[];
+};
+
+export async function strikePreview(input: {
+  ticker: string;
+  direction: "long" | "short";
+  dte: number;
+  expiryRule: "nearest" | "atLeast";
+  pct: number;
+  spreadWidth: number | null;
+}): Promise<StrikePreview | { error: string }> {
+  await requireMember("/strategies");
+  const ticker = input.ticker.trim().toUpperCase().replace(/^\$/, "");
+  if (!TICKER.test(ticker)) return { error: "Enter a ticker on the Backtest tab to preview strikes." };
+  const { candles } = await getCandles(ticker);
+  const spot = candles.at(-1)?.c;
+  if (!spot) return { error: `No price for ${ticker} right now.` };
+  const type = input.direction === "long" ? "call" : "put";
+  const sign = type === "call" ? 1 : -1;
+  const today = newYorkDate(Date.now());
+  const expiry = expiryFor(today, Math.max(1, Math.min(400, Math.round(input.dte))), input.expiryRule === "atLeast" ? "atLeast" : "nearest");
+  const T = Math.max(1, (Date.parse(`${expiry}T12:00:00Z`) - Date.parse(`${today}T12:00:00Z`)) / 86_400_000) / 365;
+  const vol = volatility(candles.slice(-21).map((c) => c.c)) * 1.1;
+  const step = strikeStep(spot);
+  const pct = Math.max(-20, Math.min(20, Number(input.pct) || 0));
+  const chosen = roundStrike(spot * (1 + (sign * pct) / 100), step);
+  const short = input.spreadWidth ? chosen + sign * input.spreadWidth * step : null;
+  // The chosen strike in the middle, a few either side (and the spread's other leg), highest on top like the chain.
+  const lo = Math.min(chosen, short ?? chosen, roundStrike(spot, step)) - 3 * step;
+  const hi = Math.max(chosen, short ?? chosen, roundStrike(spot, step)) + 3 * step;
+  const rows: StrikePreview["rows"] = [];
+  for (let k = hi; k >= lo - 1e-9; k -= step) {
+    const strike = Math.round(k * 100) / 100;
+    rows.push({
+      strike,
+      price: Math.round(bs(type, spot, strike, T, vol) * 100) / 100,
+      chosen: Math.abs(strike - chosen) < 1e-6,
+      short: short != null && Math.abs(strike - short) < 1e-6,
+      itm: type === "call" ? strike < spot : strike > spot,
+    });
+  }
+  return { ticker, spot, expiry, type, rows };
 }

@@ -108,8 +108,11 @@ export type Contract = {
   /** Days to expiry it aims for, and whether that's the nearest listed or the first at least that far. */
   dte: number;
   expiryRule: "nearest" | "atLeast";
-  /** How the strike is picked: nearest a delta, a percent from the price (positive = out of the money), or at the money. */
-  strike: { by: "delta" | "otmPct" | "atm"; value: number };
+  /**
+   * The strike, as a percent from the stock's price (Ben, 2026-11-19: "I dont know what 0.5 means… Percent from the
+   * price"): 0 is at the money, positive is out of the money (a call above the price, a put below it), negative in it.
+   */
+  strike: { pct: number };
   /** A spread's width, in strikes past the one it buys. */
   width: number;
   /** How much to buy: a number of contracts (or shares), dollars a trade, or a percent of the account. */
@@ -128,7 +131,12 @@ export type Spec = {
 };
 
 export const ACCOUNT = 25_000;
-export const DEFAULT_CONTRACT: Contract = { kind: "single", dte: 30, expiryRule: "nearest", strike: { by: "delta", value: 0.4 }, width: 2, size: { by: "contracts", value: 1 } };
+/** How far the strike can be from the price, either way, in percent. */
+export const STRIKE_RANGE = 20;
+
+/** A delta turned into about the same percent from the price (a month out, at typical volatility), to the half percent. */
+export const pctFromDelta = (delta: number) => (Number.isFinite(delta) ? Math.round((0.5 - delta) * 15 * 2) / 2 : 2);
+export const DEFAULT_CONTRACT: Contract = { kind: "single", dte: 30, expiryRule: "nearest", strike: { pct: 2 }, width: 2, size: { by: "contracts", value: 1 } };
 
 /** Every criterion for a group, off, with its defaults, overlaid with the ones given. */
 export function fullList(g: Group, given: Criterion[] = []): Criterion[] {
@@ -179,7 +187,7 @@ export function fromRules(r: Rules): Spec {
     version: 2,
     direction: r.direction,
     entry: { criteria: fullList("entry"), custom: r.entry },
-    contract: r.option ? { ...DEFAULT_CONTRACT, dte: r.option.dte, strike: { by: "delta", value: r.option.delta } } : { ...DEFAULT_CONTRACT, kind: "shares", size: { by: "dollars", value: 1000 } },
+    contract: r.option ? { ...DEFAULT_CONTRACT, dte: r.option.dte, strike: { pct: pctFromDelta(r.option.delta) } } : { ...DEFAULT_CONTRACT, kind: "shares", size: { by: "dollars", value: 1000 } },
     exit: { mode: "any", criteria: fullList("exit", exit), custom: r.exit },
     stop: { mode: "any", criteria: fullList("stop", stop), custom: [] },
   };
@@ -220,13 +228,15 @@ export function cleanSpec(raw: unknown): Spec | null {
     return r ? fromRules(r) : null;
   }
   const ct = (x.contract ?? {}) as Partial<Contract>;
-  const sb = ct.strike?.by === "otmPct" || ct.strike?.by === "atm" ? ct.strike.by : "delta";
+  // The strike as a percent; older ones by delta or "at the money" are turned into one.
+  const old = (ct.strike ?? {}) as { pct?: number; by?: string; value?: number };
+  const pct = old.pct != null ? Number(old.pct) : old.by === "otmPct" ? Number(old.value) : old.by === "atm" ? 0 : old.by === "delta" ? pctFromDelta(Number(old.value)) : 2;
   const zb = ct.size?.by === "dollars" || ct.size?.by === "accountPct" ? ct.size.by : "contracts";
   const contract: Contract = {
     kind: ct.kind === "spread" || ct.kind === "shares" ? ct.kind : "single",
     dte: Math.round(clamp(ct.dte, 1, 400, 30)),
     expiryRule: ct.expiryRule === "atLeast" ? "atLeast" : "nearest",
-    strike: { by: sb, value: sb === "delta" ? clamp(ct.strike?.value, 0.05, 0.95, 0.4) : sb === "otmPct" ? clamp(ct.strike?.value, -30, 30, 2) : 0 },
+    strike: { pct: Math.round(clamp(pct, -STRIKE_RANGE, STRIKE_RANGE, 2) * 2) / 2 },
     width: Math.round(clamp(ct.width, 1, 10, 2)),
     size: { by: zb, value: zb === "contracts" ? Math.round(clamp(ct.size?.value, 1, 10000, 1)) : zb === "dollars" ? clamp(ct.size?.value, 50, 1_000_000, 1000) : clamp(ct.size?.value, 0.5, 100, 4) },
   };
